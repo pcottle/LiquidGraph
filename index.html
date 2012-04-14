@@ -1,0 +1,115 @@
+<html>
+
+<head>
+<title> Genetic GPU!</title>
+<!--
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+<meta property="og:title" content="Genetic GPU"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="http://petercottle.com/friendMapper2/index.html"/>
+<meta property="og:image" content="http://petercottle.com/friendMapper2/friendMapperIcon.PNG"/>
+<meta property="og:site_name" content="FriendMapper"/>
+<meta property="og:description" content="Map your friends in 3D with WebGl and the Facebook Graph API! Coded by Peter Cottle"/>
+-->
+
+<link href="style.css" rel="stylesheet" type="text/css"/>
+
+<script type="text/javascript" src="Tween.js"></script>
+<!--<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>-->
+<script type="text/javascript" src="jquery-1.6.1.min.js"></script>
+<script type="text/javascript" src="liquidGraph.js"></script>
+
+
+<script type="text/javascript">
+
+$j = jQuery.noConflict();
+
+//globals
+var notifyTimeout = null;
+
+
+function startLoadingWithText(theText) {
+    startLoading();
+    topNotify(theText);
+}
+
+function stopLoadingWithText() {
+    stopLoading();
+    topNotifyClear();
+}
+
+function topNotifyClear() {
+    $j('#topNotifyBar').html('');
+    $j('#topNotifyBarHolder').addClass('topNotifyBarHidden');
+}
+
+function startLoading() {
+    isLoading = true;
+
+    var wHeight = $j(window).height();
+    var wWidth = $j(window).width();
+    $j('.loadingGif').css('left',String(wWidth/2 - 220*0.5) + 'px');
+    $j('.loadingGif').css('top',String(wHeight / 2 - 19*0.5) + 'px');
+    $j('.loadingGif').fadeIn();
+}
+
+function stopLoading() {
+    isLoading = false;
+    $j('.loadingGif').fadeOut();
+}
+
+
+function topNotify(theText) {
+    topNotifyHtml("<h1>" + theText + "</h1>");
+}
+
+function topNotifyHtml(theText) {
+    //and if someone is clicking fast, get rid of it
+    if(notifyTimeout)
+    {
+        clearTimeout(notifyTimeout);
+    }
+
+    //basically, if its already displayed, hide it and come back in 700ms
+    if(!$j('#topNotifyBarHolder').hasClass('topNotifyBarHidden'))
+    {
+        //clear and come back
+        topNotifyClear();
+        var jsToExecute = "topNotifyHtml('" + theText + "');";
+        notifyTimeout = setTimeout(jsToExecute,700);
+        return;
+    }
+
+    $j('#topNotifyBar').html("<h1>" + theText + "</h1>");
+
+    $j('#topNotifyBarHolder').removeClass('topNotifyBarHidden');
+}
+
+$j(document).ready(function(){
+
+    startLoadingWithText("Hello world!");
+    setTimeout('stopLoadingWithText();',1000);
+
+});
+
+</script>
+
+
+</head>
+
+
+<body>
+
+<img src="loading.gif"class="loadingGif"/>
+
+<div id="topNotifyBarWrapper" style="width:100%;text-align:center;position:absolute;top:0px;">
+    <div id="topNotifyBarHolder" class="buttonGradient smooth topNotifyBar topNotifyBarHidden bubbleToStop" onclick="topNotifyClear()" style="display:inline-block;cursor:pointer">
+        <div id="topNotifyBar">
+
+        </div>
+    </div>
+</div>
+
+</body>
+
+</html>
