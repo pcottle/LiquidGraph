@@ -1,7 +1,7 @@
 <html>
 
 <head>
-<title> Genetic GPU!</title>
+<title> Liquid Graph</title>
 <!--
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 <meta property="og:title" content="Genetic GPU"/>
@@ -15,8 +15,9 @@
 <link href="style.css" rel="stylesheet" type="text/css"/>
 
 <script type="text/javascript" src="Tween.js"></script>
-<!--<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>-->
-<script type="text/javascript" src="jquery-1.6.1.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<!-- <script type="text/javascript" src="jquery.min.js"></script> -->
+<script type="text/javascript" src="raphael-min.js"></script>
 <script type="text/javascript" src="liquidGraph.js"></script>
 
 
@@ -26,6 +27,7 @@ $j = jQuery.noConflict();
 
 //globals
 var notifyTimeout = null;
+var p = null;
 
 
 function startLoadingWithText(theText) {
@@ -89,7 +91,13 @@ $j(document).ready(function(){
 
     startLoadingWithText("Hello world!");
     setTimeout('stopLoadingWithText();',1000);
+    
+    p = Raphael("canvasHolder");
 
+    $j('#canvasHolder').bind('mousedown',canvasClick);
+    $j('#canvasHolder').bind('mousemove',canvasMove);
+
+    //$j(window).resize(windowResize);
 });
 
 </script>
@@ -99,6 +107,9 @@ $j(document).ready(function(){
 
 
 <body>
+
+<div id="canvasHolder" style="border:1px solid black; box-shadow: 5px 5px 5px black">
+</div>
 
 <img src="loading.gif"class="loadingGif"/>
 

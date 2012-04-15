@@ -1,36 +1,74 @@
 
 //hacked up javascript clone object method from stackoverflow. certainly a blemish on the face of JS
 
-function clone(obj) {
-    //3 simple types and null / undefined
-    if(null == obj || "object" != typeof obj) return obj;
+/*****************CLASSES*******************/
 
-    //date
-    if(obj instanceof Date) {
-        var copy = new Date();
-        copy.setTime(obj.getTime());
-        return copy;
+var points = [];
+var path = null;
+
+function cuteSmallCircle(x,y) {
+    var c = p.circle(x,y,4,4);
+
+    c.attr("fill","hsba(" + String(Math.random()) + ",0.8,0.7,1)");
+    c.attr("stroke","#FFF");
+    c.attr("stroke-width",3);
+
+    return c;
+}
+
+function canvasClick(e) {
+    if(e.target.nodeName != 'svg')
+    {
+        //we clicked something on the canvas, let that event handler deal with it
+        return;
     }
 
-    //array
-    if (obj instanceof Array) {
-        var copy = [];
-        for( var i = 0; i < obj.length; ++i) {
-            copy[i] = clone(obj[i]);
-        }
-        return copy;
-    }
+    var x = e.offsetX;
+    var y = e.offsetY;
 
-    //object
-    if(obj instanceof Object) {
-        var copy = {};
-        for(var attr in obj) {
-            if(obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
-        }
-        return copy;
+    var isBig = true;
+
+    var c = p.circle(x,y,25,25);
+
+    c.attr("fill","hsba(" + String(Math.random()) + ",0.8,0.7,1)");
+    c.attr("stroke","#FFF");
+    c.attr("stroke-width",3);
+
+    var f = function() {
+       if(isBig)
+       {
+           c.animate({'r':10},800,'easeInOut');
+           isBig = false;
+       }
+       else
+       {
+           isBig = true;
+           c.animate({'r':25},800,'easeInOut');
+       }
+    };
+
+    c.click(function() {
+        f();
+    });
+}
+
+function polygonBuilderClick(x,y) {
+    var c = p.circle(x,y,10,10);
+
+}
+
+function canvasMove(e) {
+    //only executes when holding down the button
+    if(!e.which) {
+        return;
     }
-    throw new Error("object type not supported yet!");
+}
+
+function resizeWindow(e) {
+    var width = $j('#canvasHolder').width();
+    var height = $j('#canvasHolder').height();
+
+    p.setSize(width,height);
 }
 
 
-/*****************CLASSES*******************/

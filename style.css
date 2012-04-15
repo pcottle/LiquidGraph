@@ -441,10 +441,13 @@ h1 {
     border:5px solid red;
 }
 
-#earth-canvas {
-    border:none;
-    float:left;
-    display:inline-block;
+#canvasHolder {
+    margin-left:auto;
+    margin-right:auto;
+    position:relative;
+    top:20px;
+    width:90%;
+    height:90%;
 }
 
 #holder-for-screenshots {
