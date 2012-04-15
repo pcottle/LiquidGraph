@@ -1,6 +1,4 @@
 
-//hacked up javascript clone object method from stackoverflow. certainly a blemish on the face of JS
-
 /*****************CLASSES*******************/
 
 var polygonUIControl = function() {
@@ -181,18 +179,40 @@ polygonUIControl.prototype.rightClick = function(x,y) {
     var c = cuteSmallCircle(x,y);
     this.uiPoints.push(c);
 
-    var aPath = constructPathStringFromPoints(this.uiPoints,true);
-
-    //$j.each(uiPoints,function(i,point) { point.remove(); });
-    this.uiPath.remove();
+    var aPathString = constructPathStringFromPoints(this.uiPoints,true);
 
     //to dump this
-    var asd = cutePath(aPath,true);
+    var polyPath = cutePath(aPathString,true);
+
+    try {
+        var polygon = new Polygon(this.uiPoints,polyPath);
+
+        //add it to our polyController
+        polyController.add(polygon);
+
+    } catch(e) {
+        topNotify(String(e));
+
+        //we have to color this polygon red and remove it
+        polyPath.animate({'stroke':'#F00','stroke-width':20},800,'easeInOut');
+
+        $j.each(this.uiPoints,function(i,point) { point.remove(); });
+
+        //remove it in 1000 ms
+        setTimeout(function() { polyPath.remove(); }, 1000);
+    }
+
+    //dump the ui stuff
+    this.resetUIVars();
+}
+
+polygonUIControl.prototype.resetUIVars = function() {
+    this.uiPath.remove();
+    this.currentPoint.remove();
 
     this.uiPoints = [];
-
-    //TODO: construct the polygon here!!!
-    var polygon = new Polygon();
+    this.uiPath = null;
+    this.currentPoint = null;
 }
 
 polygonUIControl.prototype.leftClick = function(x,y) {
