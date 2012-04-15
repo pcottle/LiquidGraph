@@ -96,8 +96,9 @@ $j(document).ready(function(){
 
     $j('#canvasHolder').bind('mousedown',canvasClick);
     $j('#canvasHolder').bind('mousemove',canvasMove);
+    $j('#canvasHolder').bind('contextmenu',canvasRightClick);
 
-    //$j(window).resize(windowResize);
+    $j(window).resize(windowResize);
 });
 
 </script>
