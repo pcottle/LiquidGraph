@@ -18,16 +18,20 @@
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <!-- <script type="text/javascript" src="jquery.min.js"></script> -->
 <script type="text/javascript" src="raphael-min.js"></script>
+<script type="text/javascript" src="liquidGraphUI.js"></script>
 <script type="text/javascript" src="liquidGraph.js"></script>
-
 
 <script type="text/javascript">
 
 $j = jQuery.noConflict();
 
 //globals
+//TODO: technically i should make a ui control for these
+//notify variables but that's not a priority
 var notifyTimeout = null;
 var p = null;
+
+var polygonInsertControl = null;
 
 
 function startLoadingWithText(theText) {
@@ -94,9 +98,11 @@ $j(document).ready(function(){
     
     p = Raphael("canvasHolder");
 
-    $j('#canvasHolder').bind('mousedown',canvasClick);
-    $j('#canvasHolder').bind('mousemove',canvasMove);
-    $j('#canvasHolder').bind('contextmenu',canvasRightClick);
+    //$j('#canvasHolder').bind('mousedown',canvasClick);
+    //$j('#canvasHolder').bind('mousemove',canvasMove);
+    //$j('#canvasHolder').bind('contextmenu',canvasRightClick);
+
+    polygonInserter = new polygonUIControl();
 
     $j(window).resize(windowResize);
 });
