@@ -269,13 +269,16 @@ function TraceUIControl() {
     this.UIbutton = new UIButton(this,'traceButton','Trace Particle','Stop Tracing Particles');
 }
 
-TraceUIControl.prototype.deactivate = function() {
+TraceUIControl.prototype.clearScreen = function() {
     //clear screen
     if(this.startPoint) { this.startPoint.remove(); }
     if(this.endPoint) { this.endPoint.remove(); }
     if(this.parab) { this.parab.removePaths(); }
     if(this.path) { this.path.remove(); }
-    
+}
+
+TraceUIControl.prototype.deactivate = function() {   
+    this.clearScreen();
     this.resetVars();
 
     this.active = false;
@@ -292,6 +295,8 @@ TraceUIControl.prototype.resetVars = function() {
     this.parab = null;
     this.path = null;
 
+    this.s = null;
+    this.vel = null;
 }
 
 
@@ -310,10 +315,15 @@ TraceUIControl.prototype.rightClick = function(x,y) {
 }
 
 TraceUIControl.prototype.mouseUp = function(x,y) {
-    //make the particle and trace it
+    //make the particle and advance it once
+    var k = new Kinetic(this.s,this.vel,this.accel);
+    //TODO: DEBUG
+    particle = new Particle(k,false);
+    particle.advance();
 
 
     //make sure to reset our vars
+    this.clearScreen();
     this.resetVars();
 }
 
@@ -360,13 +370,13 @@ TraceUIControl.prototype.mouseMove = function(x,y) {
     var pathString = constructPathStringFromPoints([this.startPoint,this.endPoint],false);
     this.path = cutePath(pathString);
 
-    var velocity = {
+    this.vel = {
         'x':x - this.s.x,
         'y':y - this.s.y
     };
 
     //now we have start, vel, and accel
-    this.parab = new Parabola(this.s,velocity,this.accel);
+    this.parab = new Parabola(this.s,this.vel,this.accel);
 }
 
 

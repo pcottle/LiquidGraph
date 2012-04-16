@@ -151,6 +151,7 @@ Polygon.prototype.buildEdges = function() {
 
         var nextPoint = this.vertices[nextIndex];
         var edge = new Edge(currPoint,nextPoint);
+        //edge.highlight();
 
         this.edges.push(edge);
 
@@ -265,6 +266,16 @@ function Edge(p1,p2) {
     {
         throw new Error("Invalid Polygon -- Edge with two points on top of each other!");
     }
+}
+
+Edge.prototype.highlight = function() {
+    var pathStr = constructPathStringFromCoords([this.p1,this.p2]);
+    this.path = p.path(pathStr);
+    this.path.glow();
+    this.path.attr({
+        'stroke':'#F00',
+        'stroke-width':3
+    });
 }
 
 //returns true if two edges intersect in a point that is within both edges
@@ -397,18 +408,21 @@ Edge.prototype.parabolaIntersection = function(parabola) {
     //if we don't contain this point, get pissed
     if(!this.pointWithin(solutionPoint))
     {
-        //not really on this edge
-        console.warn("parabola intersection test was valid but didnt contain line");
+        //not really on this edge...
+
+        //console.warn("parabola intersection test was valid but didnt contain line");
+        //var dsa = cuteSmallCircle(solutionPoint.x,solutionPoint.y);
         return null;
     }
     //there is a solution, and it lies within our endpoint! wahoo
-    var asd = cuteSmallCircle(solutionPoint.x,solutionPoint.y);
-    asd.glow();
+
+    //var asd = cuteSmallCircle(solutionPoint.x,solutionPoint.y);
+    //asd.glow();
 
     return {solutionPoint:solutionPoint,tValue:tValue};
 }
 
-function Parabola(pStart,vInit,accel) {
+function Parabola(pStart,vInit,accel,dontDraw) {
     this.pStart = pStart;
     this.vInit = vInit;
     this.accel = accel;
@@ -417,10 +431,13 @@ function Parabola(pStart,vInit,accel) {
     this.paths = [];
 
     //go draw ourselves
-    this.buildParabolaPath();
+    if(!dontDraw)
+    {
+        this.drawParabolaPath(-1);
+    }
 }
 
-Parabola.prototype.buildParabolaPath = function() {
+Parabola.prototype.drawParabolaPath = function(tVal) {
 
     var angle = Math.atan2(this.vInit.x,this.vInit.y);
     if(angle < 0)
@@ -432,7 +449,7 @@ Parabola.prototype.buildParabolaPath = function() {
     var hue = "hsb(" + String(hueVal) + ",0.7,0.9)";
 
     //convert this parabola into a quadratic bezier path
-    this.path = this.getQuadraticBezierPath();
+    this.path = this.getQuadraticBezierPath(tVal);
     this.path.attr({
         'stroke-width':3,
         'stroke':hue
@@ -491,16 +508,28 @@ Parabola.prototype.getQuadraticBezierPoints = function(tValue) {
     return {'C1':p1,'C2':intersectPoint,'C3':p3};
 }
 
-Parabola.prototype.getQuadraticBezierPath = function() {
+Parabola.prototype.getQuadraticBezierPath = function(desiredTimeVal) {
 
-    var pointYielder = this.getPointYielder();
-    var t = 1;
-    var point = pointYielder(t);
+    //if our tVal is -1, we want to draw offscreen.
+    //else, draw to a specific tVal
 
-    while(onScreen(point))
+    var t = 0;
+
+    if(!desiredTimeVal || desiredTimeVal < 0)
     {
-        t += 1;
-        point = pointYielder(t);
+        var pointYielder = this.getPointYielder();
+        t = 1;
+        var point = pointYielder(t);
+
+        while(onScreen(point))
+        {
+            t += 1;
+            point = pointYielder(t);
+        }
+    }
+    else
+    {
+        t = desiredTimeVal;
     }
 
     var cPoints = this.getQuadraticBezierPoints(t);
@@ -519,8 +548,72 @@ Parabola.prototype.getQuadraticBezierPath = function() {
 }
 
 
+function Kinetic(pos,vel,accel) {
+    this.pos = pos;
+    this.vel = vel;
+    this.accel = accel;
+}
 
+function Particle(startKinetic,onEdge) {
+    this.startK = startKinetic;
+    this.onEdge = onEdge;
+}
 
+//Advances the particle to the next
+Particle.prototype.advance = function(edges) {
+    //TODO: query the edges intelligently
+    if(!edges)
+    {
+        edges = [];
+        for(var i = 0; i < polyController.polys.length; i++)
+        {
+            edges = edges.concat(polyController.polys[i].edges);
+        }
+    }
+
+    //now loop through and intersect your own poly with each
+
+    //TODO: with the current kinetic not just start
+
+    var sk = this.startK;
+
+    //make a parabola but don't draw it right away
+    //TODO:DEBUG
+    var parab = new Parabola(sk.pos,sk.vel,sk.accel,true);
+    this.parab = parab;
+
+    //intersect this parab with each edge and take the min
+    var tRecord = Number.MAX_VALUE;
+    var found = false;
+
+    for(var i = 0; i < edges.length; i++)
+    {
+        var edge = edges[i];    
+        var results = edge.parabolaIntersection(parab);
+        if(results)
+        {
+            found = true;
+            var t = results.tValue;
+            if(t < tRecord)
+            {
+                tRecord = t;
+            }
+        }
+    }
+
+    //now draw the parab until here
+    if(found)
+    {
+        parab.drawParabolaPath(tRecord);
+        var point = parab.getPointYielder()(tRecord);
+        var asd = cuteSmallCircle(point.x,point.y);
+        asd.glow();
+    }
+    else
+    {
+        parab.drawParabolaPath(-1); //till offscreen
+    }
+}
 
 
 
