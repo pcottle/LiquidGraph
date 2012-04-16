@@ -90,6 +90,15 @@ function Polygon(rPoints,rPath) {
 }
 
 Polygon.prototype.classifyVertices = function() {
+    if(this.vertices.length == 3)
+    {
+        //all are convex, its a triangle.
+        //
+        //this is the only part where ear cutting fails, so we
+        //have a special case here
+        return;
+    }
+
     for(var i = 0; i < this.vertices.length; i++)
     {
         var vertex = this.vertices[i];
@@ -405,8 +414,6 @@ Edge.prototype.parabolaIntersection = function(parabola) {
     var a = (0.5 * ax * ourVec.y - 0.5 * ay * ourVec.x);
     var b = (vx * ourVec.y - vy * ourVec.x);
     var c = (px * ourVec.y - py * ourVec.x);
-
-    console.log(a,b,c);
 
     var tValues = parametricQuadSolver(a,b,c);
 
