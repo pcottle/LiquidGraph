@@ -3,15 +3,68 @@ var pointOverlapTolerance = 5;
 var endpointPointOverlapTolerance = 1.5;
 /*********** CLASSES ********/
 
+function Vertex(x,y,rPoint,parentPoly) {
+    this.x = x;
+    this.y = y;
+    this.rPoint = rPoint;
+    this.parentPoly = parentPoly;
+
+    this.inEdge = null;
+    this.outEdge = null;
+}
+
+Vertex.prototype.highlight = function() {
+    this.rPoint.animate({
+        'r':6,
+        'stroke':'#000',
+        'stroke-width':3,
+    },800,'easeInOut');
+}
+
+Vertex.prototype.concaveTest = function() {
+    //the concavity test is as follows:
+    //
+    //get the two adjacent vertices. if the avg of those two
+    //vertices is inside our path, then we are convex,
+    //otherwise we are concave
+
+    //note: the ordering of the edges is very sensitive here
+    var before = this.inEdge.p1;
+    var after = this.outEdge.p2;
+
+    //we have to test a bunch of points on the line. I wish there was a way
+    //in Raphael to just test if an entire line lies within a polygon or not
+    this.isConcave = true;
+
+    //bit both 0.01 and 0.99. this test isn't as robust as I would like it to be but
+    //it's good enough in practice
+    for(var t = 0.01; t < 1; t += 0.098)
+    {
+        var point = convexCombo(before,after,t);
+        var inside = this.parentPoly.rPath.isPointInside(point.x,point.y);
+
+        //we only need ONE point to lie inside the polygon on the 'ear'
+        //in order to classify this as convex
+        if(inside)
+        {
+            this.isConcave = false;
+            break;
+        }
+    }
+
+    return this.isConcave;
+}
+
+
+
 //takes in a collection of raphael points,
 //validates these points as a valid polygon,
 //and then displays on the screen
-
-var Polygon = function(rPoints,rPath) {
+function Polygon(rPoints,rPath) {
     this.rPoints = rPoints;
     this.rPath = rPath;
 
-    this.points = [];
+    this.vertices = [];
     this.edges = [];
 
     this.rPath.toFront();
@@ -21,14 +74,27 @@ var Polygon = function(rPoints,rPath) {
         var rPoint = this.rPoints[i];
         rPoint.toFront();
 
-        this.points.push({
-            'x':rPoint.attr('cx'),
-            'y':rPoint.attr('cy')
-        });
+        var x = rPoint.attr('cx');
+        var y = rPoint.attr('cy');
+    
+        var vertex = new Vertex(x,y,rPoint,this);
+        this.vertices.push(vertex);
     }
 
     //first validate the polygon
     this.validatePolygon();
+
+    //classify vertices
+    this.classifyVertices();
+}
+
+Polygon.prototype.classifyVertices = function() {
+    $j.each(this.vertices,function(i,vertex) {
+        if(vertex.concaveTest())
+        {
+            vertex.highlight();
+        }
+    });
 }
 
 Polygon.prototype.validatePolygon = function() {
@@ -40,6 +106,7 @@ Polygon.prototype.validatePolygon = function() {
 
     //validate edges for intersections
     this.validateEdges();
+
 }
 
 Polygon.prototype.validateEdges = function() {
@@ -65,11 +132,11 @@ Polygon.prototype.validateEdges = function() {
 }
 
 Polygon.prototype.buildEdges = function() {
-    for(var i = 0; i < this.points.length; i++)
+    for(var i = 0; i < this.vertices.length; i++)
     {
-        var currPoint = this.points[i];
+        var currPoint = this.vertices[i];
 
-        if(i == this.points.length - 1)
+        if(i == this.vertices.length - 1)
         {
             var nextIndex = 0;
         }
@@ -78,22 +145,26 @@ Polygon.prototype.buildEdges = function() {
             var nextIndex = i + 1;
         }
 
-        var nextPoint = this.points[nextIndex];
+        var nextPoint = this.vertices[nextIndex];
         var edge = new Edge(currPoint,nextPoint);
 
         this.edges.push(edge);
+
+        //set the edges for the vertices
+        currPoint.outEdge = edge;
+        nextPoint.inEdge = edge;
     }
 }
 
 Polygon.prototype.validatePoints = function() {
-    for(var i = 0; i < this.points.length; i++)
+    for(var i = 0; i < this.vertices.length; i++)
     {
-        currPoint = this.points[i];
-        for(var j = i; j < this.points.length; j++)
+        currPoint = this.vertices[i];
+        for(var j = i; j < this.vertices.length; j++)
         {
             if(j == i) { continue; }
 
-            testPoint = this.points[j];
+            testPoint = this.vertices[j];
 
             var dist = distBetween(testPoint,currPoint);
             if(dist < pointOverlapTolerance)
@@ -114,9 +185,62 @@ polygonController.prototype.add = function(poly) {
 }
 
 
+function parametricQuadSolver(a,b,c) {
+    var solutions = solveQuadraticEquation(a,b,c);
 
+    if(!solutions.results)
+    {
+        return -1;
+    }
+    var ans1 = solutions.plusAns;
+    var ans2 = solutions.negAns;
 
+    //basically return the lowest non-negative one. ugly if statements ahoy
+    if(ans1 < 0 && ans2 < 0)
+    {
+        return -1;
+    }
+    if(ans1 < 0)
+    {
+        return ans2;
+    }
+    else if(ans2 < 0)
+    {
+        return ans1;
+    }
+    else
+    {
+        return Math.min(ans1,ans2);
+    }
+}
 
+function solveQuadraticEquation(a,b,c) {
+    //if denom is invalid
+    var denom = 2 * a;
+    if(denom == 0)
+    {
+        return {results:false};
+    }
+
+    var underRoot = b*b - 4*a*c;
+    if(underRoot < 0)
+    {
+        return {results:false};
+    }
+
+    var sqrRoot = Math.sqrt(underRoot);
+
+    var numPlus = -b + sqrRoot;
+    var numNeg = -b - sqrRoot;
+
+    var plusAns = numPlus / denom;
+    var negAns = numNeg / denom;
+
+    return {results:true,
+            plusAns:plusAns,
+            negAns:negAns
+        };
+}
 
 function pointTheSame(p1,p2) {
     return p1.x == p2.x && p1.y == p2.y;
@@ -126,7 +250,7 @@ function distBetween(p1,p2) {
     return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
 }
 
-var Edge = function(p1,p2) {
+function Edge(p1,p2) {
     this.p1 = p1;
     this.p2 = p2;
 
@@ -221,11 +345,174 @@ Edge.prototype.pointWithin = function(testPoint) {
     return false;
 }
 
+Edge.prototype.parabolaIntersection = function(parabola) {
+    //a parabola is defined as:
+    //
+    // pStart -> starting point of parabola (vec)
+    // vInit -> starting velocity (vec)
+    // accel -> acceleration direction (vec)
+    var ax, ay, vx, vy, px, py;
+
+    //the px and py are relative
+    px = parabola.pStart.x - this.p1.x;
+    py = parabola.pStart.y - this.p1.y;
+
+    ax = parabola.accel.x; ay = parabola.accel.y;
+    vx = parabola.vInit.x; vy = parabola.vInit.y;
+
+    //we solve this via a clever parametric equation taken into a cross product
+    //of the vector of our endpoints
+
+    var ourVec = makeVec(this.p1,this.p2);
+
+    var a = (0.5 * ax * ourVec.y - 0.5 * ay * ourVec.x);
+    var b = (vx * ourVec.y - vy * ourVec.x);
+    var c = (px * ourVec.y - py * ourVec.x);
+
+    var tValue = parametricQuadSolver(a,b,c);
+
+    if(tValue < 0)
+    {
+        //no solution to this
+        return null;
+    }
+
+    //then get the point
+    var solutionPoint = {
+        x: px + tValue * vx + 0.5 * tValue * tValue * ax,
+        y: py + tValue * vy + 0.5 * tValue * tValue * ay
+    };
+
+    //if we don't contain this point, get pissed
+    if(!this.pointWithin(solutionPoint))
+    {
+        //not really on this edge
+        return null;
+    }
+    //there is a solution, and it lies within our endpoint! wahoo
+    return solutionPoint;
+}
+
+function Parabola(pStart,vInit,accel) {
+    this.pStart = pStart;
+    this.vInit = vInit;
+    this.accel = accel;
+
+    //go draw ourselves
+    this.buildParabolaPath();
+}
+
+Parabola.prototype.buildParabolaPath = function() {
+
+    this.path = this.getQuadraticBezierPath();
+
+    var hueVal = map(Math.atan2(this.vInit.x,this.vInit.y),0,2*Math.PI,0,1);
+
+    this.path.attr({
+            'stroke-width':3,
+            'stroke':'hsb(' + String(hueVal) + ',0.7,0.9)'
+    });
+}
+
+
+Parabola.prototype.getPointYielder = function() {
+
+    var pointYielder = function(tValue) {
+        var thisX = this.pStart.x + tValue * this.vInit.x + 0.5 * tValue * tValue * this.accel.x;
+        var thisY = this.pStart.y + tValue * this.vInit.y + 0.5 * tValue * tValue * this.accel.y;
+        return {'x':thisX,'y':thisY};
+    };
+    pointYielder = pointYielder.bind(this);
+
+    return pointYielder;
+}
+
+Parabola.prototype.getSlopeYielder = function() {
+
+    var slopeYielder = function(tValue) {
+        var slopeX = this.vInit.x + tValue * this.accel.x;
+        var slopeY = this.vInit.y + tValue * this.accel.y;
+        return {'x':slopeX,'y':slopeY};
+    };
+    slopeYielder = slopeYielder.bind(this);
+
+    return slopeYielder;
+}
+
+Parabola.prototype.getQuadraticBezierPoints = function(tValue) {
+    var pointYielder = this.getPointYielder();
+    var slopeYielder = this.getSlopeYielder();
+
+    //essentially we just need the first point, a point really far away,
+    //and the intersection between the slopes of those two points
+
+    var p1 = pointYielder(0);
+    var slope1 = slopeYielder(0);
+    var p2 = vecAdd(p1,slope1);
+
+    var p3 = pointYielder(tValue);
+    var slope2 = slopeYielder(tValue);
+    var p4 = vecAdd(p3,slope2);
+
+    var intersectPoint = lineLineIntersection(p1,p2,p3,p4);
+
+    return {'C1':p1,'C2':intersectPoint,'C3':p3};
+}
+
+Parabola.prototype.getQuadraticBezierPath = function() {
+    //TODO: check for offscreen of the curve endpoint
+    //also, sometimes the curve is really jagged even though it's not being interpolated. check out
+    //if it's an open ticket or anything
+    var cPoints = this.getQuadraticBezierPoints(6.0);
+
+    var c1 = cPoints.C1;
+    var c2 = cPoints.C2;
+    var c3 = cPoints.C3;
+
+    var str = "";
+    str = str + "M" + commaJoin(c1);
+    str = str + " Q" + commaJoin(c2);
+    str = str + " " + commaJoin(c3);
+
+    var path = p.path(str);
+    return path;
+}
+
+
+
+
+
+
+
+
+
+
+/**********END CLASSSES*************/
+
+function commaJoin(p1)
+{
+    return String(p1.x) + "," + String(p1.y);
+}
+
+
+function map(input,iLower,iUpper,oLower,oUpper)
+{
+    return (oUpper - oLower) * (input - iLower) / (iUpper - iLower);
+}
+
 function makeVec(from,to)
 {
     return {
         x:to.x - from.x,
         y:to.y - from.y
+    };
+}
+
+function convexCombo(p1,p2,t)
+{
+    return {
+        x:p1.x * t + p2.x * (1-t),
+        y:p1.y * t + p2.y * (1-t)
     };
 }
 
@@ -243,6 +530,13 @@ function vecDot(v1,v2) {
 
 function vecLength(vec) {
     return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
+}
+
+function vecAdd(vec1,vec2) {
+    return {
+        x:vec1.x + vec2.x,
+        y:vec1.y + vec2.y
+    };
 }
 
 //returns the intersection point (if one exists) between the two lines defined

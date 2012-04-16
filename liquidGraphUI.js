@@ -1,14 +1,14 @@
 
 /*****************CLASSES*******************/
 
-var polygonUIControl = function() {
+function polygonUIControl() {
 
     this.uiPoints = [];
     this.uiPath = null;
     this.currentPoint = null;
+
     this.active = false;
-    this.button = null;
-    this.text = null;
+    this.UIbutton = null;
 
     //we have to bind the "this" scope to our object for the
     //event handlers
@@ -31,72 +31,20 @@ var polygonUIControl = function() {
     $j('#canvasHolder').bind('mousemove',cm);
     $j('#canvasHolder').bind('contextmenu',crc);
 
-    //draw our little ui object
-    var topleftX = 10;
-    var topleftY = 10;
+    var colors = {
+        activeFill:"78-hsb(0.41286981720477345,0.7,1)-hsb(0.6128698172047735,0.9,1)",
+        deactiveFill:"282-hsb(0.41286981720477345,0.7,1)-hsb(0.6128698172047735,0.9,1)"
+    };
 
-    var width = 50; var height = 50;
+    var pos = {'x':10, 'y':10};
+    var size = {'width':50,'height':50};
+    var text = "+";
+    var toolTip = "Add a polygon. Left click to add points, right click to close";
+    var ids = {buttonId:"inserterButton",textId:"inserterButtonText"};
 
-    var centerX = width*0.5 + topleftX;
-    var centerY = height*0.5 + topleftY;
+    //now do the UI button
+    this.UIbutton = new UIButton(this,pos,size,colors,text,toolTip,ids);
 
-    this.button = p.rect(topleftX,topleftY,width,height,10);
-
-    this.button.attr('fill',"282-hsb(0.41286981720477345,0.7,1)-hsb(0.6128698172047735,0.9,1)");
-    this.button.attr('stroke-width',3);
-    this.button.attr('stroke','#FFF');
-    this.button.attr('title','Add a polygon. Left click to add points, right click to close.');
-
-    //use jquery to set the cursor
-    $j(this.button.node).css('cursor','pointer');
-
-    //now draw a little cross for the "+"
-    this.text = p.text(centerX,centerY,'+');
-    this.text.attr({'font-size':35,'fill':'#FFF'});
-
-    //set the cursor also, and make it not selectable
-    $j(this.text.node).css('cursor','pointer');
-    $j(this.text.node).css('-khtml-user-select','none');
-
-    //set their ids for the click handling
-    $j(this.text.node).attr('id','inserterButtonText');
-    $j(this.button.node).attr('id','inserterButton');
-
-    //now bind a click handler to both
-    var clickHandler = function(e) {
-        this.buttonClick(e);
-    }
-    clickHandler = clickHandler.bind(this);
-
-    this.text.click(clickHandler);
-    this.button.click(clickHandler);
-
-}
-
-polygonUIControl.prototype.buttonClick = function(e) {
-    if(!this.active)
-    {
-        this.button.attr('fill',"78-hsb(0.41286981720477345,0.7,1)-hsb(0.6128698172047735,0.9,1)");
-        this.text.attr('stroke','#000');
-        this.activate();
-    }
-    else
-    {
-        this.button.attr('fill',"282-hsb(0.41286981720477345,0.7,1)-hsb(0.6128698172047735,0.9,1)");
-        this.text.attr('stroke','#FFF');
-        this.deactivate();
-    }
-}
-
-polygonUIControl.prototype.toggle = function() {
-    if(this.active)
-    {
-        this.deactivate();
-    }
-    else
-    {
-        this.activate();
-    }
 }
 
 polygonUIControl.prototype.deactivate = function() {
@@ -109,6 +57,8 @@ polygonUIControl.prototype.deactivate = function() {
     if(this.currentPoint) { this.currentPoint.remove(); }
 
     this.active = false;
+    //set our button as well
+    this.UIbutton.active = false;
     $j('#canvasHolder').css('cursor','default');
 }
 
@@ -119,6 +69,7 @@ polygonUIControl.prototype.activate = function() {
     this.uiPath = null;
 
     this.active = true;
+    this.UIbutton.active = true;
     $j('#canvasHolder').css('cursor','crosshair');
 }
 
@@ -147,7 +98,8 @@ polygonUIControl.prototype.canvasClick = function(e) {
 
     //check if we hit our own button. god we even have to catch the
     //highlighted text click target here. ui controls are a beezy
-    if(e.target.id == 'inserterButtonText' || e.target.id == 'inserterButton' || $j(e.target).text() == '+')
+    if(e.target.id == this.UIbutton.ids.buttonId || 
+        e.target.id == this.UIbutton.ids.textId || $j(e.target).text() == this.UIbutton.buttonText)
     {
         //return and let the other event handler do its thing
         return;
@@ -192,14 +144,22 @@ polygonUIControl.prototype.rightClick = function(x,y) {
 
     } catch(e) {
         topNotify(String(e));
+        setTimeout(function(){ topNotifyClear(); },3000);
 
         //we have to color this polygon red and remove it
         polyPath.animate({'stroke':'#F00','stroke-width':20},800,'easeInOut');
+        $j.each(this.uiPoints,function(i,point) { point.animate({'r':0,'stroke':'#F00'},800,'easeInOut'); });
 
-        $j.each(this.uiPoints,function(i,point) { point.remove(); });
+        var temp = this.uiPoints;
 
         //remove it in 1000 ms
-        setTimeout(function() { polyPath.remove(); }, 1000);
+        setTimeout(function() { 
+            polyPath.remove();
+            for(var i = 0; i < temp.length; i++)
+            {
+                temp[i].remove();
+            }
+        }, 1000);
     }
 
     //dump the ui stuff
@@ -258,8 +218,82 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
     this.uiPath = cutePath(pathString);
 }
 
+
+
+
+function UIButton(parentObj,position,size,colors,buttonText,buttonToolTip,ids) {
+
+    this.active = false;
+    this.button = null;
+    this.parentObj = parentObj;
+    this.text = null;
+
+    this.ids = ids;
+    this.buttonText = buttonText;
+    this.activeFill = colors.activeFill;
+    this.deactiveFill = colors.deactiveFill;
+
+    var topleftX = position.x;
+    var topleftY = position.y;
+
+    var width = size.width; var height = size.height;
+
+    var centerX = width*0.5 + topleftX;
+    var centerY = height*0.5 + topleftY;
+
+    this.button = p.rect(topleftX,topleftY,width,height,10);
+
+    this.button.attr('fill',this.deactiveFill);
+    this.button.attr('stroke-width',3);
+    this.button.attr('stroke','#FFF');
+    this.button.attr('title',buttonToolTip);
+
+    //use jquery to set the cursor
+    $j(this.button.node).css('cursor','pointer');
+
+    //now draw a little cross for the text
+    this.text = p.text(centerX,centerY,this.buttonText);
+    this.text.attr({'font-size':35,'fill':'#FFF'});
+
+    //set the cursor also, and make it not selectable
+    $j(this.text.node).css('cursor','pointer');
+    $j(this.text.node).css('-khtml-user-select','none');
+
+    //set their ids for the click handling
+    $j(this.text.node).attr('id',ids.textId);
+    $j(this.button.node).attr('id',ids.buttonId);
+
+    //now bind a click handler to both
+    var clickHandler = function(e) {
+        this.buttonClick(e);
+    }
+
+    clickHandler = clickHandler.bind(this);
+
+    this.text.click(clickHandler);
+    this.button.click(clickHandler);
+}
+
+UIButton.prototype.buttonClick = function(e) {
+    if(!this.active)
+    {
+        this.button.attr('fill',this.activeFill);
+        this.text.attr('stroke','#000');
+        this.parentObj.activate();
+    }
+    else
+    {
+        this.button.attr('fill',this.deactiveFill);
+        this.text.attr('stroke','#FFF');
+        this.parentObj.deactivate();
+    }
+}
+
+
+/**********END CLASSES******************/
+
 function cuteSmallCircle(x,y,wantsSameColor) {
-    var c = p.circle(x,y,6,6);
+    var c = p.circle(x,y,4,4);
 
     if(wantsSameColor)
     {
@@ -292,6 +326,24 @@ function constructPathStringFromPoints(points,wantsToClose) {
 
     return pathString;
 }
+
+function constructPathStringFromCoords(points,wantsToClose) {
+
+    var pathString = "M" + String(points[0].x) + "," + String(points[0].y);
+    for(var i = 1; i < points.length; i++)
+    {
+        var s = "L" + String(points[i].x) + "," + String(points[i].y);
+        pathString = pathString + s;
+    }
+
+    if(wantsToClose)
+    {
+        pathString = pathString + "Z";
+    }
+
+    return pathString;
+}
+
 
 
 function randomHueString() {

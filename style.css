@@ -58,6 +58,7 @@ background-image: -webkit-gradient(
 	color: #eee;
     padding:0px;
     margin:0px;
+    overflow:hidden;
 	
 }
 
@@ -446,8 +447,8 @@ h1 {
     margin-right:auto;
     position:relative;
     top:20px;
-    width:90%;
-    height:90%;
+    width:100%;
+    height:100%;
 }
 
 #holder-for-screenshots {
