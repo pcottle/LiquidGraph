@@ -65,6 +65,7 @@ function Polygon(rPoints,rPath) {
     this.rPath = rPath;
 
     this.vertices = [];
+    this.concaveVertices = [];
     this.edges = [];
 
     this.rPath.toFront();
@@ -89,12 +90,15 @@ function Polygon(rPoints,rPath) {
 }
 
 Polygon.prototype.classifyVertices = function() {
-    $j.each(this.vertices,function(i,vertex) {
+    for(var i = 0; i < this.vertices.length; i++)
+    {
+        var vertex = this.vertices[i];
         if(vertex.concaveTest())
         {
             vertex.highlight();
+            this.concaveVertices.push(vertex);
         }
-    });
+    }
 }
 
 Polygon.prototype.validatePolygon = function() {
@@ -195,6 +199,9 @@ function parametricQuadSolver(a,b,c) {
     var ans1 = solutions.plusAns;
     var ans2 = solutions.negAns;
 
+    console.log("my ans1",ans1,"my ans2",ans2);
+
+    //DEBUG
     //basically return the lowest non-negative one. ugly if statements ahoy
     if(ans1 < 0 && ans2 < 0)
     {
@@ -369,7 +376,11 @@ Edge.prototype.parabolaIntersection = function(parabola) {
     var b = (vx * ourVec.y - vy * ourVec.x);
     var c = (px * ourVec.y - py * ourVec.x);
 
+    console.log(a,b,c);
+
     var tValue = parametricQuadSolver(a,b,c);
+
+    console.log("solution obtained was",tValue);
 
     if(tValue < 0)
     {
@@ -379,18 +390,22 @@ Edge.prototype.parabolaIntersection = function(parabola) {
 
     //then get the point
     var solutionPoint = {
-        x: px + tValue * vx + 0.5 * tValue * tValue * ax,
-        y: py + tValue * vy + 0.5 * tValue * tValue * ay
+        x: parabola.pStart.x + tValue * vx + 0.5 * tValue * tValue * ax,
+        y: parabola.pStart.y + tValue * vy + 0.5 * tValue * tValue * ay
     };
 
     //if we don't contain this point, get pissed
     if(!this.pointWithin(solutionPoint))
     {
         //not really on this edge
+        console.warn("parabola intersection test was valid but didnt contain line");
         return null;
     }
     //there is a solution, and it lies within our endpoint! wahoo
-    return solutionPoint;
+    var asd = cuteSmallCircle(solutionPoint.x,solutionPoint.y);
+    asd.glow();
+
+    return {solutionPoint:solutionPoint,tValue:tValue};
 }
 
 function Parabola(pStart,vInit,accel) {
@@ -463,7 +478,7 @@ Parabola.prototype.getQuadraticBezierPath = function() {
     //TODO: check for offscreen of the curve endpoint
     //also, sometimes the curve is really jagged even though it's not being interpolated. check out
     //if it's an open ticket or anything
-    var cPoints = this.getQuadraticBezierPoints(6.0);
+    var cPoints = this.getQuadraticBezierPoints(60.0);
 
     var c1 = cPoints.C1;
     var c2 = cPoints.C2;
@@ -568,3 +583,35 @@ function lineLineIntersection(p1,p2,p3,p4) {
     return {'x':iX,'y':iY};
 }
 
+function m(x,y) {
+    return {x:x,y:y};
+}
+
+function randomParab()
+{
+    var a = m(Math.random() * 500, Math.random() * 500);
+    var b = m(Math.random() * 100 - 50, Math.random() * 100 - 50);
+    var c = m(Math.random() * 20, Math.random() * 10);
+
+    return new Parabola(a,b,c);
+}
+
+function testRandomParabs()
+{
+    parabs = [];
+    for(var i = 0; i < 1; i++)
+    {
+        parab = randomParab();
+        parabs.push(parab);
+        parab.path.glow();
+    }
+
+    var edges = polyController.polys[0].edges;
+    for(var i = 0; i < edges.length; i++)
+    {
+        for(var j = 0; j < parabs.length; j++)
+        {
+            edges[i].parabolaIntersection(parabs[j]);
+        }
+    }
+}
