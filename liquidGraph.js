@@ -195,31 +195,23 @@ function parametricQuadSolver(a,b,c) {
 
     if(!solutions.results)
     {
-        return -1;
+        return [];
     }
     var ans1 = solutions.plusAns;
     var ans2 = solutions.negAns;
 
-    console.log("my ans1",ans1,"my ans2",ans2);
+    //basically return the non-negative ones
+    var answers = [];
+    if(ans1 >= 0)
+    {
+        answers.push(ans1);
+    }
+    if(ans2 >= 0)
+    {
+        answers.push(ans2);
+    }
 
-    //DEBUG
-    //basically return the lowest non-negative one. ugly if statements ahoy
-    if(ans1 < 0 && ans2 < 0)
-    {
-        return -1;
-    }
-    if(ans1 < 0)
-    {
-        return ans2;
-    }
-    else if(ans2 < 0)
-    {
-        return ans1;
-    }
-    else
-    {
-        return Math.min(ans1,ans2);
-    }
+    return answers;
 }
 
 function solveQuadraticEquation(a,b,c) {
@@ -363,6 +355,33 @@ Edge.prototype.pointWithin = function(testPoint) {
     return false;
 }
 
+Edge.prototype.validateSolutionPoint = function(parabola,tValue) {
+    var ax, ay, vx, vy, px, py;
+
+    //the px and py are relative
+    px = parabola.pStart.x - this.p1.x;
+    py = parabola.pStart.y - this.p1.y;
+
+    ax = parabola.accel.x; ay = parabola.accel.y;
+    vx = parabola.vInit.x; vy = parabola.vInit.y;
+
+
+    var solutionPoint = {
+        x: parabola.pStart.x + tValue * vx + 0.5 * tValue * tValue * ax,
+        y: parabola.pStart.y + tValue * vy + 0.5 * tValue * tValue * ay
+    };
+
+    //if we don't contain this point, get pissed because it was deceiving
+    //and return
+    if(!this.pointWithin(solutionPoint))
+    {
+        //not really on this edge...
+        return null;
+    }
+    //there is a solution, and it lies within our endpoint! wahoo
+    return {solutionPoint:solutionPoint,tValue:tValue};
+}
+
 Edge.prototype.parabolaIntersection = function(parabola) {
     //a parabola is defined as:
     //
@@ -389,37 +408,42 @@ Edge.prototype.parabolaIntersection = function(parabola) {
 
     console.log(a,b,c);
 
-    var tValue = parametricQuadSolver(a,b,c);
+    var tValues = parametricQuadSolver(a,b,c);
 
-    console.log("solution obtained was",tValue);
-
-    if(tValue < 0)
+    if(tValues.length == 0)
     {
         //no solution to this
         return null;
     }
 
-    //then get the point
-    var solutionPoint = {
-        x: parabola.pStart.x + tValue * vx + 0.5 * tValue * tValue * ax,
-        y: parabola.pStart.y + tValue * vy + 0.5 * tValue * tValue * ay
-    };
+    //sort the tValues
+    tValues.sort();
 
-    //if we don't contain this point, get pissed
-    if(!this.pointWithin(solutionPoint))
+    //now loop through them.
+    //
+    /*
+     * The reason why we have to loop through them (rather than just taking the
+     * smallest one) is because we are solving a parabola / LINE intersection.
+     * Hence, in certain cases, there would be two solutions to the parabola
+     * and the line defined by this edge. Unfortunately, the first solution would
+     * be a point on the parabola that was not on the edge and the second
+     * solution would be a point that was on the edge. so originally the
+     * parametric quad solver would throw out the higher solution and
+     * the lower solution would get rejected at the validation step.
+     * This was really tricky to find. I fixed it by instead looping
+     * Through them in order so you consider all positive results.
+     *
+     */
+    for(var i = 0; i < tValues.length; i++)
     {
-        //not really on this edge...
-
-        //console.warn("parabola intersection test was valid but didnt contain line");
-        //var dsa = cuteSmallCircle(solutionPoint.x,solutionPoint.y);
-        return null;
+        var tValue = tValues[i];
+        var results = this.validateSolutionPoint(parabola,tValue);
+        if(results)
+        {
+            return results;
+        }
     }
-    //there is a solution, and it lies within our endpoint! wahoo
-
-    //var asd = cuteSmallCircle(solutionPoint.x,solutionPoint.y);
-    //asd.glow();
-
-    return {solutionPoint:solutionPoint,tValue:tValue};
+    return null;
 }
 
 function Parabola(pStart,vInit,accel,dontDraw) {
@@ -613,6 +637,8 @@ Particle.prototype.advance = function(edges) {
     {
         parab.drawParabolaPath(-1); //till offscreen
     }
+
+    return parab;
 }
 
 
@@ -705,31 +731,13 @@ function m(x,y) {
     return {x:x,y:y};
 }
 
-function randomParab()
+function randomParab(dontDraw)
 {
-    var a = m(Math.random() * 500, Math.random() * 500);
+    var width = $j(window).width();
+    var a = m(Math.random() * width, Math.random() * width);
     var b = m(Math.random() * 100 - 50, Math.random() * 100 - 50);
-    var c = m(Math.random() * 20, Math.random() * 10);
+    var c = m(Math.random() * 20 - 10, Math.random() * 10 - 5);
 
-    return new Parabola(a,b,c);
+    return new Parabola(a,b,c,dontDraw);
 }
 
-function testRandomParabs()
-{
-    parabs = [];
-    for(var i = 0; i < 1; i++)
-    {
-        parab = randomParab();
-        parabs.push(parab);
-        parab.path.glow();
-    }
-
-    var edges = polyController.polys[0].edges;
-    for(var i = 0; i < edges.length; i++)
-    {
-        for(var j = 0; j < parabs.length; j++)
-        {
-            edges[i].parabolaIntersection(parabs[j]);
-        }
-    }
-}

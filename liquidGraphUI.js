@@ -317,10 +317,9 @@ TraceUIControl.prototype.rightClick = function(x,y) {
 TraceUIControl.prototype.mouseUp = function(x,y) {
     //make the particle and advance it once
     var k = new Kinetic(this.s,this.vel,this.accel);
-    //TODO: DEBUG
-    particle = new Particle(k,false);
-    particle.advance();
 
+    var particle = new Particle(k,false);
+    particle.advance();
 
     //make sure to reset our vars
     this.clearScreen();
@@ -487,3 +486,53 @@ function onScreen(point) {
     //we dont check for zero because particles could come back down
     return point.x < width && point.x > 0 && point.y < height;
 }
+
+function bombard() {
+    var polys = polyController.polys;
+    //make 100 random parabolas and trace em
+    for(var i = 0; i < 100; i++)
+    {
+        var parab = randomParab(true);
+        var x = parab.pStart.x;
+        var y = parab.pStart.y;
+
+        var inside = false;
+        for(var j = 0; j < polys.length; j++)
+        {
+            if(polys[j].rPath.isPointInside(x,y))
+            {
+                inside = true;
+                break;
+            }
+        }
+        if(inside)
+        {
+            //i--;
+            continue;
+        }
+
+        //make a particle and advance
+        var k = new Kinetic(parab.pStart,parab.vInit,parab.accel);
+        var particle = new Particle(k);
+
+        var parab = particle.advance();
+        var parabPath = parab.path;
+
+        //DEBUG
+        //click = makeDebugClosure(parab,parabPath);
+        //parabPath.click(click);
+    }
+}
+
+function makeDebugClosure(parab,path) {
+
+    var toReturn = function() {
+        var s = parab.pStart;
+        var v = parab.vInit;
+        var a = parab.accel;
+        console.log(s,v,a);
+        path.glow();
+    };
+    return toReturn;
+}
+
