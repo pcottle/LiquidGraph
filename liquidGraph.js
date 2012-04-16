@@ -413,20 +413,37 @@ function Parabola(pStart,vInit,accel) {
     this.vInit = vInit;
     this.accel = accel;
 
+    this.path = null;
+    this.paths = [];
+
     //go draw ourselves
     this.buildParabolaPath();
 }
 
 Parabola.prototype.buildParabolaPath = function() {
 
+    var angle = Math.atan2(this.vInit.x,this.vInit.y);
+    if(angle < 0)
+    {
+        angle += 2*Math.PI;
+    }
+
+    var hueVal = map(angle,0,2*Math.PI,0,1);
+    var hue = "hsb(" + String(hueVal) + ",0.7,0.9)";
+
+    //convert this parabola into a quadratic bezier path
     this.path = this.getQuadraticBezierPath();
-
-    var hueVal = map(Math.atan2(this.vInit.x,this.vInit.y),0,2*Math.PI,0,1);
-
     this.path.attr({
-            'stroke-width':3,
-            'stroke':'hsb(' + String(hueVal) + ',0.7,0.9)'
+        'stroke-width':3,
+        'stroke':hue
     });
+}
+
+Parabola.prototype.removePaths = function() {
+    if(this.path)
+    {
+        this.path.remove();
+    }
 }
 
 
@@ -475,10 +492,18 @@ Parabola.prototype.getQuadraticBezierPoints = function(tValue) {
 }
 
 Parabola.prototype.getQuadraticBezierPath = function() {
-    //TODO: check for offscreen of the curve endpoint
-    //also, sometimes the curve is really jagged even though it's not being interpolated. check out
-    //if it's an open ticket or anything
-    var cPoints = this.getQuadraticBezierPoints(60.0);
+
+    var pointYielder = this.getPointYielder();
+    var t = 1;
+    var point = pointYielder(t);
+
+    while(onScreen(point))
+    {
+        t += 1;
+        point = pointYielder(t);
+    }
+
+    var cPoints = this.getQuadraticBezierPoints(t);
 
     var c1 = cPoints.C1;
     var c2 = cPoints.C2;

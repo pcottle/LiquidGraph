@@ -262,18 +262,21 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 
 
 function TraceUIControl() {
+    this.resetVars();
+    this.accel = {'x':0,'y':50};
 
     this.prototype = new uiControl(this);
     this.UIbutton = new UIButton(this,'traceButton','Trace Particle','Stop Tracing Particles');
 }
 
 TraceUIControl.prototype.deactivate = function() {
-    //remove our path and points from the screen
+    //clear screen
     if(this.startPoint) { this.startPoint.remove(); }
     if(this.endPoint) { this.endPoint.remove(); }
-
-    if(this.uiPath) { this.uiPath.remove(); }
-    if(this.currentPoint) { this.currentPoint.remove(); }
+    if(this.parab) { this.parab.removePaths(); }
+    if(this.path) { this.path.remove(); }
+    
+    this.resetVars();
 
     this.active = false;
     //set our button as well
@@ -282,11 +285,19 @@ TraceUIControl.prototype.deactivate = function() {
     $j('#canvasHolder').css('cursor','default');
 }
 
+TraceUIControl.prototype.resetVars = function() {
+
+    this.startPoint= null
+    this.endPoint = null;
+    this.parab = null;
+    this.path = null;
+
+}
+
+
 TraceUIControl.prototype.activate = function() {
     //just reset some variables
-    this.uiPoints = [];
-    this.currentPoint = null;
-    this.uiPath = null;
+    this.resetVars();
 
     this.active = true;
     this.UIbutton.active = true;
@@ -299,16 +310,63 @@ TraceUIControl.prototype.rightClick = function(x,y) {
 }
 
 TraceUIControl.prototype.mouseUp = function(x,y) {
+    //make the particle and trace it
 
 
+    //make sure to reset our vars
+    this.resetVars();
 }
 
 TraceUIControl.prototype.leftClick = function(x,y) {
+    //this is essentially the mousedown left click
+    this.startPoint = cuteSmallCircle(x,y);
 
+    this.s = {
+        'x':x,
+        'y':y
+    };
+ 
+    var now = new Date();
+    this.startTime = now.getTime();
+
+    this.mouseMove(x,y);
 }
 
 TraceUIControl.prototype.mouseMove = function(x,y) {
 
+    //only do the moving if our mouse is down
+    if(!this.startPoint)
+    {
+        return;
+    }
+
+    var now = new Date();
+    var time = now.getTime();
+
+    if(time - this.startTime < 1000 && false)
+    {
+        return;
+    }
+    this.startTime = time;
+
+    if(this.parab) { this.parab.removePaths(); }
+    if(this.path) { this.path.remove(); }
+    if(this.endPoint) { this.endPoint.remove(); }
+
+    //for mouse move, set the second point and make the velocity
+    this.endPoint = cuteSmallCircle(x,y);
+
+    //make a path connecting them
+    var pathString = constructPathStringFromPoints([this.startPoint,this.endPoint],false);
+    this.path = cutePath(pathString);
+
+    var velocity = {
+        'x':x - this.s.x,
+        'y':y - this.s.y
+    };
+
+    //now we have start, vel, and accel
+    this.parab = new Parabola(this.s,velocity,this.accel);
 }
 
 
@@ -351,16 +409,21 @@ function constructPathStringFromPoints(points,wantsToClose) {
 
 function constructPathStringFromCoords(points,wantsToClose) {
 
-    var pathString = "M" + String(points[0].x) + "," + String(points[0].y);
+    var pathString = "M" + String(Math.round(points[0].x)) + "," + String(Math.round(points[0].y));
+
+    var lp = points[0];
+
     for(var i = 1; i < points.length; i++)
     {
-        var s = "L" + String(points[i].x) + "," + String(points[i].y);
+        var s = " L" + String(Math.round(points[i].x)) + "," + String(Math.round(points[i].y));
+        //var s = " l" + String(points[i].x - lp.x) + "," + String(points[i].y - lp.y);
+        //lp = points[i];
         pathString = pathString + s;
     }
 
     if(wantsToClose)
     {
-        pathString = pathString + "Z";
+        pathString = pathString + " Z";
     }
 
     return pathString;
@@ -384,9 +447,14 @@ function randomGradient() {
     return gradient;
 }
 
-function cutePath(pathString,wantsToFill) {
+function cutePath(pathString,wantsToFill,strokeColor) {
     var path = p.path(pathString);
-    path.attr({'stroke-width':2,'stroke':'#FFF'});
+    if(!strokeColor)
+    {
+        strokeColor = '#FFF';
+    }
+    path.attr({'stroke-width':2,'stroke':strokeColor});
+
     if(wantsToFill)
     {
         path.attr('fill',randomGradient());
@@ -402,3 +470,10 @@ function windowResize(e) {
     p.setSize(width,height);
 }
 
+function onScreen(point) {
+    var width = $j('#canvasHolder').width();
+    var height = $j('#canvasHolder').height();
+
+    //we dont check for zero because particles could come back down
+    return point.x < width && point.x > 0 && point.y < height;
+}
