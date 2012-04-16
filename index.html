@@ -104,6 +104,7 @@ $j(document).ready(function(){
 
     polygonInserter = new polygonUIControl();
     polyController = new polygonController();
+    particleTracer = new TraceUIControl();
 
     $j(window).resize(windowResize);
 });
@@ -128,6 +129,12 @@ $j(document).ready(function(){
         </div>
     </div>
 </div>
+
+<a id="addPolyButton" class="uiButton">Add Polygon
+</a>
+
+<a id="traceButton" class="uiButton">Trace Particle
+</a>
 
 </body>
 

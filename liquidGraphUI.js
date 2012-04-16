@@ -1,14 +1,10 @@
 
 /*****************CLASSES*******************/
 
-function polygonUIControl() {
-
-    this.uiPoints = [];
-    this.uiPath = null;
-    this.currentPoint = null;
-
+function uiControl(parentObj) {
     this.active = false;
     this.UIbutton = null;
+    this.parentObj = parentObj;
 
     //we have to bind the "this" scope to our object for the
     //event handlers
@@ -21,30 +17,127 @@ function polygonUIControl() {
     var crc = function(e) {
         this.canvasRightClick(e);
     }
+    var mu = function(e) {
+        this.canvasMouseUp(e);
+    }
 
     crc = crc.bind(this);
     cc = cc.bind(this);
     cm = cm.bind(this);
+    mu = mu.bind(this);
 
     //register event handlers
     $j('#canvasHolder').bind('mousedown',cc);
     $j('#canvasHolder').bind('mousemove',cm);
     $j('#canvasHolder').bind('contextmenu',crc);
+    $j('#canvasHolder').bind('mouseup',mu);
+}
 
-    var colors = {
-        activeFill:"78-hsb(0.41286981720477345,0.7,1)-hsb(0.6128698172047735,0.9,1)",
-        deactiveFill:"282-hsb(0.41286981720477345,0.7,1)-hsb(0.6128698172047735,0.9,1)"
+uiControl.prototype.canvasRightClick = function(e) {
+    if(this.parentObj.active)
+    {
+        e.preventDefault();
+    }
+}
+
+uiControl.prototype.canvasMouseUp = function(e) {
+    if(this.parentObj.active)
+    {
+        this.parentObj.mouseUp(e.offsetX,e.offsetY);
+    }
+}
+
+uiControl.prototype.canvasMove = function(e) {
+    if(this.parentObj.active)
+    {
+        this.parentObj.mouseMove(e.offsetX,e.offsetY);
+    }
+}
+
+uiControl.prototype.canvasClick = function(e) {
+
+    if(!this.parentObj.active)
+    {
+        return;
+    }
+
+    var x = e.offsetX;
+    var y = e.offsetY;
+
+    if(e.which == 1)
+    {
+        this.parentObj.leftClick(x,y);
+    }
+    else
+    {
+        this.parentObj.rightClick(x,y);
+    }
+}
+
+//stubs
+uiControl.prototype.mouseUp = function(x,y) {
+    return;
+}
+
+uiControl.prototype.rightClick = function(x,y) {
+    return;
+}
+
+uiControl.prototype.mouseMove = function(x,y) {
+    return;
+}
+
+uiControl.prototype.leftClick = function(x,y) {
+    return;
+}
+
+function UIButton(parentObj,id,text,activeText) {
+
+    this.active = false;
+    this.parentObj = parentObj;
+
+    this.text = text;
+    this.activeText = activeText;
+    this.id = id;
+
+    var cHandler = function(e) {
+        this.anchorClick();
     };
+    cHandler = cHandler.bind(this);
 
-    var pos = {'x':10, 'y':10};
-    var size = {'width':50,'height':50};
-    var text = "+";
-    var toolTip = "Add a polygon. Left click to add points, right click to close";
-    var ids = {buttonId:"inserterButton",textId:"inserterButtonText"};
+    $j('#' + this.id).click(cHandler);
+}
 
-    //now do the UI button
-    this.UIbutton = new UIButton(this,pos,size,colors,text,toolTip,ids);
+UIButton.prototype.anchorClick = function() {
+    if(!this.active)
+    {
+        this.parentObj.activate();
+        $j('#' + this.id).text(this.activeText);
+        $j('.uiButton').filter(':not(#' + this.id + ')').slideUp();
+    }
+    else
+    {
+        this.parentObj.deactivate();
+        $j('#' + this.id).text(this.text);
+        $j('.uiButton').filter(':not(#' + this.id + ')').slideDown();
+    }
+}
 
+
+/*^^^^^ general UI classes ^^^^*/
+/*
+
+ *->    specific UI classes <- */
+
+
+function polygonUIControl() {
+
+    this.uiPoints = [];
+    this.uiPath = null;
+    this.currentPoint = null;
+
+    this.prototype = new uiControl(this);
+    this.UIbutton = new UIButton(this,'addPolyButton','Add Polygon','Stop Adding Polygons');
 }
 
 polygonUIControl.prototype.deactivate = function() {
@@ -71,58 +164,6 @@ polygonUIControl.prototype.activate = function() {
     this.active = true;
     this.UIbutton.active = true;
     $j('#canvasHolder').css('cursor','crosshair');
-}
-
-polygonUIControl.prototype.canvasRightClick = function(e) {
-    if(this.active)
-    {
-        e.preventDefault();
-    }
-}
-
-polygonUIControl.prototype.canvasMove = function(e) {
-    if(!this.active)
-    {
-        return;
-    }
-
-    this.mouseMove(e);
-}
-
-polygonUIControl.prototype.canvasClick = function(e) {
-
-    if(!this.active)
-    {
-        return;
-    }
-
-    //check if we hit our own button. god we even have to catch the
-    //highlighted text click target here. ui controls are a beezy
-    if(e.target.id == this.UIbutton.ids.buttonId || 
-        e.target.id == this.UIbutton.ids.textId || $j(e.target).text() == this.UIbutton.buttonText)
-    {
-        //return and let the other event handler do its thing
-        return;
-    }
-
-    if(e.target.nodeName == 'rect' || e.target.nodeName == 'tspan')
-    {
-        console.log(e.target);
-        console.log($j(e.target).text());
-        console.warn('hitting other button, what to do?');
-    }
-
-    var x = e.offsetX;
-    var y = e.offsetY;
-
-    if(e.which == 1)
-    {
-        this.leftClick(x,y);
-    }
-    else
-    {
-        this.rightClick(x,y);
-    }
 }
 
 polygonUIControl.prototype.rightClick = function(x,y) {
@@ -189,10 +230,8 @@ polygonUIControl.prototype.leftClick = function(x,y) {
     this.mouseMove(x,y);
 }
 
-polygonUIControl.prototype.canvasMove = function(e) {
-    if(!this.active) { return; }
-
-    this.mouseMove(e.offsetX,e.offsetY);
+polygonUIControl.prototype.mouseUp = function(x,y) {
+    return;
 }
 
 polygonUIControl.prototype.mouseMove = function(x,y) {
@@ -221,72 +260,55 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 
 
 
-function UIButton(parentObj,position,size,colors,buttonText,buttonToolTip,ids) {
 
-    this.active = false;
-    this.button = null;
-    this.parentObj = parentObj;
-    this.text = null;
+function TraceUIControl() {
 
-    this.ids = ids;
-    this.buttonText = buttonText;
-    this.activeFill = colors.activeFill;
-    this.deactiveFill = colors.deactiveFill;
-
-    var topleftX = position.x;
-    var topleftY = position.y;
-
-    var width = size.width; var height = size.height;
-
-    var centerX = width*0.5 + topleftX;
-    var centerY = height*0.5 + topleftY;
-
-    this.button = p.rect(topleftX,topleftY,width,height,10);
-
-    this.button.attr('fill',this.deactiveFill);
-    this.button.attr('stroke-width',3);
-    this.button.attr('stroke','#FFF');
-    this.button.attr('title',buttonToolTip);
-
-    //use jquery to set the cursor
-    $j(this.button.node).css('cursor','pointer');
-
-    //now draw a little cross for the text
-    this.text = p.text(centerX,centerY,this.buttonText);
-    this.text.attr({'font-size':35,'fill':'#FFF'});
-
-    //set the cursor also, and make it not selectable
-    $j(this.text.node).css('cursor','pointer');
-    $j(this.text.node).css('-khtml-user-select','none');
-
-    //set their ids for the click handling
-    $j(this.text.node).attr('id',ids.textId);
-    $j(this.button.node).attr('id',ids.buttonId);
-
-    //now bind a click handler to both
-    var clickHandler = function(e) {
-        this.buttonClick(e);
-    }
-
-    clickHandler = clickHandler.bind(this);
-
-    this.text.click(clickHandler);
-    this.button.click(clickHandler);
+    this.prototype = new uiControl(this);
+    this.UIbutton = new UIButton(this,'traceButton','Trace Particle','Stop Tracing Particles');
 }
 
-UIButton.prototype.buttonClick = function(e) {
-    if(!this.active)
-    {
-        this.button.attr('fill',this.activeFill);
-        this.text.attr('stroke','#000');
-        this.parentObj.activate();
-    }
-    else
-    {
-        this.button.attr('fill',this.deactiveFill);
-        this.text.attr('stroke','#FFF');
-        this.parentObj.deactivate();
-    }
+TraceUIControl.prototype.deactivate = function() {
+    //remove our path and points from the screen
+    if(this.startPoint) { this.startPoint.remove(); }
+    if(this.endPoint) { this.endPoint.remove(); }
+
+    if(this.uiPath) { this.uiPath.remove(); }
+    if(this.currentPoint) { this.currentPoint.remove(); }
+
+    this.active = false;
+    //set our button as well
+    this.UIbutton.active = false;
+
+    $j('#canvasHolder').css('cursor','default');
+}
+
+TraceUIControl.prototype.activate = function() {
+    //just reset some variables
+    this.uiPoints = [];
+    this.currentPoint = null;
+    this.uiPath = null;
+
+    this.active = true;
+    this.UIbutton.active = true;
+    $j('#canvasHolder').css('cursor','crosshair');
+}
+
+TraceUIControl.prototype.rightClick = function(x,y) {
+    //just return I think? or do a random arc from here
+    return;
+}
+
+TraceUIControl.prototype.mouseUp = function(x,y) {
+
+
+}
+
+TraceUIControl.prototype.leftClick = function(x,y) {
+
+}
+
+TraceUIControl.prototype.mouseMove = function(x,y) {
+
 }
 
 
