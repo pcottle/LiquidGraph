@@ -674,6 +674,17 @@ function bombard() {
 
 function advanceDraw(particle)
 {
+    particle.settle();
+
+    for(var i = 0; i < particle.kPaths.length; i++)
+    {
+        particle.kPaths[i].drawPath();
+        particle.kPaths[i].showEndpoint();
+    }
+
+    particle.animate();
+
+    return;
     var results = particle.advance();
     if(results.kPath)
     {

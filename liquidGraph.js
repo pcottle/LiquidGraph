@@ -511,6 +511,9 @@ function Parabola(pos,vel,accel,shouldDraw) {
     this.path = null;
     this.clickFunction = null;
 
+    this.pointYielder = this.getPointYielder();
+    this.slopeYielder = this.getSlopeYielder();
+
     //go draw ourselves
     if(shouldDraw)
     {
@@ -577,7 +580,7 @@ Parabola.prototype.getSlopeYielder = function() {
 }
 
 Parabola.prototype.getQuadraticBezierPoints = function(tValue) {
-    var pointYielder = this.getPointYielder();
+    var pointYielder = this.pointYielder;
     var slopeYielder = this.getSlopeYielder();
 
     //essentially we just need the first point and the point at which we want to stop drawing.
@@ -604,7 +607,7 @@ Parabola.prototype.getEndTimeValue = function(desiredTimeVal) {
 
     if(!desiredTimeVal || desiredTimeVal < 0)
     {
-        var pointYielder = this.getPointYielder();
+        var pointYielder = this.pointYielder;
         t = 1;
         var point = pointYielder(t);
 
@@ -658,8 +661,8 @@ KineticState.prototype.toParabola = function() {
 
 function KineticPath(parabola,endTime)
 {
-    this.pointYielder = parabola.getPointYielder();
-    this.slopeYielder = parabola.getSlopeYielder();
+    this.pointYielder = parabola.pointYielder;
+    this.slopeYielder = parabola.slopeYielder;
     this.parabola = parabola;
 
     //begin time is assumed to be 0
@@ -673,14 +676,17 @@ function KineticPath(parabola,endTime)
 
     this.animateTime = 0;
     this.animateFunction = this.getAnimateFunction();
+    this.doneFunction = null;
 }
 
-KineticPath.prototype.animate = function(animateSpeed) {
+KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
     //first remove our animationFeatures if they exist
     if(!animateSpeed)
     {
-        animateSpeed = 0.2;
+        //animateSpeed = 0.2;
+        animateSpeed = 0.01;
     }
+    this.doneFunction = doneFunction;
 
     this.clearAnimation();
     this.animateSpeed = animateSpeed;
@@ -735,6 +741,11 @@ KineticPath.prototype.animateStep = function() {
     if(this.animateTime < this.endTime)
     {
         setTimeout(this.animateFunction,1000 * 1/60);
+    }
+    else
+    {
+        //we are done! call our parent done function. yay closures
+        this.doneFunction();
     }
 }
 
@@ -810,6 +821,21 @@ function Particle(startKineticState,state) {
 
 //ELASTICITY
 Particle.prototype.elasticity = 0.5;
+Particle.prototype.edgeFriction = 0.1;
+
+//advances the particle until it settles in a concave vertex or offscreen
+Particle.prototype.settle = function() {
+    var i = 0;
+    var done = false;
+    while(!done)
+    {
+        i += 1;
+        var results = this.advance();
+        done = results.done;
+
+        if(i > 1000) { throw new Error("particle tracing did not terminate"); }
+    }
+}
 
 //Advances the particle to the next collision or reflection point.
 //
@@ -836,6 +862,7 @@ Particle.prototype.advance = function() {
     }
     else
     {
+        console.log(this.traceState.name);
         return {'done':false,'kPath':kPath};
     }
 }
@@ -949,7 +976,7 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
     var accel = parabola.accel;
 
     //first project velocity onto edge
-    var newVelocity = this.projectVectorOntoEdge(preCollisionVelocity,edge);
+    var newVelocity = this.projectVelocityOntoEdge(preCollisionVelocity,edge);
 
     //now determine if we are on the edge or not by looking at the edge outward normal
     //and accel
@@ -958,7 +985,14 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
     if(onEdgeTest >= 0)
     {
         //we are 'free falling' so save kinetic state and update state. easy.
-        this.currentKineticState = new KineticState(pos,newVelocity,accel);
+        //
+        //note: we have to advance slightly off the edge here to not get caught in that edge
+        //solution!
+        var tempParab = new Parabola(pos,newVelocity,accel);
+        //advance slightly
+        var bouncedOff = tempParab.pointYielder(0.01);
+
+        this.currentKineticState = new KineticState(bouncedOff,newVelocity,accel);
         this.kStates.push(this.currentKineticState);
 
         this.traceState = {name:'freeFall'};
@@ -978,13 +1012,21 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
     }
 }
 
-Particle.prototype.projectVectorOntoEdge = function(velocity,edge) {
+Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
 
     if(vecDot(velocity,edge.outwardNormal) >= 0)
     {
+        console.log("done with a velocity!!");
+        //var asd = new rArrow(edge.p1,velocity);
+        edge.highlight();
+
         throw new Error('Projecting vector onto edge with same facing outward normal!');
     }
 
+    return this.projectVectorOntoEdge(velocity,edge);
+}
+
+Particle.prototype.projectVectorOntoEdge = function(velocity,edge) {
     //get the edge slope unit vector
     var edgeSlope = vecNormalize(edge.edgeSlope);
 
@@ -997,8 +1039,8 @@ Particle.prototype.projectVectorOntoEdge = function(velocity,edge) {
     //now dot these two, and divide by their lengths to get the cos(theta) term
     var cosTheta = vecDot(velocity,edgeSlope) / (vecLength(velocity) * 1);
 
-    //now scale correctly
-    var newTangentVelocity = vecScale(edgeSlope,cosTheta * vecLength(velocity));
+    //now scale correctly with the fricton factor
+    var newTangentVelocity = vecScale(edgeSlope,cosTheta * vecLength(velocity) * (1-this.edgeFriction));
 
     //get the elasticity rebound
     var newNormalVelocity = vecScale(vecSubtract(velocity,newTangentVelocity),this.elasticity);
@@ -1007,6 +1049,42 @@ Particle.prototype.projectVectorOntoEdge = function(velocity,edge) {
 
     //the new velocity is these two
     return vecAdd(newTangentVelocity,newNormalVelocity);
+}
+
+Particle.prototype.edgeSlide = function() {
+    console.log("edge sliding");
+
+    this.traceState.name = 'settledAtVertex';
+}
+
+Particle.prototype.animateStep = function(i) {
+   if(i >= this.kPaths.length)
+   {
+       return; //we are done animating all paths!
+   }
+
+   //make a done closure object
+   var doneClosure = this.getDoneClosure(i+1);
+
+   //animate this kPath and call us when done
+   this.kPaths[i].animate(doneClosure);
+}
+
+Particle.prototype.getDoneClosure = function(num) {
+    var toReturn = function() {
+        this.animateStep(num);
+    };
+    toReturn = toReturn.bind(this);
+
+    return toReturn;
+}
+
+Particle.prototype.animate = function() {
+    //ok so the tricky here is that we need to animate each path in succession. so when a path finishes,
+    //it must call it's parent particle to animate the next one. this is all done with closures and
+    //timeouts.... aka reasons to absolutely love JS
+
+    this.animateStep(0);
 }
 
 
