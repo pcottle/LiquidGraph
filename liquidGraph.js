@@ -457,6 +457,18 @@ Edge.prototype.parabolaIntersection = function(parabola) {
     var ourVec = makeVec(this.p1,this.p2);
 
     var a = (0.5 * ax * ourVec.y - 0.5 * ay * ourVec.x);
+    if(a == 0)
+    {
+        //one tricky thing happens when you have completely vertical accel
+        //and completely vertical edges. the denom goes to 0 because
+        //there might be an infinite number of solutions; however for us,
+        //we just want one, so perturb ax and ay a bit
+        ax += 0.001;
+        ay += 0.001;
+        a = (0.5 * ax * ourVec.y - 0.5 * ay * ourVec.x);
+    }
+
+
     var b = (vx * ourVec.y - vy * ourVec.x);
     var c = (px * ourVec.y - py * ourVec.x);
 
@@ -999,15 +1011,14 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         //
         //note: we have to advance slightly off the edge here to not get caught in that edge
         //solution!
-        var tempParab = new Parabola(pos,newVelocity,accel);
-        //advance slightly
-        var bouncedOff = tempParab.pointYielder(0.01);
-        var here = tempParab.pointYielder(0);
+        var bouncedOff = vecAdd(pos,vecScale(edge.outwardNormal,0.01));
 
-        cuteSmallCircle(here.x,here.y);
+        cuteSmallCircle(pos.x,pos.y);
         cuteSmallCircle(bouncedOff.x,bouncedOff.y);
 
-        this.currentKineticState = new KineticState(bouncedOff,newVelocity,accel);
+        //TODO debug this!
+        //this.currentKineticState = new KineticState(bouncedOff,newVelocity,accel);
+        this.currentKinetcState = new KineticState(pos,newVelocity,accel);
         this.kStates.push(this.currentKineticState);
 
         this.traceState = {name:'freeFall'};
@@ -1031,6 +1042,7 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
 
     var nowOnEdge = false;
 
+    console.log('called');
     if(vecDot(velocity,edge.outwardNormal) >= 0)
     {
         console.log("done with a velocity!!");
@@ -1063,12 +1075,9 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
     //get the elasticity rebound
     var newNormalVelocity = vecScale(vecSubtract(velocity,newTangentVelocity),this.elasticity);
 
-    //here we have a TOLERANCE where if the velocity is just too dang low 
-    //in the tangental direction,
-    //then we will set it to zero so we are edge sliding
-    if(vecLength(newNormalVelocity) <= 1)
+    //we check for edge sliding by checking the cosTheta
+    if(cosTheta > 0.975)
     {
-        newNormalVelocity = vecScale(newNormalVelocity,0);
         nowOnEdge = true;
     }
 
