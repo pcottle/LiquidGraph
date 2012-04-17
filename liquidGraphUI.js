@@ -124,6 +124,91 @@ UIButton.prototype.anchorClick = function() {
 }
 
 
+function rArrow(pos,vel) {
+    //ok so we want to essentially make a path that looks like an arrow
+
+    //this consists of making a path. first we start at our position, and then
+    //we move some fraction of our velocity in the velocity direction to get our second point.
+
+    //then we draw the arrow heads. this is done by doing some vector rotations and the like
+    this.pos = pos;
+    this.vel = vel;
+
+    this.path = null;
+
+    this.buildPath();
+}
+
+rArrow.prototype.buildPath = function() {
+    //ok get the first point, that's easy
+    var points = [];
+
+    var tail = this.pos;
+    points.push(tail);
+
+    //now get the head
+    var fraction = 0.5;
+
+    var velScaled = vecScale(this.vel,fraction); 
+    var head = vecAdd(velScaled,tail);
+    points.push(head);
+
+    //ok so we need to do something simple. first get the angle from the head to the tail
+    //aka, the atan2 of the negated velocity
+    var fromHeadToTail = vecNegate(this.vel);
+
+    var angle = vecAtan2(fromHeadToTail);
+
+    //now add 45 to get chevron1 (i know these aren't chevrons but i dont have a good name
+    //for the little dangly things off the arrow head).
+    //and subtract 45 to get chevron2
+
+    var chev1Angle = angle + Math.PI * 0.25;
+    var chev2Angle = angle - Math.PI * 0.25;
+
+    //get these vectors
+    var chev1Vec = vecScale(angleToVec(chev1Angle),vecLength(this.vel) * 0.1);
+    var chev2Vec = vecScale(angleToVec(chev2Angle),vecLength(this.vel) * 0.1);
+
+    //get these points
+    var chev1point = vecAdd(head,chev1Vec);
+    var chev2point = vecAdd(head,chev2Vec);
+
+    points.push(chev1point,head,chev2point,head);
+
+    //now the path. god this is a long process
+    var pathStr = constructPathStringFromCoords(points);
+
+    var velMag = vecLength(this.vel);
+    console.log(velMag);
+
+    var extra = map(velMag,0,1000,0,10);
+    var strokeWidth = 2 + Math.round(extra);
+
+    this.path = p.path(pathStr);
+    this.path.attr({
+        'stroke-width':strokeWidth,
+        'stroke':velocityHue(this.vel)
+    });
+}
+
+rArrow.prototype.updatePath = function(pos,vel) {
+    if(this.path)
+    {
+        this.path.remove();
+    }
+
+    this.pos = pos;
+    this.vel = vel;
+
+    this.buildPath();
+}
+
+
+
+
+
+
 /*^^^^^ general UI classes ^^^^*/
 /*
 
@@ -364,6 +449,8 @@ TraceUIControl.prototype.mouseMove = function(x,y) {
 
     //for mouse move, set the second point and make the velocity
     this.endPoint = cuteSmallCircle(x,y);
+
+    this.e = {x:x,y:y};
 
     //make a path connecting them
     var pathString = constructPathStringFromPoints([this.startPoint,this.endPoint],false);

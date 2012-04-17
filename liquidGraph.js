@@ -469,14 +469,7 @@ function Parabola(pos,vel,accel,shouldDraw) {
 
 Parabola.prototype.drawParabolaPath = function(tVal) {
 
-    var angle = Math.atan2(this.vel.x,this.vel.y);
-    if(angle < 0)
-    {
-        angle += 2*Math.PI;
-    }
-
-    var hueVal = map(angle,0,2*Math.PI,0,1);
-    var hue = "hsb(" + String(hueVal) + ",0.7,0.9)";
+    var hue = velocityHue(this.vel);
 
     //convert this parabola into a quadratic bezier path
     this.path = this.getQuadraticBezierPath(tVal);
@@ -609,12 +602,41 @@ function KineticPath(parabola,endTime)
     //if the endTime is less than -1, we need to animate until it's offscreen.
     //hence, convert the time
     this.endTime = parabola.getEndTimeValue(endTime);
-    this.endPoint = null;
+
+    this.particleBody = null;
+    this.vArrow = null;
+
+    this.animateTime = 0;
 }
 
-KineticPath.prototype.animate = function(rPoint,rArrow) {
-    //might take in a point and arrow and animate them
-    //along the given path. problem is that we need to do this with a setTimeout() kinda thing...
+KineticPath.prototype.animate = function(animateSpeed) {
+    //first remove our animationFeatures if they exist
+
+    this.clearAnimation();
+    this.animateSpeed = animateSpeed;
+
+    //now set our graphical stuff to the beginning at t=0
+    var startPoint = this.pointYielder(0);
+    var startVel = this.slopeYielder(0);
+
+    this.particleBody = cuteSmallCircle(startPoint.x,startPoint.y);
+    this.vArrow = new rArrow(startPoint,startVel);
+
+    //start animation with timeout
+
+}
+
+KineticPath.prototype.animateStep = function() {
+    if(!this.animateSpeed) { throw new Error("animate speed not set!"); }
+
+
+}
+
+KineticPath.prototype.clearAnimation = function() {
+    if(this.particleBody) { this.particleBody.remove(); }
+    if(this.vArrow) { this.vArrow.remove(); }
+
+    this.animateTime = 0;
 }
 
 KineticPath.prototype.drawPath = function() {
@@ -624,20 +646,19 @@ KineticPath.prototype.drawPath = function() {
 
 KineticPath.prototype.showEndpoint = function() {
     var point = this.pointYielder(this.endTime);
-    this.endPoint = cuteSmallCircle(point.x,point.y);
+
+    this.clearAnimation();
+
+    this.particleBody = cuteSmallCircle(point.x,point.y);
 
     //optional
-    this.endPoint.glow();
+    this.particleBody.glow();
 }
 
 KineticPath.prototype.clearPath = function() {
     this.parabola.removePath();
 
-    if(this.endPoint)
-    {
-        this.endPoint.remove();
-    }
-
+    this.clearAnimation();
     //can't clear the glow unfortunately :O kinda a todo
 }
 
@@ -682,21 +703,22 @@ function Particle(startKineticState,state) {
 //If there is a collision or inflection point, the next kinetic state is calculated
 //(along with the specific edge if applicable) and the function returns
 Particle.prototype.advance = function() {
+    var kPath = null;
 
     //if the particle is on an edge, then we do that logic
     if(this.state.name == 'onEdge')
     {
-        var kPath = this.edgeSlide();
+        kPath = this.edgeSlide();
     }
     else if(this.state.name == 'freeFall')
     {
-        var kPath = this.freeFall();
+        kPath = this.freeFall();
     }
 
     //if our state name is settled or offscreen, then stop animating.
     if(this.state.name == 'offScreen' || this.state.name == 'settledAtVertex')
     {
-        return {'done':true};
+        return {'done':true,'kPath':kPath};
     }
     else
     {
@@ -760,12 +782,11 @@ Particle.prototype.freeFall = function() {
 
     //make a path. the neat thing here is that based on our tRecord, we will either
     //draw the parabola until it's offscreen or correctly draw it until it hits the
-    //edge we collided with. yay parametric equations FTW
+    //edge we collided with. yay parametric equations FTWwwwww
 
     var kPath = new KineticPath(parab,tRecord);
 
     this.kPaths.push(kPath);
-
     return kPath;
 }
 
@@ -831,6 +852,38 @@ function vecAdd(vec1,vec2) {
     };
 }
 
+function vecSubtract(vec1,vec2) {
+    return {
+        x:vec1.x - vec2.x,
+        y:vec1.y - vec2.y
+    };
+}
+
+function vecNegate(vec) {
+    return {
+        x:-vec.x,
+        y:-vec.y
+    };
+}
+
+function vecAtan2(vec) {
+    return Math.atan2(vec.y,vec.x);
+}
+
+function angleToVec(angle) {
+    return {
+        x:Math.cos(angle),
+        y:Math.sin(angle)
+    };
+}
+
+function vecScale(vec,scale) {
+    return {
+        x:vec.x * scale,
+        y:vec.y * scale
+    };
+}
+
 //returns the intersection point (if one exists) between the two lines defined
 //by p1,p2 and p3, p4. returns false if none exists
 function lineLineIntersection(p1,p2,p3,p4) {
@@ -872,5 +925,22 @@ function randomParab(shouldDraw)
     var c = m(Math.random() * 20 - 10, Math.random() * 10 - 5);
 
     return new Parabola(a,b,c,shouldDraw);
+}
+
+function velocityAngle(vel)
+{
+    var angle = Math.atan2(vel.x,vel.y);
+    if(angle < 0)
+    {
+        angle += 2*Math.PI;
+    }
+    return angle;
+}
+
+function velocityHue(vel)
+{
+    var angle = velocityAngle(vel);
+    var hueVal = map(angle,0,2*Math.PI,0,1);
+    return hue = "hsb(" + String(hueVal) + ",0.7,0.9)";
 }
 
