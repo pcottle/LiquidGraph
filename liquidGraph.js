@@ -368,16 +368,16 @@ Edge.prototype.validateSolutionPoint = function(parabola,tValue) {
     var ax, ay, vx, vy, px, py;
 
     //the px and py are relative
-    px = parabola.pStart.x - this.p1.x;
-    py = parabola.pStart.y - this.p1.y;
+    px = parabola.pos.x - this.p1.x;
+    py = parabola.pos.y - this.p1.y;
 
     ax = parabola.accel.x; ay = parabola.accel.y;
-    vx = parabola.vInit.x; vy = parabola.vInit.y;
+    vx = parabola.vel.x; vy = parabola.vel.y;
 
 
     var solutionPoint = {
-        x: parabola.pStart.x + tValue * vx + 0.5 * tValue * tValue * ax,
-        y: parabola.pStart.y + tValue * vy + 0.5 * tValue * tValue * ay
+        x: parabola.pos.x + tValue * vx + 0.5 * tValue * tValue * ax,
+        y: parabola.pos.y + tValue * vy + 0.5 * tValue * tValue * ay
     };
 
     //if we don't contain this point, get pissed because it was deceiving
@@ -394,17 +394,17 @@ Edge.prototype.validateSolutionPoint = function(parabola,tValue) {
 Edge.prototype.parabolaIntersection = function(parabola) {
     //a parabola is defined as:
     //
-    // pStart -> starting point of parabola (vec)
-    // vInit -> starting velocity (vec)
+    // pos -> starting point of parabola (vec)
+    // vel -> starting velocity (vec)
     // accel -> acceleration direction (vec)
     var ax, ay, vx, vy, px, py;
 
     //the px and py are relative
-    px = parabola.pStart.x - this.p1.x;
-    py = parabola.pStart.y - this.p1.y;
+    px = parabola.pos.x - this.p1.x;
+    py = parabola.pos.y - this.p1.y;
 
     ax = parabola.accel.x; ay = parabola.accel.y;
-    vx = parabola.vInit.x; vy = parabola.vInit.y;
+    vx = parabola.vel.x; vy = parabola.vel.y;
 
     //we solve this via a clever parametric equation taken into a cross product
     //of the vector of our endpoints
@@ -453,16 +453,15 @@ Edge.prototype.parabolaIntersection = function(parabola) {
     return null;
 }
 
-function Parabola(pStart,vInit,accel,dontDraw) {
-    this.pStart = pStart;
-    this.vInit = vInit;
+function Parabola(pos,vel,accel,shouldDraw) {
+    this.pos = pos;
+    this.vel = vel;
     this.accel = accel;
 
     this.path = null;
-    this.paths = [];
 
     //go draw ourselves
-    if(!dontDraw)
+    if(shouldDraw)
     {
         this.drawParabolaPath(-1);
     }
@@ -470,7 +469,7 @@ function Parabola(pStart,vInit,accel,dontDraw) {
 
 Parabola.prototype.drawParabolaPath = function(tVal) {
 
-    var angle = Math.atan2(this.vInit.x,this.vInit.y);
+    var angle = Math.atan2(this.vel.x,this.vel.y);
     if(angle < 0)
     {
         angle += 2*Math.PI;
@@ -487,7 +486,7 @@ Parabola.prototype.drawParabolaPath = function(tVal) {
     });
 }
 
-Parabola.prototype.removePaths = function() {
+Parabola.prototype.removePath = function() {
     if(this.path)
     {
         this.path.remove();
@@ -498,8 +497,8 @@ Parabola.prototype.removePaths = function() {
 Parabola.prototype.getPointYielder = function() {
 
     var pointYielder = function(tValue) {
-        var thisX = this.pStart.x + tValue * this.vInit.x + 0.5 * tValue * tValue * this.accel.x;
-        var thisY = this.pStart.y + tValue * this.vInit.y + 0.5 * tValue * tValue * this.accel.y;
+        var thisX = this.pos.x + tValue * this.vel.x + 0.5 * tValue * tValue * this.accel.x;
+        var thisY = this.pos.y + tValue * this.vel.y + 0.5 * tValue * tValue * this.accel.y;
         return {'x':thisX,'y':thisY};
     };
     pointYielder = pointYielder.bind(this);
@@ -510,8 +509,8 @@ Parabola.prototype.getPointYielder = function() {
 Parabola.prototype.getSlopeYielder = function() {
 
     var slopeYielder = function(tValue) {
-        var slopeX = this.vInit.x + tValue * this.accel.x;
-        var slopeY = this.vInit.y + tValue * this.accel.y;
+        var slopeX = this.vel.x + tValue * this.accel.x;
+        var slopeY = this.vel.y + tValue * this.accel.y;
         return {'x':slopeX,'y':slopeY};
     };
     slopeYielder = slopeYielder.bind(this);
@@ -523,8 +522,8 @@ Parabola.prototype.getQuadraticBezierPoints = function(tValue) {
     var pointYielder = this.getPointYielder();
     var slopeYielder = this.getSlopeYielder();
 
-    //essentially we just need the first point, a point really far away,
-    //and the intersection between the slopes of those two points
+    //essentially we just need the first point and the point at which we want to stop drawing.
+    //then define two lines based on the slopes there and intersect them for the control point!
 
     var p1 = pointYielder(0);
     var slope1 = slopeYielder(0);
@@ -539,11 +538,10 @@ Parabola.prototype.getQuadraticBezierPoints = function(tValue) {
     return {'C1':p1,'C2':intersectPoint,'C3':p3};
 }
 
-Parabola.prototype.getQuadraticBezierPath = function(desiredTimeVal) {
+Parabola.prototype.getEndTimeValue = function(desiredTimeVal) {
 
     //if our tVal is -1, we want to draw offscreen.
     //else, draw to a specific tVal
-
     var t = 0;
 
     if(!desiredTimeVal || desiredTimeVal < 0)
@@ -563,6 +561,16 @@ Parabola.prototype.getQuadraticBezierPath = function(desiredTimeVal) {
         t = desiredTimeVal;
     }
 
+    return t;
+}
+
+Parabola.prototype.getQuadraticBezierPath = function(desiredTimeVal) {
+
+    //if our tVal is -1, we want to draw offscreen.
+    //else, draw to a specific tVal
+
+    var t = this.getEndTimeValue(desiredTimeVal);
+
     var cPoints = this.getQuadraticBezierPoints(t);
 
     var c1 = cPoints.C1;
@@ -579,76 +587,194 @@ Parabola.prototype.getQuadraticBezierPath = function(desiredTimeVal) {
 }
 
 
-function Kinetic(pos,vel,accel) {
+function KineticState(pos,vel,accel) {
     this.pos = pos;
     this.vel = vel;
     this.accel = accel;
 }
 
-function Particle(startKinetic,onEdge) {
-    this.startK = startKinetic;
-    this.onEdge = onEdge;
+KineticState.prototype.toParabola = function() {
+    return new Parabola(this.pos,this.vel,this.accel);
 }
 
-//Advances the particle to the next
-Particle.prototype.advance = function(edges) {
-    //TODO: query the edges intelligently
-    if(!edges)
+
+function KineticPath(parabola,endTime)
+{
+    this.pointYielder = parabola.getPointYielder();
+    this.slopeYielder = parabola.getSlopeYielder();
+    this.parabola = parabola;
+
+    //begin time is assumed to be 0
+
+    //if the endTime is less than -1, we need to animate until it's offscreen.
+    //hence, convert the time
+    this.endTime = parabola.getEndTimeValue(endTime);
+    this.endPoint = null;
+}
+
+KineticPath.prototype.animate = function(rPoint,rArrow) {
+    //might take in a point and arrow and animate them
+    //along the given path. problem is that we need to do this with a setTimeout() kinda thing...
+}
+
+KineticPath.prototype.drawPath = function() {
+
+    this.parabola.drawParabolaPath(this.endTime);
+}
+
+KineticPath.prototype.showEndpoint = function() {
+    var point = this.pointYielder(this.endTime);
+    this.endPoint = cuteSmallCircle(point.x,point.y);
+
+    //optional
+    this.endPoint.glow();
+}
+
+KineticPath.prototype.clearPath = function() {
+    this.parabola.removePath();
+
+    if(this.endPoint)
     {
-        edges = [];
-        for(var i = 0; i < polyController.polys.length; i++)
-        {
-            edges = edges.concat(polyController.polys[i].edges);
-        }
+        this.endPoint.remove();
+    }
+
+    //can't clear the glow unfortunately :O kinda a todo
+}
+
+
+
+
+function Particle(startKineticState,state) {
+    this.startKineticState = startKineticState;
+    this.currentKinetic = startKineticState;
+
+    //optional argument. gah i still wish JS had that support
+    if(!state)
+    {
+        state = {
+            name:'freeFall'
+        };
+    }
+
+    //state is either:
+    // name: freeFall
+    //
+    // name: onEdge, whichEdge: [Object Edge]
+    //
+    // name: offScreen
+    //
+    // name: settledAtVertex, whichVertex: [Object Vertex (concave)]
+
+    this.state = state;
+
+    //we would also like to keep track of path for animation and debugging support.
+    //
+    //we will do this by maintaining a list of point yielders, slope yielders and associated time intervals
+    //to animate those point yielders through. that way we can playback a given particle trace.
+    //
+    //This combination of a point yielder / slope yielder / time interval is known as a "KineticPath"
+
+    this.kPaths = [];
+}
+
+//Advances the particle to the next collision or reflection point.
+//
+//If there is a collision or inflection point, the next kinetic state is calculated
+//(along with the specific edge if applicable) and the function returns
+Particle.prototype.advance = function() {
+
+    //if the particle is on an edge, then we do that logic
+    if(this.state.name == 'onEdge')
+    {
+        var kPath = this.edgeSlide();
+    }
+    else if(this.state.name == 'freeFall')
+    {
+        var kPath = this.freeFall();
+    }
+
+    //if our state name is settled or offscreen, then stop animating.
+    if(this.state.name == 'offScreen' || this.state.name == 'settledAtVertex')
+    {
+        return {'done':true};
+    }
+    else
+    {
+        return {'done':false,'kPath':kPath};
+    }
+}
+
+Particle.prototype.freeFall = function() {
+
+    //TODO: query the edges intelligently. We might use a quadtree here eventually but
+    //that's low on the priority list
+    var edges = [];
+    for(var i = 0; i < polyController.polys.length; i++)
+    {
+        edges = edges.concat(polyController.polys[i].edges);
     }
 
     //now loop through and intersect your own poly with each
-
-    //TODO: with the current kinetic not just start
-
-    var sk = this.startK;
+    var sk = this.currentKinetic;
 
     //make a parabola but don't draw it right away
-    //TODO:DEBUG
-    var parab = new Parabola(sk.pos,sk.vel,sk.accel,true);
+    var parab = sk.toParabola();
     this.parab = parab;
 
     //intersect this parab with each edge and take the min
-    var tRecord = Number.MAX_VALUE;
-    var found = false;
+    var tRecord = -1;
+    var edgeHit = null;
 
+    //maybetODO: do this with webworkers in parallel? we can't really block though...
+    //and if we wanted to do the vertex classification in parallel, we would have to
+    //copy the entire Raphael reference as well for the inside test. hmm. more thought
+    //on this is required
     for(var i = 0; i < edges.length; i++)
     {
         var edge = edges[i];    
         var results = edge.parabolaIntersection(parab);
+
         if(results)
         {
-            found = true;
             var t = results.tValue;
-            if(t < tRecord)
+
+            //tRecord < 0 is for the initial assignment of -1, and we have -1
+            //because that's our offscreen integer
+            if(tRecord < 0 || t < tRecord)
             {
                 tRecord = t;
+                edgeHit = edge;
             }
         }
     }
 
-    //now draw the parab until here
-    if(found)
+    if(edgeHit)
     {
-        parab.drawParabolaPath(tRecord);
-        var point = parab.getPointYielder()(tRecord);
-        var asd = cuteSmallCircle(point.x,point.y);
-        asd.glow();
+        //we should collide to update our kinetic state
+        this.collide(parab,tRecord,edgeHit);
     }
     else
     {
-        parab.drawParabolaPath(-1); //till offscreen
+        this.state = {name:'offScreen'};
     }
 
-    return parab;
+    //make a path. the neat thing here is that based on our tRecord, we will either
+    //draw the parabola until it's offscreen or correctly draw it until it hits the
+    //edge we collided with. yay parametric equations FTW
+
+    var kPath = new KineticPath(parab,tRecord);
+
+    this.kPaths.push(kPath);
+
+    return kPath;
 }
 
+//updates kinetic state after a collision. Also in charge of determining if
+//the particle is on edge or still free falling after a collision
+Particle.prototype.collide = function(parabola,tValue,edge) {
+    //TODO
 
+}
 
 
 
@@ -738,13 +864,13 @@ function m(x,y) {
     return {x:x,y:y};
 }
 
-function randomParab(dontDraw)
+function randomParab(shouldDraw)
 {
     var width = $j(window).width();
     var a = m(Math.random() * width, Math.random() * width);
     var b = m(Math.random() * 100 - 50, Math.random() * 100 - 50);
     var c = m(Math.random() * 20 - 10, Math.random() * 10 - 5);
 
-    return new Parabola(a,b,c,dontDraw);
+    return new Parabola(a,b,c,shouldDraw);
 }
 

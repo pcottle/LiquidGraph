@@ -273,7 +273,7 @@ TraceUIControl.prototype.clearScreen = function() {
     //clear screen
     if(this.startPoint) { this.startPoint.remove(); }
     if(this.endPoint) { this.endPoint.remove(); }
-    if(this.parab) { this.parab.removePaths(); }
+    if(this.parab) { this.parab.removePath(); }
     if(this.path) { this.path.remove(); }
 }
 
@@ -316,10 +316,10 @@ TraceUIControl.prototype.rightClick = function(x,y) {
 
 TraceUIControl.prototype.mouseUp = function(x,y) {
     //make the particle and advance it once
-    var k = new Kinetic(this.s,this.vel,this.accel);
+    var k = new KineticState(this.s,this.vel,this.accel);
 
-    var particle = new Particle(k,false);
-    particle.advance();
+    var particle = new Particle(k);
+    advanceDraw(particle);
 
     //make sure to reset our vars
     this.clearScreen();
@@ -358,7 +358,7 @@ TraceUIControl.prototype.mouseMove = function(x,y) {
     }
     this.startTime = time;
 
-    if(this.parab) { this.parab.removePaths(); }
+    if(this.parab) { this.parab.removePath(); }
     if(this.path) { this.path.remove(); }
     if(this.endPoint) { this.endPoint.remove(); }
 
@@ -375,7 +375,7 @@ TraceUIControl.prototype.mouseMove = function(x,y) {
     };
 
     //now we have start, vel, and accel
-    this.parab = new Parabola(this.s,this.vel,this.accel);
+    this.parab = new Parabola(this.s,this.vel,this.accel,true);
 }
 
 
@@ -483,8 +483,11 @@ function onScreen(point) {
     var width = $j('#canvasHolder').width();
     var height = $j('#canvasHolder').height();
 
-    //we dont check for zero because particles could come back down
-    return point.x < width && point.x > 0 && point.y < height;
+    //we dont check for y because particles could come back down
+
+    //TODO: the particle could technically "come back down" from the screen edge depending on the accel
+    //and velocity combo. hence we need to actually take in an accel here to check!
+    return point.x < width && point.x > 0 && point.y < height && point.y > 0;
 }
 
 function bombard() {
@@ -492,9 +495,9 @@ function bombard() {
     //make 100 random parabolas and trace em
     for(var i = 0; i < 100; i++)
     {
-        var parab = randomParab(true);
-        var x = parab.pStart.x;
-        var y = parab.pStart.y;
+        var parab = randomParab(false);
+        var x = parab.pos.x;
+        var y = parab.pos.y;
 
         var inside = false;
         for(var j = 0; j < polys.length; j++)
@@ -512,11 +515,10 @@ function bombard() {
         }
 
         //make a particle and advance
-        var k = new Kinetic(parab.pStart,parab.vInit,parab.accel);
+        var k = new KineticState(parab.pos,parab.vel,parab.accel);
         var particle = new Particle(k);
 
-        var parab = particle.advance();
-        var parabPath = parab.path;
+        advanceDraw(particle);
 
         //DEBUG
         //click = makeDebugClosure(parab,parabPath);
@@ -524,11 +526,22 @@ function bombard() {
     }
 }
 
+function advanceDraw(particle)
+{
+    var results = particle.advance();
+    if(results.kPath)
+    {
+        results.kPath.drawPath();
+        results.kPath.showEndpoint();
+    }
+}
+
+
 function makeDebugClosure(parab,path) {
 
     var toReturn = function() {
-        var s = parab.pStart;
-        var v = parab.vInit;
+        var s = parab.pos;
+        var v = parab.vel;
         var a = parab.accel;
         console.log(s,v,a);
         path.glow();
