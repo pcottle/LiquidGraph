@@ -50,7 +50,7 @@ uiControl.prototype.canvasMouseUp = function(e) {
 uiControl.prototype.canvasMove = function(e) {
     if(this.parentObj.active)
     {
-        this.parentObj.mouseMove(e.offsetX,e.offsetY);
+        this.parentObj.mouseMove(e.offsetX,e.offsetY,e);
     }
 }
 
@@ -427,7 +427,13 @@ TraceUIControl.prototype.leftClick = function(x,y) {
     this.mouseMove(x,y);
 }
 
-TraceUIControl.prototype.mouseMove = function(x,y) {
+TraceUIControl.prototype.mouseMove = function(x,y,e) { 
+    if(e && !e.which)
+    {
+        this.clearScreen();
+        this.resetVars();
+        return;
+    }
 
     //only do the moving if our mouse is down
     if(!this.startPoint)

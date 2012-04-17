@@ -1,6 +1,7 @@
 //Globals
 var pointOverlapTolerance = 5;
 var endpointPointOverlapTolerance = 1.5;
+var part = null
 /*********** CLASSES ********/
 
 function Vertex(x,y,rPoint,parentPoly) {
@@ -745,6 +746,9 @@ KineticPath.prototype.animateStep = function() {
     else
     {
         //we are done! call our parent done function. yay closures
+        //also remove our body and arrow
+        this.particleBody.remove();
+        this.vArrow.path.remove();
         this.doneFunction();
     }
 }
@@ -770,7 +774,7 @@ KineticPath.prototype.showEndpoint = function() {
     this.particleBody = cuteSmallCircle(point.x,point.y);
 
     //optional
-    this.particleBody.glow();
+    //this.particleBody.glow();
 }
 
 KineticPath.prototype.clearPath = function() {
@@ -862,7 +866,6 @@ Particle.prototype.advance = function() {
     }
     else
     {
-        console.log(this.traceState.name);
         return {'done':false,'kPath':kPath};
     }
 }
@@ -975,17 +978,18 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
     var preCollisionVelocity = parabola.slopeYielder(tValue);
     var accel = parabola.accel;
 
-    //first project velocity onto edge
-    var newVelocity = this.projectVelocityOntoEdge(preCollisionVelocity,edge);
+    //first project velocity onto edge, and see if it's on the edge now
+    //after the tolerance check
+    var results = this.projectVelocityOntoEdge(preCollisionVelocity,edge);
+    var newVelocity = results.newVelocity;
+    var onEdgeTest2 = results.nowOnEdge;
 
     //now determine if we are on the edge:
     //
     // do this by first seeing if the accel will keep us on the edge
     //
-    // then look at normal velocity and see if it's essentially 0 (the tolerance is done
-    // in the vector projection). 
-    var onEdgeTest1 = vecDot(accel,edge.outwardNormal) >= 0;
-    var onEdgeTest2 = vecDot(preCollisionVelocity,edge.outwardNormal) > 0;
+    // then look at result from collision
+    var onEdgeTest1 = vecDot(accel,edge.outwardNormal) <= 0;
 
     var onEdge = onEdgeTest2 && onEdgeTest1;
 
@@ -998,6 +1002,10 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         var tempParab = new Parabola(pos,newVelocity,accel);
         //advance slightly
         var bouncedOff = tempParab.pointYielder(0.01);
+        var here = tempParab.pointYielder(0);
+
+        cuteSmallCircle(here.x,here.y);
+        cuteSmallCircle(bouncedOff.x,bouncedOff.y);
 
         this.currentKineticState = new KineticState(bouncedOff,newVelocity,accel);
         this.kStates.push(this.currentKineticState);
@@ -1021,11 +1029,18 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
 
 Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
 
+    var nowOnEdge = false;
+
     if(vecDot(velocity,edge.outwardNormal) >= 0)
     {
         console.log("done with a velocity!!");
-        //var asd = new rArrow(edge.p1,velocity);
+        console.log("result was",vecDot(velocity,edge.outwardNormal));
+        console.log(velocity);
+
+        var asd = new rArrow(edge.p1,velocity);
         edge.highlight();
+        console.log(this);
+        part = this;
 
         throw new Error('Projecting vector onto edge with same facing outward normal!');
     }
@@ -1048,18 +1063,23 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
     //get the elasticity rebound
     var newNormalVelocity = vecScale(vecSubtract(velocity,newTangentVelocity),this.elasticity);
 
-    //here we have a TOLERANCE where if the velocity is just too dang low in the tangental direction,
+    //here we have a TOLERANCE where if the velocity is just too dang low 
+    //in the tangental direction,
     //then we will set it to zero so we are edge sliding
-    if(vecLength(newNormalVelocity) <= 10)
+    if(vecLength(newNormalVelocity) <= 1)
     {
         newNormalVelocity = vecScale(newNormalVelocity,0);
+        nowOnEdge = true;
     }
 
     //its a rebound for a reason
     newNormalVelocity = vecNegate(newNormalVelocity);
 
     //the new velocity is these two
-    return vecAdd(newTangentVelocity,newNormalVelocity);
+    return {
+        'newVelocity':vecAdd(newTangentVelocity,newNormalVelocity),
+        'nowOnEdge':nowOnEdge
+    };
 }
 
 Particle.prototype.projectVectorOntoEdge = function(vector,edge) {
@@ -1085,6 +1105,8 @@ Particle.prototype.projectVectorOntoEdge = function(vector,edge) {
 
 Particle.prototype.edgeSlide = function() {
     console.log("edge sliding");
+
+    //TODO
 
     this.traceState.name = 'settledAtVertex';
 }
