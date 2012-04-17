@@ -683,8 +683,8 @@ KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
     //first remove our animationFeatures if they exist
     if(!animateSpeed)
     {
-        //animateSpeed = 0.2;
-        animateSpeed = 0.01;
+        animateSpeed = 0.2;
+        //animateSpeed = 0.01;
     }
     this.doneFunction = doneFunction;
 
@@ -978,11 +978,18 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
     //first project velocity onto edge
     var newVelocity = this.projectVelocityOntoEdge(preCollisionVelocity,edge);
 
-    //now determine if we are on the edge or not by looking at the edge outward normal
-    //and accel
-    var onEdgeTest = vecDot(accel,edge.outwardNormal);
+    //now determine if we are on the edge:
+    //
+    // do this by first seeing if the accel will keep us on the edge
+    //
+    // then look at normal velocity and see if it's essentially 0 (the tolerance is done
+    // in the vector projection). 
+    var onEdgeTest1 = vecDot(accel,edge.outwardNormal) >= 0;
+    var onEdgeTest2 = vecDot(preCollisionVelocity,edge.outwardNormal) > 0;
 
-    if(onEdgeTest >= 0)
+    var onEdge = onEdgeTest2 && onEdgeTest1;
+
+    if(!onEdge)
     {
         //we are 'free falling' so save kinetic state and update state. easy.
         //
@@ -1023,10 +1030,6 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
         throw new Error('Projecting vector onto edge with same facing outward normal!');
     }
 
-    return this.projectVectorOntoEdge(velocity,edge);
-}
-
-Particle.prototype.projectVectorOntoEdge = function(velocity,edge) {
     //get the edge slope unit vector
     var edgeSlope = vecNormalize(edge.edgeSlope);
 
@@ -1044,12 +1047,41 @@ Particle.prototype.projectVectorOntoEdge = function(velocity,edge) {
 
     //get the elasticity rebound
     var newNormalVelocity = vecScale(vecSubtract(velocity,newTangentVelocity),this.elasticity);
+
+    //here we have a TOLERANCE where if the velocity is just too dang low in the tangental direction,
+    //then we will set it to zero so we are edge sliding
+    if(vecLength(newNormalVelocity) <= 10)
+    {
+        newNormalVelocity = vecScale(newNormalVelocity,0);
+    }
+
     //its a rebound for a reason
     newNormalVelocity = vecNegate(newNormalVelocity);
 
     //the new velocity is these two
     return vecAdd(newTangentVelocity,newNormalVelocity);
 }
+
+Particle.prototype.projectVectorOntoEdge = function(vector,edge) {
+    //get the edge slope unit vector
+    var edgeSlope = vecNormalize(edge.edgeSlope);
+
+    //if the dot product is negative, negate the edge slope
+    if(vecDot(edgeSlope,vector) < 0)
+    {
+        edgeSlope = vecNegate(edgeSlope);
+    }
+
+    //now dot these two, and divide by their lengths to get the cos(theta) term
+    var cosTheta = vecDot(vector,edgeSlope) / (vecLength(vector) * 1);
+
+    //now scale correctly with the cos(theta) term
+    var newTangentVector = vecScale(edgeSlope,cosTheta * vecLength(vector));
+
+    //this is the projected vector
+    return newTangentVector;
+}
+
 
 Particle.prototype.edgeSlide = function() {
     console.log("edge sliding");
