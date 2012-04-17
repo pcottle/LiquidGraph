@@ -36,12 +36,12 @@ Vertex.prototype.concaveTest = function() {
     //in Raphael to just test if an entire line lies within a polygon or not
     this.isConcave = true;
 
-    //bit both 0.01 and 0.99. this test isn't as robust as I would like it to be but
+    //hit both 0.01 and 0.99. this test isn't as robust as I would like it to be but
     //it's good enough in practice
     for(var t = 0.01; t < 1; t += 0.098)
     {
         var point = convexCombo(before,after,t);
-        var inside = this.parentPoly.rPath.isPointInside(point.x,point.y);
+        var inside = this.parentPoly.isPointInside(point);
 
         //we only need ONE point to lie inside the polygon on the 'ear'
         //in order to classify this as convex
@@ -159,7 +159,7 @@ Polygon.prototype.buildEdges = function() {
         }
 
         var nextPoint = this.vertices[nextIndex];
-        var edge = new Edge(currPoint,nextPoint);
+        var edge = new Edge(currPoint,nextPoint,this);
         //edge.highlight();
 
         this.edges.push(edge);
@@ -168,6 +168,10 @@ Polygon.prototype.buildEdges = function() {
         currPoint.outEdge = edge;
         nextPoint.inEdge = edge;
     }
+}
+
+Polygon.prototype.isPointInside = function(point) {
+    return this.rPath.isPointInside(point.x,point.y);
 }
 
 Polygon.prototype.validatePoints = function() {
@@ -259,14 +263,54 @@ function distBetween(p1,p2) {
     return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
 }
 
-function Edge(p1,p2) {
+function Edge(p1,p2,parentPoly) {
     this.p1 = p1;
     this.p2 = p2;
+    this.parentPoly = parentPoly;
 
     if(distBetween(p1,p2) < pointOverlapTolerance)
     {
         throw new Error("Invalid Polygon -- Edge with two points on top of each other!");
     }
+
+    this.outwardNormal = this.getOutwardNormal();
+}
+
+Edge.prototype.getOutwardNormal = function() {
+    //ok this is a bit hacked up but get avg point, get a given normal, displace a bit, and test
+    //for inclusion in the polygon. i know i know this sucks but normal computational
+    //geometry people get clockwise ordered vertices so it's easy, not for me with those
+    //tricky users!!
+
+    var midPoint = vecAdd(vecScale(this.p1,0.5),vecScale(this.p2,0.5));
+
+    this.edgeSlope = vecSubtract(this.p2,this.p1);
+
+    var edgeSlope = this.edgeSlope;
+
+    var aNormal = {
+        'x':edgeSlope.y * -1,
+        'y':edgeSlope.x
+    };
+    aNormal = vecNormalize(aNormal);
+
+    //displace by a bit
+    var testPoint = vecAdd(midPoint,vecScale(aNormal,0.01));
+
+    //if this is inside, then negate!
+    if(this.parentPoly.isPointInside(testPoint))
+    {
+        aNormal = vecNegate(aNormal);
+    }
+
+    //for debug, make an arrow
+    if(debug)
+    {
+        new rArrow(midPoint,vecScale(aNormal,100));
+        new rArrow(midPoint,edgeSlope);
+    }
+
+    return aNormal;
 }
 
 Edge.prototype.highlight = function() {
@@ -454,11 +498,18 @@ Edge.prototype.parabolaIntersection = function(parabola) {
 }
 
 function Parabola(pos,vel,accel,shouldDraw) {
+    if(!pos || !vel || !accel)
+    {
+        throw new Error("undefined parameters!");
+    }
+
+
     this.pos = pos;
     this.vel = vel;
     this.accel = accel;
 
     this.path = null;
+    this.clickFunction = null;
 
     //go draw ourselves
     if(shouldDraw)
@@ -477,12 +528,26 @@ Parabola.prototype.drawParabolaPath = function(tVal) {
         'stroke-width':3,
         'stroke':hue
     });
+
+    if(this.clickFunction)
+    {
+        this.path.click(this.clickFunction);
+    }
 }
 
 Parabola.prototype.removePath = function() {
     if(this.path)
     {
         this.path.remove();
+    }
+}
+
+Parabola.prototype.click = function(clickFunction) {
+    this.clickFunction = clickFunction;
+
+    if(this.path)
+    {
+        this.path.click(clickFunction);
     }
 }
 
@@ -543,7 +608,7 @@ Parabola.prototype.getEndTimeValue = function(desiredTimeVal) {
         t = 1;
         var point = pointYielder(t);
 
-        while(onScreen(point))
+        while(onScreen(point,this.accel))
         {
             t += 1;
             point = pointYielder(t);
@@ -607,10 +672,15 @@ function KineticPath(parabola,endTime)
     this.vArrow = null;
 
     this.animateTime = 0;
+    this.animateFunction = this.getAnimateFunction();
 }
 
 KineticPath.prototype.animate = function(animateSpeed) {
     //first remove our animationFeatures if they exist
+    if(!animateSpeed)
+    {
+        animateSpeed = 0.2;
+    }
 
     this.clearAnimation();
     this.animateSpeed = animateSpeed;
@@ -619,17 +689,53 @@ KineticPath.prototype.animate = function(animateSpeed) {
     var startPoint = this.pointYielder(0);
     var startVel = this.slopeYielder(0);
 
+    this.pos = startPoint;
+    this.vel = startVel;
+
     this.particleBody = cuteSmallCircle(startPoint.x,startPoint.y);
     this.vArrow = new rArrow(startPoint,startVel);
 
     //start animation with timeout
 
+    //60fps?
+    setTimeout(this.animateFunction,1000 * 1/60);
+}
+
+KineticPath.prototype.getAnimateFunction = function() {
+    var animate = function() {
+        this.animateStep();
+    };
+    animate = animate.bind(this);
+    return animate;
 }
 
 KineticPath.prototype.animateStep = function() {
     if(!this.animateSpeed) { throw new Error("animate speed not set!"); }
 
+    this.animateTime += this.animateSpeed;
 
+    if(this.animateTime > this.endTime)
+    {
+        this.animateTime = this.endTime;
+    }
+
+    //once time advances, update our stuff!
+    this.pos = this.pointYielder(this.animateTime);
+    this.vel = this.slopeYielder(this.animateTime);
+
+    //move our particle body and update our arrow
+    this.particleBody.attr({
+        'cx':this.pos.x,
+        'cy':this.pos.y
+    });
+
+    this.vArrow.update(this.pos,this.vel);
+
+    //set another?
+    if(this.animateTime < this.endTime)
+    {
+        setTimeout(this.animateFunction,1000 * 1/60);
+    }
 }
 
 KineticPath.prototype.clearAnimation = function() {
@@ -642,6 +748,7 @@ KineticPath.prototype.clearAnimation = function() {
 KineticPath.prototype.drawPath = function() {
 
     this.parabola.drawParabolaPath(this.endTime);
+
 }
 
 KineticPath.prototype.showEndpoint = function() {
@@ -667,7 +774,7 @@ KineticPath.prototype.clearPath = function() {
 
 function Particle(startKineticState,state) {
     this.startKineticState = startKineticState;
-    this.currentKinetic = startKineticState;
+    this.currentKineticState = startKineticState;
 
     //optional argument. gah i still wish JS had that support
     if(!state)
@@ -686,7 +793,7 @@ function Particle(startKineticState,state) {
     //
     // name: settledAtVertex, whichVertex: [Object Vertex (concave)]
 
-    this.state = state;
+    this.traceState = state;
 
     //we would also like to keep track of path for animation and debugging support.
     //
@@ -696,7 +803,13 @@ function Particle(startKineticState,state) {
     //This combination of a point yielder / slope yielder / time interval is known as a "KineticPath"
 
     this.kPaths = [];
+
+    this.kStates = [];
+    this.kStates.push(this.currentKineticState);
 }
+
+//ELASTICITY
+Particle.prototype.elasticity = 0.5;
 
 //Advances the particle to the next collision or reflection point.
 //
@@ -706,17 +819,18 @@ Particle.prototype.advance = function() {
     var kPath = null;
 
     //if the particle is on an edge, then we do that logic
-    if(this.state.name == 'onEdge')
+    if(this.traceState.name == 'onEdge')
     {
         kPath = this.edgeSlide();
     }
-    else if(this.state.name == 'freeFall')
+    //or we freefall
+    else if(this.traceState.name == 'freeFall')
     {
         kPath = this.freeFall();
     }
 
     //if our state name is settled or offscreen, then stop animating.
-    if(this.state.name == 'offScreen' || this.state.name == 'settledAtVertex')
+    if(this.traceState.name == 'offScreen' || this.traceState.name == 'settledAtVertex')
     {
         return {'done':true,'kPath':kPath};
     }
@@ -737,7 +851,7 @@ Particle.prototype.freeFall = function() {
     }
 
     //now loop through and intersect your own poly with each
-    var sk = this.currentKinetic;
+    var sk = this.currentKineticState;
 
     //make a parabola but don't draw it right away
     var parab = sk.toParabola();
@@ -777,7 +891,7 @@ Particle.prototype.freeFall = function() {
     }
     else
     {
-        this.state = {name:'offScreen'};
+        this.traceState = {name:'offScreen'};
     }
 
     //make a path. the neat thing here is that based on our tRecord, we will either
@@ -786,18 +900,114 @@ Particle.prototype.freeFall = function() {
 
     var kPath = new KineticPath(parab,tRecord);
 
+    if(debug)
+    {
+        var closure = this.makeDebugClosure(parab,tRecord,kPath,edgeHit);
+        kPath.parabola.click(closure);
+    }
+
     this.kPaths.push(kPath);
     return kPath;
 }
 
-//updates kinetic state after a collision. Also in charge of determining if
-//the particle is on edge or still free falling after a collision
-Particle.prototype.collide = function(parabola,tValue,edge) {
-    //TODO
+Particle.prototype.makeDebugClosure = function(parab,tRecord,kPath,edgeHit) {
 
+    var toReturn = function() {
+        console.log("The particle");
+        console.log(this);
+        console.log("The parabola");
+        console.log(parab);
+        console.log("The time we obtained");
+        console.log(tRecord);
+        console.log("The kinetic Path");
+        console.log(kPath);
+        if(edgeHit)
+        {
+            console.log("The edge we hit");
+            console.log(edgeHit);
+            edgeHit.highlight();
+        }
+
+        parab.path.glow();
+    };
+
+    toReturn = toReturn.bind(this);
+
+    return toReturn;
 }
 
+//updates kinetic state after a collision. Also in charge of determining if
+//the particle is on edge or still free falling after a collision
 
+Particle.prototype.collide = function(parabola,tValue,edge) {
+    //we need to update our kinetic state with this projected velocity and decide
+    //if we are on an edge or not!
+
+    //first get the kinetic state RIGHT before the collision
+    var pos = parabola.pointYielder(tValue);
+    var preCollisionVelocity = parabola.slopeYielder(tValue);
+    var accel = parabola.accel;
+
+    //first project velocity onto edge
+    var newVelocity = this.projectVectorOntoEdge(preCollisionVelocity,edge);
+
+    //now determine if we are on the edge or not by looking at the edge outward normal
+    //and accel
+    var onEdgeTest = vecDot(accel,edge.outwardNormal);
+
+    if(onEdgeTest >= 0)
+    {
+        //we are 'free falling' so save kinetic state and update state. easy.
+        this.currentKineticState = new KineticState(pos,newVelocity,accel);
+        this.kStates.push(this.currentKineticState);
+
+        this.traceState = {name:'freeFall'};
+    }
+    else
+    {
+        //we are on an edge now... project our accel onto this edge
+        var newAccel = this.projectVectorOntoEdge(accel,edge);
+
+        this.currentKineticState = new KineticState(pos,newVelocity,newAccel);
+        this.kStates.push(this.currentKineticState);
+
+        this.traceState = {
+            name:'onEdge',
+            whichEdge:edge
+        };
+    }
+}
+
+Particle.prototype.projectVectorOntoEdge = function(velocity,edge) {
+
+    if(vecDot(velocity,edge.outwardNormal) >= 0)
+    {
+        throw new Error('Projecting vector onto edge with same facing outward normal!');
+    }
+
+    //get the edge slope unit vector
+    var edgeSlope = vecNormalize(edge.edgeSlope);
+
+    //if the dot product is negative, negate the edge slope
+    if(vecDot(edgeSlope,velocity) < 0)
+    {
+        edgeSlope = vecNegate(edgeSlope);
+    }
+
+    //now dot these two, and divide by their lengths to get the cos(theta) term
+    var cosTheta = vecDot(velocity,edgeSlope) / (vecLength(velocity) * 1);
+
+    //now scale correctly
+    var newTangentVelocity = vecScale(edgeSlope,cosTheta * vecLength(velocity));
+
+    //get the elasticity rebound
+    var newNormalVelocity = vecScale(vecSubtract(velocity,newTangentVelocity),this.elasticity);
+    //its a rebound for a reason
+    newNormalVelocity = vecNegate(newNormalVelocity);
+
+    //the new velocity is these two
+    return vecAdd(newTangentVelocity,newNormalVelocity);
+}
 
 
 /**********END CLASSSES*************/
@@ -849,6 +1059,14 @@ function vecAdd(vec1,vec2) {
     return {
         x:vec1.x + vec2.x,
         y:vec1.y + vec2.y
+    };
+}
+
+function vecNormalize(vec) {
+    var denom = vecLength(vec);
+    return {
+        x:vec.x / denom,
+        y:vec.y / denom
     };
 }
 
@@ -943,4 +1161,12 @@ function velocityHue(vel)
     var hueVal = map(angle,0,2*Math.PI,0,1);
     return hue = "hsb(" + String(hueVal) + ",0.7,0.9)";
 }
+
+function velocityHueFaded(vel)
+{
+    var angle = velocityAngle(vel);
+    var hueVal = map(angle,0,2*Math.PI,0,1);
+    return hue = "hsba(" + String(hueVal) + ",0.7,0.9,0.1)";
+}
+
 

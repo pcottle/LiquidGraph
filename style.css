@@ -488,6 +488,7 @@ h1 {
    text-decoration: none;
    vertical-align: middle;
    cursor:pointer;
+   
    }
 .uiButton:hover {
    border-top-color: #28597a;
@@ -499,6 +500,8 @@ h1 {
    background: #1b435e;
 }
 
+
+
 #traceButton {
     position:absolute;
     top:60px;
@@ -509,3 +512,5 @@ h1 {
     position:absolute;
     top:20px;
     left:10px;
+    
+ 

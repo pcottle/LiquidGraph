@@ -180,7 +180,6 @@ rArrow.prototype.buildPath = function() {
     var pathStr = constructPathStringFromCoords(points);
 
     var velMag = vecLength(this.vel);
-    console.log(velMag);
 
     var extra = map(velMag,0,1000,0,10);
     var strokeWidth = 2 + Math.round(extra);
@@ -188,11 +187,13 @@ rArrow.prototype.buildPath = function() {
     this.path = p.path(pathStr);
     this.path.attr({
         'stroke-width':strokeWidth,
-        'stroke':velocityHue(this.vel)
+        'stroke':velocityHue(this.vel),
+         'stroke-linecap':'round',
+        'stroke-linejoin':'round'
     });
 }
 
-rArrow.prototype.updatePath = function(pos,vel) {
+rArrow.prototype.update = function(pos,vel) {
     if(this.path)
     {
         this.path.remove();
@@ -549,7 +550,12 @@ function cutePath(pathString,wantsToFill,strokeColor) {
     {
         strokeColor = '#FFF';
     }
-    path.attr({'stroke-width':2,'stroke':strokeColor});
+    path.attr({
+        'stroke-width':2,
+        'stroke':strokeColor,
+        'stroke-linecap':'round',
+        'stroke-linejoin':'round'
+    });
 
     if(wantsToFill)
     {
@@ -566,15 +572,72 @@ function windowResize(e) {
     p.setSize(width,height);
 }
 
-function onScreen(point) {
+function onScreen(point,accel) {
+    var x = point.x;
+    var y = point.y;
+
+    if(!accel)
+    {
+        throw new Error("no accel specified!");
+    }
+
     var width = $j('#canvasHolder').width();
     var height = $j('#canvasHolder').height();
 
-    //we dont check for y because particles could come back down
+    //ok so there are four boundaries. we can't check the boundary that is OPPOSITE
+    //the direction of the acceleration because the particle might come back down!
 
-    //TODO: the particle could technically "come back down" from the screen edge depending on the accel
-    //and velocity combo. hence we need to actually take in an accel here to check!
-    return point.x < width && point.x > 0 && point.y < height && point.y > 0;
+    var bottomCheck = function(x,y) {
+        return y > 0;
+    };
+    var topCheck = function(x,y) {
+        return y < height;
+    };
+    var leftCheck = function(x,y) {
+        return x > 0;
+    };
+    var rightCheck = function(x,y) {
+        return x < width;
+    };
+
+    //ok so then nullify the check that corresponds to our accel angle
+    var accelAngle = vecAtan2(accel);
+
+    //accel is pointing to the right
+    if(accelAngle >= -Math.PI * 0.25 && accelAngle < Math.PI * 0.25)
+    {
+        leftCheck = null;
+    }
+    else if(accelAngle >= Math.PI * 0.25 && accelAngle < Math.PI * 0.75) //pointing up
+    {
+        bottomCheck = null;
+    }
+    else if(accelAngle >= Math.PI * 0.75 || accelAngle < -Math.PI * 0.75) // left
+    {
+        rightCheck = null;
+    }
+    else if(accelAngle < -Math.PI * 0.25 && accelAngle >= -Math.PI * 0.75) // down
+    {
+        topCheck = null;
+    }
+    else
+    {
+        console.warn("bad accel angle ",accelAngle);
+    }
+
+    var checks = [leftCheck,bottomCheck,rightCheck,topCheck];
+
+    var checkResult = true;
+    for(var i = 0; i < checks.length; i++)
+    {
+        if(checks[i])
+        {
+            checkResult = checkResult && checks[i](x,y);
+        }
+    }
+
+    return checkResult;
+    //we dont check for y because particles could come back down
 }
 
 function bombard() {
@@ -606,10 +669,6 @@ function bombard() {
         var particle = new Particle(k);
 
         advanceDraw(particle);
-
-        //DEBUG
-        //click = makeDebugClosure(parab,parabPath);
-        //parabPath.click(click);
     }
 }
 
@@ -620,19 +679,19 @@ function advanceDraw(particle)
     {
         results.kPath.drawPath();
         results.kPath.showEndpoint();
+        results.kPath.animate();
     }
 }
 
-
-function makeDebugClosure(parab,path) {
-
-    var toReturn = function() {
-        var s = parab.pos;
-        var v = parab.vel;
-        var a = parab.accel;
-        console.log(s,v,a);
-        path.glow();
-    };
-    return toReturn;
+function toggleDebug()
+{
+    debug = !debug;
+    if(debug)
+    {
+        $j('#debugButton').text('Stop Debugging');
+    }
+    else
+    {
+        $j('#debugButton').text('Debug');
+    }
 }
-

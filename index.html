@@ -26,12 +26,13 @@
 $j = jQuery.noConflict();
 
 //globals
-//TODO: technically i should make a ui control for these
-//notify variables but that's not a priority
 var notifyTimeout = null;
 var p = null;
 
 var polygonInsertControl = null;
+var polyController = null;
+
+var debug = false;
 
 
 function startLoadingWithText(theText) {
@@ -137,6 +138,9 @@ $j(document).ready(function(){
 </a>
 
 <a class="uiButton" style="position:absolute;top:100px;left:10px" onclick="javscript:bombard();">Bombard
+</a>
+
+<a id="debugButton" class="uiButton" style="position:absolute;top:140px;left:10px" onclick="javascript:toggleDebug();">Debug
 </a>
 
 </body>
