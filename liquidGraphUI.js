@@ -491,7 +491,7 @@ TraceUIControl.prototype.mouseUp = function(x,y) {
 
     for(var j = 0; j < polys.length; j++)
     {
-        if(polys[j].rPath.isPointInside(x,y))
+        if(polys[j].rPath.isPointInside(this.s.x,this.s.y))
         {
             inside = true;
             break;
