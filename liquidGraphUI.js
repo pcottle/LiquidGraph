@@ -10,27 +10,45 @@ function uiControl(parentObj) {
     //event handlers
     var cc = function(e) {
         this.canvasClick(e);
-    }
+    };
     var cm = function(e) {
         this.canvasMove(e);
-    }
+    };
     var crc = function(e) {
         this.canvasRightClick(e);
-    }
+    };
     var mu = function(e) {
         this.canvasMouseUp(e);
+    };
+    var kd = function(e) {
+        this.canvasKeyDown(e);
+    };
+
+    try {
+    crc = crc.bind(this);
+    } catch (e) { 
+        alert("Sorry, Your browser does not support javascript function context binding! Hence this only works in Firefox / Chrome :D");
     }
 
-    crc = crc.bind(this);
     cc = cc.bind(this);
     cm = cm.bind(this);
     mu = mu.bind(this);
+    kd = kd.bind(this);
 
     //register event handlers
     $j('#canvasHolder').bind('mousedown',cc);
     $j('#canvasHolder').bind('mousemove',cm);
     $j('#canvasHolder').bind('contextmenu',crc);
     $j('#canvasHolder').bind('mouseup',mu);
+    $j(document).bind('keydown',kd);
+}
+
+uiControl.prototype.canvasKeyDown = function(e) {
+    if(this.parentObj.active)
+    {
+        var which = e.which;
+        this.parentObj.keyDown(which,e);
+    }
 }
 
 uiControl.prototype.canvasRightClick = function(e) {
@@ -50,7 +68,10 @@ uiControl.prototype.canvasMouseUp = function(e) {
 uiControl.prototype.canvasMove = function(e) {
     if(this.parentObj.active)
     {
-        this.parentObj.mouseMove(e.offsetX,e.offsetY,e);
+        var x = e.offsetX; var y = e.offsetY;
+        if(!x) { x = e.pageX; y = e.pageY; } //FF
+
+        this.parentObj.mouseMove(x,y,e);
     }
 }
 
@@ -63,6 +84,12 @@ uiControl.prototype.canvasClick = function(e) {
 
     var x = e.offsetX;
     var y = e.offsetY;
+
+    if(!x) //FF
+    {
+        x = e.pageX;
+        y = e.pageY;
+    }
 
     if(e.which == 1)
     {
@@ -88,6 +115,10 @@ uiControl.prototype.mouseMove = function(x,y) {
 }
 
 uiControl.prototype.leftClick = function(x,y) {
+    return;
+}
+
+uiControl.prototype.keyDown = function(which) {
     return;
 }
 
@@ -221,6 +252,7 @@ function polygonUIControl() {
     this.uiPoints = [];
     this.uiPath = null;
     this.currentPoint = null;
+    this.firstTime = true;
 
     this.prototype = new uiControl(this);
     this.UIbutton = new UIButton(this,'addPolyButton','Add Polygon','Stop Adding Polygons');
@@ -247,9 +279,31 @@ polygonUIControl.prototype.activate = function() {
     this.currentPoint = null;
     this.uiPath = null;
 
+    if(this.firstTime)
+    {
+        //explain what to do if its our first time
+        topNotifyTemp("Left Click to Add, Right Click / Space to close",5000);
+        this.firstTime = false;
+    }
+
     this.active = true;
     this.UIbutton.active = true;
     $j('#canvasHolder').css('cursor','crosshair');
+}
+
+polygonUIControl.prototype.keyDown = function(which,e) {
+
+    if(!this.currentPoint || which != 32)
+    {
+        //we aren't inserting, dont do anything. or hit wrong button
+        return;
+    }
+
+    var x = this.currentPoint.attr('cx');
+    var y = this.currentPoint.attr('cy');
+
+    //if it's a space, then go close the polygon?
+    this.rightClick(x,y);
 }
 
 polygonUIControl.prototype.rightClick = function(x,y) {
@@ -270,8 +324,7 @@ polygonUIControl.prototype.rightClick = function(x,y) {
         polyController.add(polygon);
 
     } catch(e) {
-        topNotify(String(e));
-        setTimeout(function(){ topNotifyClear(); },3000);
+        topNotifyTemp(String(e));
 
         //we have to color this polygon red and remove it
         polyPath.animate({'stroke':'#F00','stroke-width':20},800,'easeInOut');
@@ -350,6 +403,7 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 function TraceUIControl() {
     this.resetVars();
     this.accel = {'x':0,'y':50};
+    this.firstTime = true;
 
     this.prototype = new uiControl(this);
     this.UIbutton = new UIButton(this,'traceButton','Trace Particle','Stop Tracing Particles');
@@ -390,6 +444,12 @@ TraceUIControl.prototype.activate = function() {
     //just reset some variables
     this.resetVars();
 
+    if(this.firstTime)
+    {
+        this.firstTime = false;
+        topNotifyTemp("Left click, drag, and release to shoot",4000);
+    }
+
     this.active = true;
     this.UIbutton.active = true;
     $j('#canvasHolder').css('cursor','crosshair');
@@ -397,6 +457,10 @@ TraceUIControl.prototype.activate = function() {
 
 TraceUIControl.prototype.rightClick = function(x,y) {
     //just return I think? or do a random arc from here
+    return;
+}
+
+TraceUIControl.prototype.keydown = function(which,e) {
     return;
 }
 

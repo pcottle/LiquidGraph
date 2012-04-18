@@ -70,6 +70,12 @@ function topNotify(theText) {
     topNotifyHtml("<h1>" + theText + "</h1>");
 }
 
+function topNotifyTemp(theText,time) {
+    if(!time) { time = 3000; }
+    topNotify(theText);
+    setTimeout('topNotifyClear();',time);
+}
+
 function topNotifyHtml(theText) {
     //and if someone is clicking fast, get rid of it
     if(notifyTimeout)
@@ -123,7 +129,7 @@ $j(document).ready(function(){
 
 <img src="loading.gif"class="loadingGif"/>
 
-<div id="topNotifyBarWrapper" style="width:100%;text-align:center;position:absolute;top:0px;">
+<div id="topNotifyBarWrapper" style="width:100%;text-align:center;position:absolute;top:-100px;height:0px;">
     <div id="topNotifyBarHolder" class="buttonGradient smooth topNotifyBar topNotifyBarHidden bubbleToStop" onclick="topNotifyClear()" style="display:inline-block;cursor:pointer">
         <div id="topNotifyBar">
 
