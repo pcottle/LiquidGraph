@@ -460,7 +460,7 @@ TraceUIControl.prototype.rightClick = function(x,y) {
     return;
 }
 
-TraceUIControl.prototype.keydown = function(which,e) {
+TraceUIControl.prototype.keyDown = function(which,e) {
     return;
 }
 
