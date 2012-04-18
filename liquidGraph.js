@@ -300,6 +300,16 @@ function Edge(p1,p2,parentPoly,outwardNormal) {
     }
 }
 
+Edge.prototype.getOtherVertex = function(vertex) {
+    if(!vertex || !this.p1 || !this.p2) { throw new Error("null arguments!"); }
+
+    if(this.p1 == vertex)
+    {
+        return this.p2;
+    }
+    return this.p1;
+}
+
 Edge.prototype.getOutwardNormal = function() {
     //ok this is a bit hacked up but get avg point, get a given normal, displace a bit, and test
     //for inclusion in the polygon. i know i know this sucks but normal computational
@@ -1210,10 +1220,6 @@ Particle.prototype.getArrivalVertex = function() {
     var boundaryEdges = [p1BoundaryEdge,p2BoundaryEdge];
     var parab = this.currentKineticState.toParabola();
 
-    //starting accel
-    var asd = new rArrow(edge.p1,parab.accel);
-    asd.highlight();
-
     //we have our boundary edges. now go do a very similar looping and solve
     var tRecord = -1;
     var edgeHit = null;
@@ -1267,6 +1273,8 @@ Particle.prototype.edgeSlide = function() {
     this.kPaths.push(kPath);
 
     var arrivalVertex = arrivalResults.arrivalVertex;
+    var arrivalVel = arrivalResults.arrivalVel;
+    var arrivalPos = arrivalResults.arrivalPos;
 
     //ok so now we have all this GREAT information about our state
     //when we cross a vertex. here we branch into 3 different situations
@@ -1290,16 +1298,99 @@ Particle.prototype.edgeSlide = function() {
 
     //ok it's not as easy as the edgepop; we need to determine the angle between the two lines
     //that adjoin at this vertex. first, we need the "other edge"
-    var edgeWeAreOn = this.traceState.whichEdge;
 
+    var edgeWeAreOn = this.traceState.whichEdge;
     var edgeWeAreHitting = arrivalVertex.getOtherEdge(edgeWeAreOn);
 
-    var angleBetween = angleBetweenVectors(edgeWeAreOn.edgeSlope,edgeWeAreHitting.edgeSlope);
+    var angleBetween = angleBetweenEdges(edgeWeAreOn,edgeWeAreHitting);
 
-    //based on the angle we branch here
+    //ok so if this anglebetween is less than 90
+    if(angleBetween < Math.PI * 0.5)
+    {
+        //the edge traps this, so this is easy
+        this.easyEdgeTrap(arrivalResults);
+        return;
+    }
 
-    this.traceState = {'name':'settledAtVertex'};
+    /***************** EDGE TRANSITION *****************/
+    //final option. we need to collide onto this edge. we might end up edge sliding if
+    //our rebound is low, or we might end up free falling if our rebound is high. hence, we call
+    //to our awesome projection method
+
+    var results = this.projectVelocityOntoEdge(arrivalVel,edgeWeAreHitting);
+
+    var nowOnEdge = results.nowOnEdge; var newVelocity = results.newVelocity;
+
+    console.log('post edgetransition velocity',vecLength(newVelocity),'ondge',nowOnEdge);
+
+    if(vecLength(newVelocity) <= 3)
+    {
+        this.easyEdgeTrap(arrivalResults);
+        return;
+    }
+
+    if(results.nowOnEdge)
+    {
+        //our velocity is not small, so transition to edge sliding on this edge. we need 2 things:
+        //
+        //  1) the acceleration projected onto the edge
+        //
+        //  2) a position just slightly forward from the arrival position on the other edge
+        //     so we dont accidentally solve the edge collision problem with t=0
+
+        var newAccel = this.projectVectorOntoEdge(this.fieldAccel,edgeWeAreHitting);
+
+        var otherVertex = edgeWeAreHitting.getOtherVertex(arrivalVertex);
+        var directionWeAreHeaded = vecNormalize(vecSubtract(otherVertex,arrivalVertex));
+        //DEBUG: TODO: need to decide
+        //var newPos = vecAdd(arrivalPos,vecScale(directionWeAreHeaded,0.001));
+        var newPos = arrivalPos;
+
+        var newState = new KineticState(newPos,newVelocity,newAccel);
+        this.currentKineticState = newState;
+        this.kStates.push(newState);
+
+        this.traceState = {
+            'name':'onEdge',
+            'whichEdge':edgeWeAreHitting
+        };
+        return;
+    }
+
+    //FINAL possiblity. we are now free falling but just above this new edge
+    var newAccel = this.fieldAccel;
+    //DEBUG: TODO: need to decide
+    var bouncedOff = vecAdd(arrivalPos,vecScale(edgeWeAreHitting.outwardNormal,0.005));
+
+    var newState = new KineticState(bouncedOff,newVelocity,newAccel);
+    this.currentKineticState = newState;
+    this.kStates.push(newState);
+
+    this.traceState = {
+        'name':'freeFall'
+    };
 }
+
+Particle.prototype.easyEdgeTrap = function(arrivalResults) {
+
+    //just set the position at the right spot, null out velocity and accel,
+    //and then update our kinetic state / traceState
+
+    var arrivalVertex = arrivalResults.arrivalVertex;
+    var arrivalPos = arrivalResults.arrivalPos;
+    var arrivalVel = vecMake(0,0);
+    var arrivalAccel = vecMake(0,0);
+
+    var endState = new KineticState(arrivalPos,arrivalVel,arrivalAccel);
+    this.currentKineticState = endState;
+    this.kStates.push(endState);
+
+    this.traceState = {
+        'name':'settledAtVertex',
+        'whichVertex':arrivalVertex
+    };
+}
+
 
 Particle.prototype.easyEdgePop = function(arrivalResults) {
     //ok here's what we do:
@@ -1488,6 +1579,10 @@ function m(x,y) {
     return {x:x,y:y};
 }
 
+function vecMake(x,y) {
+    return {x:x,y:y};
+}
+
 function randomParab(shouldDraw)
 {
     var width = $j(window).width();
@@ -1506,6 +1601,29 @@ function velocityAngle(vel)
         angle += 2*Math.PI;
     }
     return angle;
+}
+
+/*
+    returns the angle BETWEEN the edges at the junction / vertex point, aka
+           * 
+    \     /
+     \   /
+      \O/
+       *
+
+    where O is theta, even though the second vector is pointing out. we negate
+    the second vector to do the calculation.
+                                                    */
+
+function angleBetweenEdges(edge1,edge2)
+{
+    //this function HEAVILY depends on edge point ordering being consistent around the boundary
+    //of a polygon, but it is, so I think we are good
+    var slope1 = edge1.edgeSlope;
+    var slope2 = vecNegate(edge2.edgeSlope);
+
+    var dotScaled = vecDot(slope1,slope2) / (vecLength(slope1) * vecLength(slope2));
+    return Math.acos(dotScaled);
 }
 
 function velocityHue(vel)
