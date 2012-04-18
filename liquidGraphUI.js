@@ -156,6 +156,7 @@ UIButton.prototype.anchorClick = function() {
 
 
 function rArrow(pos,vel) {
+    if(!pos || !vel) { throw new Error("null arguments!"); }
     //ok so we want to essentially make a path that looks like an arrow
 
     //this consists of making a path. first we start at our position, and then
@@ -234,6 +235,23 @@ rArrow.prototype.update = function(pos,vel) {
     this.vel = vel;
 
     this.buildPath();
+}
+
+rArrow.prototype.remove = function() {
+    if(this.path)
+    {
+        this.path.remove();
+    }
+}
+
+rArrow.prototype.highlight = function() {
+    if(this.path)
+    {
+        this.path.attr({
+            'stroke':'#F00',
+            'stroke-width':5
+        });
+    }
 }
 
 
@@ -402,7 +420,7 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 
 function TraceUIControl() {
     this.resetVars();
-    this.accel = {'x':0,'y':50};
+    this.accel = {'x':0.5,'y':50};
     this.firstTime = true;
 
     this.prototype = new uiControl(this);
@@ -468,7 +486,10 @@ TraceUIControl.prototype.mouseUp = function(x,y) {
     //make the particle and advance it once
     var k = new KineticState(this.s,this.vel,this.accel);
 
-    var particle = new Particle(k);
+    var particle = new Particle(k,this.accel);
+    //DEBUG
+    part = particle;
+
     advanceDraw(particle);
 
     //make sure to reset our vars
@@ -713,7 +734,7 @@ function onScreen(point,accel) {
 function bombard() {
     var polys = polyController.polys;
     //make 100 random parabolas and trace em
-    for(var i = 0; i < 100; i++)
+    for(var i = 0; i < 10; i++)
     {
         var parab = randomParab(false);
         var x = parab.pos.x;
@@ -736,7 +757,7 @@ function bombard() {
 
         //make a particle and advance
         var k = new KineticState(parab.pos,parab.vel,parab.accel);
-        var particle = new Particle(k);
+        var particle = new Particle(k,parab.accel);
 
         advanceDraw(particle);
     }
@@ -749,7 +770,7 @@ function advanceDraw(particle)
     for(var i = 0; i < particle.kPaths.length; i++)
     {
         particle.kPaths[i].drawPath();
-        particle.kPaths[i].showEndpoint();
+        //particle.kPaths[i].showEndpoint();
     }
 
     particle.animate();

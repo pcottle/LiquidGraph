@@ -12,6 +12,7 @@ function Vertex(x,y,rPoint,parentPoly) {
 
     this.inEdge = null;
     this.outEdge = null;
+    this.isConcave = null;
 }
 
 Vertex.prototype.highlight = function() {
@@ -20,6 +21,17 @@ Vertex.prototype.highlight = function() {
         'stroke':'#000',
         'stroke-width':3,
     },800,'easeInOut');
+}
+
+Vertex.prototype.getOtherEdge = function(edge) {
+    if(!this.inEdge || !this.outEdge) { throw new Error("null edges!"); }
+
+    //this comparison works because the edges aren't typecasted to strings or anything
+    if(this.inEdge == edge)
+    {
+        return this.outEdge;
+    }
+    return this.inEdge;
 }
 
 Vertex.prototype.concaveTest = function() {
@@ -161,7 +173,6 @@ Polygon.prototype.buildEdges = function() {
 
         var nextPoint = this.vertices[nextIndex];
         var edge = new Edge(currPoint,nextPoint,this);
-        //edge.highlight();
 
         this.edges.push(edge);
 
@@ -197,10 +208,12 @@ Polygon.prototype.validatePoints = function() {
 //controls the global polygons
 var polygonController = function() {
     this.polys = [];
+    this.allEdges = [];
 }
 
 polygonController.prototype.add = function(poly) {
     this.polys.push(poly);
+    this.allEdges = this.allEdges.concat(poly.edges);
 }
 
 
@@ -264,17 +277,27 @@ function distBetween(p1,p2) {
     return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
 }
 
-function Edge(p1,p2,parentPoly) {
+function Edge(p1,p2,parentPoly,outwardNormal) {
     this.p1 = p1;
     this.p2 = p2;
     this.parentPoly = parentPoly;
+
+    this.midPoint = vecAdd(vecScale(this.p1,0.5),vecScale(this.p2,0.5));
+    this.edgeSlope = vecSubtract(this.p2,this.p1);
 
     if(distBetween(p1,p2) < pointOverlapTolerance)
     {
         throw new Error("Invalid Polygon -- Edge with two points on top of each other!");
     }
 
-    this.outwardNormal = this.getOutwardNormal();
+    if(this.parentPoly && !outwardNormal)
+    {
+        this.outwardNormal = this.getOutwardNormal();
+    }
+    else
+    {
+        this.outwardNormal = outwardNormal;
+    }
 }
 
 Edge.prototype.getOutwardNormal = function() {
@@ -283,9 +306,7 @@ Edge.prototype.getOutwardNormal = function() {
     //geometry people get clockwise ordered vertices so it's easy, not for me with those
     //tricky users!!
 
-    var midPoint = vecAdd(vecScale(this.p1,0.5),vecScale(this.p2,0.5));
-
-    this.edgeSlope = vecSubtract(this.p2,this.p1);
+    var midPoint = this.midPoint;
 
     var edgeSlope = this.edgeSlope;
 
@@ -799,14 +820,20 @@ KineticPath.prototype.clearPath = function() {
 
 
 
-function Particle(startKineticState,state) {
+function Particle(startKineticState,fieldAccel,beginState) {
     this.startKineticState = startKineticState;
     this.currentKineticState = startKineticState;
 
+    if(!fieldAccel) { throw new Error("specify a field acceleration! We might not start in free fall"); }
+
+    //the acceleration to restore once we go back to free falling.
+    //because we might not start in free falling!!!
+    this.fieldAccel = fieldAccel;
+
     //optional argument. gah i still wish JS had that support
-    if(!state)
+    if(!beginState)
     {
-        state = {
+        beginState = {
             name:'freeFall'
         };
     }
@@ -820,7 +847,7 @@ function Particle(startKineticState,state) {
     //
     // name: settledAtVertex, whichVertex: [Object Vertex (concave)]
 
-    this.traceState = state;
+    this.traceState = beginState;
 
     //we would also like to keep track of path for animation and debugging support.
     //
@@ -886,11 +913,7 @@ Particle.prototype.freeFall = function() {
 
     //TODO: query the edges intelligently. We might use a quadtree here eventually but
     //that's low on the priority list
-    var edges = [];
-    for(var i = 0; i < polyController.polys.length; i++)
-    {
-        edges = edges.concat(polyController.polys[i].edges);
-    }
+    var edges = polyController.allEdges;
 
     //now loop through and intersect your own poly with each
     var sk = this.currentKineticState;
@@ -1015,9 +1038,6 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         //solution!
         var bouncedOff = vecAdd(pos,vecScale(edge.outwardNormal,0.01));
 
-        cuteSmallCircle(pos.x,pos.y);
-        cuteSmallCircle(bouncedOff.x,bouncedOff.y);
-
         this.currentKineticState = new KineticState(bouncedOff,newVelocity,accel);
         this.kStates.push(this.currentKineticState);
 
@@ -1027,6 +1047,19 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
     {
         //we are on an edge now... project our accel onto this edge
         var newAccel = this.projectVectorOntoEdge(accel,edge);
+
+        //this new acceleration is correct
+        //var asd = new rArrow(edge.midPoint,newAccel);
+        //asd.highlight();
+
+        //if our accel is 0, and our new velocity is zero, particle might not settle / move
+        //
+        //hence we might need to just stop here?
+        if(vecLength(newAccel) < 0.1 && vecLength(newVelocity) < 0.1)
+        {
+            //we should see if this actually happens in practice...
+            console.warn("Extremely low velocity and accel after collision");
+        }
 
         this.currentKineticState = new KineticState(pos,newVelocity,newAccel);
         this.kStates.push(this.currentKineticState);
@@ -1087,11 +1120,14 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
         //      \/
         //
         //in short im glad I have both these checks in here
-        //console.warn("actually used the cos check");
+
+        newNormalVelocity.x =0.001; newNormalVelocity.y = 0.001;
     }
     else if(vecLength(newNormalVelocity) < 1)
     {
         nowOnEdge = true;
+        //0's wreck havoc
+        newNormalVelocity.x = 0.001; newNormalVelocity.y = 0.001;
     }
 
     //its a rebound for a reason
@@ -1125,12 +1161,175 @@ Particle.prototype.projectVectorOntoEdge = function(vector,edge) {
 }
 
 
+Particle.prototype.getArrivalVertex = function() { 
+
+    if(this.traceState.name != 'onEdge') { throw new Error("dont call arrival vertex when not on edge!"); }
+    if(!this.traceState.whichEdge) { throw new Error("null edge during sliding!"); }
+
+    //ok so here's the tricky thing. there are two cases with edge sliding when determining
+    //the vertex we will end up at:
+    //
+    //  1) our velocity and acceleration are pointing in the same direction. This means
+    //     that our instantaneous direction at impact is the direction towards the vertex
+    //     we will arrive at first
+    //
+    //  2) the second situation is where our acceleration and velocity are pointing in
+    //     opposite directions. This means that the vertex of arrival (haha) is
+    //     completely ambiguous.
+    //
+    //     To rectify these situations, I will do something tricky. I will define two lines
+    //     , one at each vertex, and then use our parabola with the projected accel
+    //     and velocity to solve for which vertex we cross first. This ends up being advantageous,
+    //     for we need to determine the kinetic state at the vertex anyways, and rather than doing some
+    //     horrible forward simulation (with super small or super large timesteps), we instead
+    //     solve deterministically / parametrically and then just compute the required kinetic
+    //     state at that edge.
+    //
+    // 
+
+    var edge = this.traceState.whichEdge;
+    var edgeNormal = vecScale(edge.outwardNormal,40);
+    var edgeSlope = edge.edgeSlope;
+
+    //ok so first define the edge at p1
+    var p1Top = vecAdd(edge.p1,edgeNormal);
+    var p1Bottom = vecAdd(edge.p1,vecNegate(edgeNormal));
+
+    //pass in a defined outward normal so it doesnt do the test
+    var p1BoundaryEdge = new Edge(p1Top,p1Bottom,null,edgeSlope);
+    p1BoundaryEdge.__vertex = edge.p1;
+
+    var p2Top = vecAdd(edge.p2,edgeNormal);
+    var p2Bottom = vecAdd(edge.p2,vecNegate(edgeNormal));
+
+    var p2BoundaryEdge = new Edge(p2Top,p2Bottom,null,edgeSlope);
+    p2BoundaryEdge.__vertex = edge.p2;
+
+    //p1BoundaryEdge.highlight();
+    //p2BoundaryEdge.highlight();
+    var boundaryEdges = [p1BoundaryEdge,p2BoundaryEdge];
+    var parab = this.currentKineticState.toParabola();
+
+    //starting accel
+    var asd = new rArrow(edge.p1,parab.accel);
+    asd.highlight();
+
+    //we have our boundary edges. now go do a very similar looping and solve
+    var tRecord = -1;
+    var edgeHit = null;
+    for(var i = 0; i < boundaryEdges.length; i++)
+    {
+        var results = boundaryEdges[i].parabolaIntersection(parab);
+
+        if(results)
+        {
+            var t = results.tValue;
+            if(tRecord < 0 || t < tRecord)
+            {
+                tRecord = t;
+                edgeHit = boundaryEdges[i];
+            }
+        }
+    }
+
+    //if we dont have an edge hit here something is seriously wrong
+    if(!edgeHit)
+    {
+        throw new Error("tried to intersect parabola with boundary edges but something failed.");
+    }
+
+    //now we know the kinetic state at vertex arrival AND the vertex we arrive at
+    var arrivalVertex = edgeHit.__vertex;
+
+    var arrivalPos = parab.pointYielder(tRecord);
+    var arrivalVel = parab.slopeYielder(tRecord);
+
+    return {
+        'arrivalVertex':arrivalVertex,
+        'arrivalPos':arrivalPos,
+        'arrivalVel':arrivalVel,
+        'arrivalTime':tRecord
+    };
+}
+
+Particle.prototype.clearPath = function() {
+    $j.each(this.kPaths,function(i,kPath) { kPath.clearPath(); });
+}
+
 Particle.prototype.edgeSlide = function() {
     console.log("edge sliding");
 
-    //TODO
+    //first we must obtain the arrival vertex
+    var arrivalResults = this.getArrivalVertex();
 
-    this.traceState.name = 'settledAtVertex';
+    //no matter what, this path now exists, so make it an add it.
+    var kPath = new KineticPath(this.currentKineticState.toParabola(),arrivalResults.arrivalTime);
+    this.kPaths.push(kPath);
+
+    var arrivalVertex = arrivalResults.arrivalVertex;
+
+    //ok so now we have all this GREAT information about our state
+    //when we cross a vertex. here we branch into 3 different situations
+    //
+    //
+    //      1) The vertex we arrive at is convex, in which we simply bump
+    //         off a bit and then begin free falling at this position once more
+    //
+    //      2) The vertex we arrive at is concave, and the lines join at an angle
+    //         of less than 90 degrees (no rebound), so we become settled immediately
+    //
+    //      3) the vertex we arrive at is concave, but the angle is more than 90 degrees,
+    //         so we have to do the collision / projection logic again and begin edge sliding
+    //         on THAT edge. we should also check for a velocity length here
+
+    if(!arrivalVertex.isConcave)
+    {
+        this.easyEdgePop(arrivalResults);
+        return;
+    }
+
+    //ok it's not as easy as the edgepop; we need to determine the angle between the two lines
+    //that adjoin at this vertex. first, we need the "other edge"
+    var edgeWeAreOn = this.traceState.whichEdge;
+
+    var edgeWeAreHitting = arrivalVertex.getOtherEdge(edgeWeAreOn);
+
+    var angleBetween = angleBetweenVectors(edgeWeAreOn.edgeSlope,edgeWeAreHitting.edgeSlope);
+
+    //based on the angle we branch here
+
+    this.traceState = {'name':'settledAtVertex'};
+}
+
+Particle.prototype.easyEdgePop = function(arrivalResults) {
+    //ok here's what we do:
+    //
+    //  first, pop the position slightly away from the vertex we were just on.
+    //
+    //  then, continue free falling from there!
+
+    var arrivalPos = arrivalResults.arrivalPos;
+    var arrivalVel = arrivalResults.arrivalVel;
+    var arrivalTime = arrivalResults.tRecord;
+
+    var thisEdge = this.traceState.whichEdge;
+
+    //bounce the position slightly upward. This is so we dont intersect our own edge
+    //again when free falling / whatever
+
+    var pushedUp = vecAdd(arrivalPos,vecScale(thisEdge.outwardNormal,0.0001));
+
+    //now we have a new kinetic state here. get the original field acceleration when
+    //free falling
+    var originalAccel = this.fieldAccel;
+
+    //make the kinetic state
+    var kState = new KineticState(pushedUp,arrivalVel,originalAccel);
+    this.currentKineticState = kState;
+    this.kStates.push(kState);
+
+    //update your trace state
+    this.traceState = {'name':'freeFall'};
 }
 
 Particle.prototype.animateStep = function(i) {
