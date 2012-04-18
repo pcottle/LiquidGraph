@@ -952,6 +952,7 @@ Particle.prototype.freeFall = function() {
         if(results)
         {
             var t = results.tValue;
+            console.log('one solution',t,'edge',edge);
 
             //tRecord < 0 is for the initial assignment of -1, and we have -1
             //because that's our offscreen integer
@@ -1091,7 +1092,14 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
 
     var nowOnEdge = false;
 
-    if(vecDot(velocity,edge.outwardNormal) >= 0)
+    if(vecDot(velocity,edge.outwardNormal) > 0 && vecDot(velocity,edge.outwardNormal) < 5)
+    {
+        console.log('wtf');
+        //tolerance against side stuff
+        velocity = vecNegate(velocity);
+    }
+
+    if(vecDot(velocity,edge.outwardNormal) > 0)
     {
         console.log("done with a velocity!!");
         console.log("result was",vecDot(velocity,edge.outwardNormal));
@@ -1350,7 +1358,7 @@ Particle.prototype.edgeSlide = function() {
         var otherVertex = edgeWeAreHitting.getOtherVertex(arrivalVertex);
         var directionWeAreHeaded = vecNormalize(vecSubtract(otherVertex,arrivalVertex));
         //DEBUG: TODO: need to decide
-        var newPos = vecAdd(arrivalPos,vecScale(directionWeAreHeaded,0.001));
+        var newPos = vecAdd(arrivalPos,vecScale(directionWeAreHeaded,0.1));
         //var newPos = arrivalPos;
 
         var newState = new KineticState(newPos,newVelocity,newAccel);
