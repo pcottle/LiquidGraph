@@ -867,9 +867,11 @@ function Particle(startKineticState,fieldAccel,beginState) {
     //This combination of a point yielder / slope yielder / time interval is known as a "KineticPath"
 
     this.kPaths = [];
-
     this.kStates = [];
+    this.tStates = [];
+
     this.kStates.push(this.currentKineticState);
+    this.tStates.push(this.traceState);
 }
 
 //ELASTICITY
@@ -1049,9 +1051,10 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         var bouncedOff = vecAdd(pos,vecScale(edge.outwardNormal,0.01));
 
         this.currentKineticState = new KineticState(bouncedOff,newVelocity,accel);
-        this.kStates.push(this.currentKineticState);
-
         this.traceState = {name:'freeFall'};
+
+        this.kStates.push(this.currentKineticState);
+        this.tStates.push(this.traceState);
     }
     else
     {
@@ -1072,12 +1075,13 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         }
 
         this.currentKineticState = new KineticState(pos,newVelocity,newAccel);
-        this.kStates.push(this.currentKineticState);
-
         this.traceState = {
             name:'onEdge',
             whichEdge:edge
         };
+
+        this.kStates.push(this.currentKineticState);
+        this.tStates.push(this.traceState);
     }
 }
 
@@ -1343,32 +1347,34 @@ Particle.prototype.edgeSlide = function() {
         var otherVertex = edgeWeAreHitting.getOtherVertex(arrivalVertex);
         var directionWeAreHeaded = vecNormalize(vecSubtract(otherVertex,arrivalVertex));
         //DEBUG: TODO: need to decide
-        //var newPos = vecAdd(arrivalPos,vecScale(directionWeAreHeaded,0.001));
-        var newPos = arrivalPos;
+        var newPos = vecAdd(arrivalPos,vecScale(directionWeAreHeaded,0.001));
+        //var newPos = arrivalPos;
 
         var newState = new KineticState(newPos,newVelocity,newAccel);
-        this.currentKineticState = newState;
-        this.kStates.push(newState);
 
+        this.currentKineticState = newState;
         this.traceState = {
             'name':'onEdge',
             'whichEdge':edgeWeAreHitting
         };
+
+        this.tStates.push(this.traceState);
+        this.kStates.push(newState);
         return;
     }
 
     //FINAL possiblity. we are now free falling but just above this new edge
     var newAccel = this.fieldAccel;
-    //DEBUG: TODO: need to decide
     var bouncedOff = vecAdd(arrivalPos,vecScale(edgeWeAreHitting.outwardNormal,0.005));
 
     var newState = new KineticState(bouncedOff,newVelocity,newAccel);
     this.currentKineticState = newState;
-    this.kStates.push(newState);
-
     this.traceState = {
         'name':'freeFall'
     };
+
+    this.kStates.push(newState);
+    this.tStates.push(this.traceState);
 }
 
 Particle.prototype.easyEdgeTrap = function(arrivalResults) {
@@ -1383,12 +1389,14 @@ Particle.prototype.easyEdgeTrap = function(arrivalResults) {
 
     var endState = new KineticState(arrivalPos,arrivalVel,arrivalAccel);
     this.currentKineticState = endState;
-    this.kStates.push(endState);
 
     this.traceState = {
         'name':'settledAtVertex',
         'whichVertex':arrivalVertex
     };
+
+    this.kStates.push(endState);
+    this.tStates.push(this.traceState);
 }
 
 
@@ -1417,10 +1425,12 @@ Particle.prototype.easyEdgePop = function(arrivalResults) {
     //make the kinetic state
     var kState = new KineticState(pushedUp,arrivalVel,originalAccel);
     this.currentKineticState = kState;
-    this.kStates.push(kState);
 
     //update your trace state
     this.traceState = {'name':'freeFall'};
+
+    this.kStates.push(kState);
+    this.tStates.push(this.traceState);
 }
 
 Particle.prototype.animateStep = function(i) {
