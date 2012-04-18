@@ -512,7 +512,9 @@ Edge.prototype.parabolaIntersection = function(parabola) {
     }
 
     //sort the tValues
-    tValues.sort();
+    //WOW ARE YOU KIDDING MEEeeee javascript your sort function fails
+    //so badly. this caused a huge bug
+    tValues.sort(function(a,b) { return a - b; });
 
     //now loop through them.
     //
@@ -876,7 +878,7 @@ function Particle(startKineticState,fieldAccel,beginState) {
 
 //ELASTICITY
 Particle.prototype.elasticity = 0.5;
-Particle.prototype.edgeFriction = 0.1;
+Particle.prototype.edgeFriction = 0.2;
 
 //advances the particle until it settles in a concave vertex or offscreen
 Particle.prototype.settle = function() {
@@ -1325,9 +1327,10 @@ Particle.prototype.edgeSlide = function() {
 
     var nowOnEdge = results.nowOnEdge; var newVelocity = results.newVelocity;
 
-    console.log('post edgetransition velocity',vecLength(newVelocity),'ondge',nowOnEdge);
+    //console.log('post edgetransition velocity',vecLength(newVelocity),'ondge',nowOnEdge);
 
-    if(vecLength(newVelocity) <= 3)
+    //EDGE SETTLE VELOCITY TOLERANCE CONSTANT... 3 is ok but kinda long sometimes
+    if(vecLength(newVelocity) <= 4)
     {
         this.easyEdgeTrap(arrivalResults);
         return;
