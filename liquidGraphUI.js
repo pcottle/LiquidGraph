@@ -486,6 +486,24 @@ TraceUIControl.prototype.mouseUp = function(x,y) {
     //make the particle and advance it once
     var k = new KineticState(this.s,this.vel,this.accel);
 
+    var inside = false;
+    var polys = polyController.polys;
+
+    for(var j = 0; j < polys.length; j++)
+    {
+        if(polys[j].rPath.isPointInside(x,y))
+        {
+            inside = true;
+            break;
+        }
+    }
+    if(inside)
+    {
+        this.clearScreen();
+        this.resetVars();
+        return; //dont launch particles inside polygons
+    }
+
     var particle = new Particle(k,this.accel);
     //DEBUG
     part = particle;
