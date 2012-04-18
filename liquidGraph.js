@@ -1003,6 +1003,8 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
     // then look at result from collision
     var onEdgeTest1 = vecDot(accel,edge.outwardNormal) <= 0;
 
+    //console.log('test1',onEdgeTest1,'test2',onEdgeTest2);
+
     var onEdge = onEdgeTest2 && onEdgeTest1;
 
     if(!onEdge)
@@ -1016,9 +1018,7 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         cuteSmallCircle(pos.x,pos.y);
         cuteSmallCircle(bouncedOff.x,bouncedOff.y);
 
-        //TODO debug this!
-        //this.currentKineticState = new KineticState(bouncedOff,newVelocity,accel);
-        this.currentKinetcState = new KineticState(pos,newVelocity,accel);
+        this.currentKineticState = new KineticState(bouncedOff,newVelocity,accel);
         this.kStates.push(this.currentKineticState);
 
         this.traceState = {name:'freeFall'};
@@ -1042,7 +1042,6 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
 
     var nowOnEdge = false;
 
-    console.log('called');
     if(vecDot(velocity,edge.outwardNormal) >= 0)
     {
         console.log("done with a velocity!!");
@@ -1076,7 +1075,21 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
     var newNormalVelocity = vecScale(vecSubtract(velocity,newTangentVelocity),this.elasticity);
 
     //we check for edge sliding by checking the cosTheta
+
     if(cosTheta > 0.975)
+    {
+        nowOnEdge = true;
+        //BOOM BABY!!! the cosine check is really helpful for when the particle is settling into a
+        //concave vertex hole, like
+        //
+        //    \    /
+        //     \. /
+        //      \/
+        //
+        //in short im glad I have both these checks in here
+        //console.warn("actually used the cos check");
+    }
+    else if(vecLength(newNormalVelocity) < 1)
     {
         nowOnEdge = true;
     }
