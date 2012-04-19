@@ -1074,6 +1074,9 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         {
             //we should see if this actually happens in practice...
             console.warn("Extremely low velocity and accel after collision");
+            //cheat
+            newAccel = vecScale(newAccel,2);
+            newVelocity = vecScale(newVelocity,2);
         }
 
         this.currentKineticState = new KineticState(pos,newVelocity,newAccel);
@@ -1351,6 +1354,9 @@ Particle.prototype.edgeSlide = function() {
         //     so we dont accidentally solve the edge collision problem with t=0
 
         var newAccel = this.projectVectorOntoEdge(this.fieldAccel,edgeWeAreHitting);
+
+        //scale accel by a bit just to simulate a lil friction
+        newAccel = vecScale(newAccel,(1-this.edgeFriction));
 
         var otherVertex = edgeWeAreHitting.getOtherVertex(arrivalVertex);
         var directionWeAreHeaded = vecNormalize(vecSubtract(otherVertex,arrivalVertex));
