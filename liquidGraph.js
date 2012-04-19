@@ -952,7 +952,6 @@ Particle.prototype.freeFall = function() {
         if(results)
         {
             var t = results.tValue;
-            console.log('one solution',t,'edge',edge);
 
             //tRecord < 0 is for the initial assignment of -1, and we have -1
             //because that's our offscreen integer
@@ -1261,7 +1260,8 @@ Particle.prototype.getArrivalVertex = function() {
     //now we know the kinetic state at vertex arrival AND the vertex we arrive at
     var arrivalVertex = edgeHit.__vertex;
 
-    var arrivalPos = parab.pointYielder(tRecord);
+    //using the arrival vertex for the position is FAR BETTER for numerical stability
+    var arrivalPos = vecMake(arrivalVertex.x,arrivalVertex.y);
     var arrivalVel = parab.slopeYielder(tRecord);
 
     return {
@@ -1332,10 +1332,7 @@ Particle.prototype.edgeSlide = function() {
     //to our awesome projection method
 
     var results = this.projectVelocityOntoEdge(arrivalVel,edgeWeAreHitting);
-
     var nowOnEdge = results.nowOnEdge; var newVelocity = results.newVelocity;
-
-    //console.log('post edgetransition velocity',vecLength(newVelocity),'ondge',nowOnEdge);
 
     //EDGE SETTLE VELOCITY TOLERANCE CONSTANT... 3 is ok but kinda long sometimes
     if(vecLength(newVelocity) <= 4)
@@ -1374,9 +1371,37 @@ Particle.prototype.edgeSlide = function() {
         return;
     }
 
-    //FINAL possiblity. we are now free falling but just above this new edge
+    //
+    //  Here's the deal though. This is where there's a SUPER rare bug... think of the situation below:
+    //
+    //                    \o
+    //                  e1 \
+    //                      \
+    //                       |
+    //                    e2 |
+    //
+    //      The particle (o) is sliding on the edge e1. This edge e1 and e2 meet at a convex angle,
+    //      so naturally the particle is going to be "free falling" after we finish sliding on
+    //      e1. The problem (I think) is that we use the parabolic path for the e1 slide to yield the
+    //      final point where this edge transition occurs. Sometimes, due to numerical imprecision,
+    //      the point that is yielded is slightly _behind_ the line defined by e2. Thus, when we
+    //      then cycle through the edges to look for the next edge that is hit, we actually get a solution
+    //      for the e2 / new parabola intersection at what is, essentially, the vertex between the two.
+    //      Then we think we are hitting this edge from behind, so the code barfs because we try to project
+    //      a velocity onto an edge with the same outward facing normal.
+    //      
+    //      I just actually verified this in the debugger, and I got a solution of
+    //      0.00000114454 for the next stage of the particle, meaning that it collided with the edge from
+    //      behind :O. Let's try this:
+    //          If we instead take our next starting position as the VERTEX, we actually get 0
+    //          for the solution! Wahoo. Just to be safe, I might perturb it ever so slightly forward.
+    //
+    //      Also, I technically drew the edgePop situation above, but the same happens with the concave
+    //      vertices that are almost flat. I changed the arrivalPosition to the vertex either way.
+
     var newAccel = this.fieldAccel;
     var bouncedOff = vecAdd(arrivalPos,vecScale(edgeWeAreHitting.outwardNormal,0.005));
+    bouncedOff = vecAdd(bouncedOff,vecScale(edgeWeAreOn.outwardNormal,0.005));
 
     var newState = new KineticState(bouncedOff,newVelocity,newAccel);
     this.currentKineticState = newState;
@@ -1490,6 +1515,7 @@ function map(input,iLower,iUpper,oLower,oUpper)
 
 function makeVec(from,to)
 {
+    if(!from || !to) { throw new Error("using vecMake isntead!"); }
     return {
         x:to.x - from.x,
         y:to.y - from.y
