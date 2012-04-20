@@ -354,31 +354,11 @@ polygonUIControl.prototype.rightClick = function(x,y) {
 
     //to dump this
     var polyPath = cutePath(aPathString,true);
+    
+    var clonedPoints = [];
+    for(var i = 0; i < this.uiPoints.length; i++ ) { clonedPoints.push(this.uiPoints[i].clone()); }
 
-    try {
-        var polygon = new Polygon(this.uiPoints,polyPath);
-
-        //add it to our polyController
-        polyController.add(polygon);
-
-    } catch(e) {
-        topNotifyTemp(String(e));
-
-        //we have to color this polygon red and remove it
-        polyPath.animate({'stroke':'#F00','stroke-width':20},800,'easeInOut');
-        $j.each(this.uiPoints,function(i,point) { point.animate({'r':0,'stroke':'#F00'},800,'easeInOut'); });
-
-        var temp = this.uiPoints;
-
-        //remove it in 1000 ms
-        setTimeout(function() { 
-            polyPath.remove();
-            for(var i = 0; i < temp.length; i++)
-            {
-                temp[i].remove();
-            }
-        }, 1000);
-    }
+    var results = polyController.makePolygon(clonedPoints,polyPath);
 
     //dump the ui stuff
     this.resetUIVars();
@@ -387,6 +367,10 @@ polygonUIControl.prototype.rightClick = function(x,y) {
 polygonUIControl.prototype.resetUIVars = function() {
     this.uiPath.remove();
     this.currentPoint.remove();
+
+    $j.each(this.uiPoints,function(i,point) {
+        point.remove();
+    });
 
     this.uiPoints = [];
     this.uiPath = null;
@@ -445,6 +429,7 @@ function EditUIControl() {
     this.UIbutton = new UIButton(this,'editPolyButton','Edit Polygons','Stop Editing Polygons');
 }
 
+//for some reason the stubs from the prototype dont get inherited
 EditUIControl.prototype.mouseMove = function() { return; }
 EditUIControl.prototype.mouseUp = function() { return; }
 EditUIControl.prototype.leftClick = function() { return; }
@@ -460,6 +445,9 @@ EditUIControl.prototype.activate = function() {
 
     this.active = true;
     this.UIbutton.active = true;
+
+    //reset all particles
+    partController.clearAll();
 
     this.setCursor('move','pointer');
 }

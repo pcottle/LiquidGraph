@@ -13,7 +13,7 @@ function Vertex(x,y,rPoint,parentPoly) {
     this.inEdge = null;
     this.outEdge = null;
     this.isConcave = null;
-}
+};
 
 Vertex.prototype.highlight = function() {
     this.rPoint.animate({
@@ -21,7 +21,7 @@ Vertex.prototype.highlight = function() {
         'stroke':'#000',
         'stroke-width':3,
     },800,'easeInOut');
-}
+};
 
 Vertex.prototype.getOtherEdge = function(edge) {
     if(!this.inEdge || !this.outEdge) { throw new Error("null edges!"); }
@@ -32,7 +32,7 @@ Vertex.prototype.getOtherEdge = function(edge) {
         return this.outEdge;
     }
     return this.inEdge;
-}
+};
 
 Vertex.prototype.concaveTest = function() {
     //the concavity test is as follows:
@@ -66,7 +66,7 @@ Vertex.prototype.concaveTest = function() {
     }
 
     return this.isConcave;
-}
+};
 
 
 
@@ -102,7 +102,7 @@ function Polygon(rPoints,rPath) {
 
     //classify vertices
     this.classifyVertices();
-}
+};
 
 Polygon.prototype.setDragHandlers = function() {
     var onDrag = function(dx,dy,x,y,e) {
@@ -135,17 +135,36 @@ Polygon.prototype.setDragHandlers = function() {
         var newPoints = [];
         for(var i = 0; i < this.vertices.length; i++)
         {
-            newPoints.push(this.vertices[i].rPoint);
+            newPoints.push(this.vertices[i].rPoint.clone());
         }
         var newPathString = constructPathStringFromPoints(newPoints,true);
         var newPath = cutePath(newPathString,true);
 
-        var newPoly = new Polygon(newPoints,newPath);
-
-        this.rPath.remove();
-
+        //we need to temporarily remove ourselves so validation doesnt fail
         polyController.remove(this);
-        polyController.add(newPoly);
+
+        var results = polyController.makePolygon(newPoints,newPath);
+
+        //if successful, clear ourselves out for good
+        if(!results.failed)
+        {
+            this.rPath.remove();
+            $j.each(this.vertices,function(i,vertex) { vertex.rPoint.remove(); });
+        }
+        else
+        {
+            //add ourselves back in
+            polyController.add(this);
+
+            //reset our translation?
+            this.rPath.transform("");
+            $j.each(this.vertices,function(i,vertex) {
+                vertex.rPoint.attr({
+                    'cx':vertex.x,
+                    'cy':vertex.y
+                });
+            });
+        }
     };
 
     var onStart = function(x,y,e) {
@@ -160,7 +179,7 @@ Polygon.prototype.setDragHandlers = function() {
     }
 
     this.rPath.drag(onDrag,onStart,onEnd,this,this,this);
-}
+};
 
 Polygon.prototype.classifyVertices = function() {
     if(this.vertices.length == 3)
@@ -181,7 +200,7 @@ Polygon.prototype.classifyVertices = function() {
             this.concaveVertices.push(vertex);
         }
     }
-}
+};
 
 Polygon.prototype.validatePolygon = function() {
     //make sure no two points on top of each other (or within a few pixels)
@@ -193,7 +212,7 @@ Polygon.prototype.validatePolygon = function() {
     //validate edges for intersections
     this.validateEdges();
 
-}
+};
 
 Polygon.prototype.validateEdges = function() {
     //test all the edges against each other
@@ -201,6 +220,11 @@ Polygon.prototype.validateEdges = function() {
     for(var i = 0; i < this.edges.length; i++)
     {
         var currEdge = this.edges[i];
+
+        if(polyController.doesEdgeIntersectAny(currEdge,this))
+        {
+            throw new Error("An edge overlaps another edge in that polygon!");
+        }
 
         //minor speedup by specifying j = i to start
         for(var j = i; j < this.edges.length; j++)
@@ -215,7 +239,7 @@ Polygon.prototype.validateEdges = function() {
             }
         }
     }
-}
+};
 
 Polygon.prototype.buildEdges = function() {
     for(var i = 0; i < this.vertices.length; i++)
@@ -240,16 +264,22 @@ Polygon.prototype.buildEdges = function() {
         currPoint.outEdge = edge;
         nextPoint.inEdge = edge;
     }
-}
+};
 
 Polygon.prototype.isPointInside = function(point) {
     return this.rPath.isPointInside(point.x,point.y);
-}
+};
 
 Polygon.prototype.validatePoints = function() {
     for(var i = 0; i < this.vertices.length; i++)
     {
         currPoint = this.vertices[i];
+
+        if(polyController.isPointInAny(currPoint,this))
+        {
+            throw new Error("Invalid Polygon - Point inside other polygon!");
+        }
+
         for(var j = i; j < this.vertices.length; j++)
         {
             if(j == i) { continue; }
@@ -263,7 +293,7 @@ Polygon.prototype.validatePoints = function() {
             }
         }
     }
-}
+};
 
 /**************GLOBAL CONTROL OBJECTS *******************/
 
@@ -271,17 +301,87 @@ Polygon.prototype.validatePoints = function() {
 function polygonController() {
     this.polys = [];
     this.allEdges = [];
-}
+};
 
 polygonController.prototype.reset = function() {
     this.polys = [];
     this.allEdges = []; //lol garbage collection
-}
+};
+
+
+//node: we will destroy the points and path here if the polygon fails
+//so make sure they are a cloned / duplicate if you want to preserve them
+
+polygonController.prototype.makePolygon = function(rPoints,rPath) {
+    try {
+        var poly = new Polygon(rPoints,rPath);
+    } catch (e) {
+        topNotifyTemp(String(e));
+
+        //we have to color this polygon red and remove it
+        rPath.animate({'stroke':'#F00','stroke-width':20},800,'easeInOut');
+        $j.each(rPoints,function(i,point) { point.animate({'r':0,'stroke':'#F00'},800,'easeInOut'); });
+
+        //remove it in 1000 ms
+        setTimeout(function() {
+            rPath.remove();
+            for(var i = 0; i < rPoints.length; i++)
+            {
+                rPoints[i].remove();
+            }
+        }, 1000);
+
+        return {
+            'poly':null,
+            'failed':true,
+        };
+    }
+
+    this.add(poly);
+    return {
+        'poly':poly,
+        'failed':false
+    };
+};
+
 
 polygonController.prototype.add = function(poly) {
     this.polys.push(poly);
     this.allEdges = this.allEdges.concat(poly.edges);
-}
+};
+
+polygonController.prototype.doesEdgeIntersectAny = function(edge,sourcePoly) {
+
+    for(var i = 0; i < this.polys.length; i++)
+    {
+        //dont check against yourself
+        if(this.polys[i] == sourcePoly) { continue; }
+
+        for(var j = 0; j < this.polys[i].edges.length; j++)
+        {
+            if(edge.intersectTest(this.polys[i].edges[j]))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+};
+
+polygonController.prototype.isPointInAny = function(point,sourcePoly) {
+
+    for(var i = 0; i < this.polys.length; i++)
+    {
+        //dont check against yourself
+        if(this.polys[i] == sourcePoly) { continue; }
+
+        if(this.polys[i].isPointInside(point))
+        {
+            return true;
+        }
+    }
+    return false;
+};
 
 polygonController.prototype.remove = function(poly) {
     //wish JS had a nice list remove like pyton
@@ -301,24 +401,24 @@ polygonController.prototype.remove = function(poly) {
     {
         this.allEdges = this.allEdges.concat(this.polys[i].edges);
     }
-}
+};
 
 function particleController() {
     this.particles = [];
 
     this.wantsPaths = true;
-}
+};
 
 particleController.prototype.add = function(part) {
     this.particles.push(part);
-}
+};
 
 particleController.prototype.clearAll = function() {
     $j.each(this.particles,function(i,particle) {
         particle.clearAll();
     });
     this.particles = [];
-}
+};
 
 particleController.prototype.makeParticle = function(kState,accel,beginState) {
     var particle = new Particle(kState,accel,beginState);
@@ -332,7 +432,7 @@ particleController.prototype.makeParticle = function(kState,accel,beginState) {
     particle.animate();
 
     return particle;
-}
+};
 
 particleController.prototype.togglePathPreference = function() {
     if(this.wantsPaths)
@@ -349,7 +449,7 @@ particleController.prototype.togglePathPreference = function() {
         });
         this.wantsPaths = true;
     }
-}
+};
 
 
 
@@ -383,7 +483,7 @@ function parametricQuadSolver(a,b,c) {
     }
 
     return answers;
-}
+};
 
 function solveQuadraticEquation(a,b,c) {
     //if denom is invalid
@@ -411,15 +511,15 @@ function solveQuadraticEquation(a,b,c) {
             plusAns:plusAns,
             negAns:negAns
         };
-}
+};
 
 function pointTheSame(p1,p2) {
     return p1.x == p2.x && p1.y == p2.y;
-}
+};
 
 function distBetween(p1,p2) {
     return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y);
-}
+};
 
 function Edge(p1,p2,parentPoly,outwardNormal) {
     this.p1 = p1;
@@ -442,7 +542,7 @@ function Edge(p1,p2,parentPoly,outwardNormal) {
     {
         this.outwardNormal = outwardNormal;
     }
-}
+};
 
 Edge.prototype.getOtherVertex = function(vertex) {
     if(!vertex || !this.p1 || !this.p2) { throw new Error("null arguments!"); }
@@ -452,7 +552,7 @@ Edge.prototype.getOtherVertex = function(vertex) {
         return this.p2;
     }
     return this.p1;
-}
+};
 
 Edge.prototype.getOutwardNormal = function() {
     //ok this is a bit hacked up but get avg point, get a given normal, displace a bit, and test
@@ -487,7 +587,7 @@ Edge.prototype.getOutwardNormal = function() {
     }
 
     return aNormal;
-}
+};
 
 Edge.prototype.highlight = function() {
     var pathStr = constructPathStringFromCoords([this.p1,this.p2]);
@@ -497,7 +597,7 @@ Edge.prototype.highlight = function() {
         'stroke':'#F00',
         'stroke-width':3
     });
-}
+};
 
 //returns true if two edges intersect in a point that is within both edges
 //and not defined by their endpoints
@@ -535,7 +635,7 @@ Edge.prototype.intersectTest = function(otherEdge) {
 
     //finally, both edges must contain these points for it to be a true intersection
     return this.containsInsideEndpoints(intersectPoint) && otherEdge.containsInsideEndpoints(intersectPoint);
-}
+};
 
 Edge.prototype.containsInsideEndpoints = function(testPoint) {
     //first check if its within, then do the tolerance check against the endpoints
@@ -555,7 +655,7 @@ Edge.prototype.containsInsideEndpoints = function(testPoint) {
     }
     //truly within and not on top
     return true;
-}
+};
 
 //returns true when the testPoint lies within our edge endpoints
 Edge.prototype.pointWithin = function(testPoint) {
@@ -582,7 +682,7 @@ Edge.prototype.pointWithin = function(testPoint) {
     }
 
     return false;
-}
+};
 
 Edge.prototype.validateSolutionPoint = function(parabola,tValue) {
     var ax, ay, vx, vy, px, py;
@@ -609,7 +709,7 @@ Edge.prototype.validateSolutionPoint = function(parabola,tValue) {
     }
     //there is a solution, and it lies within our endpoint! wahoo
     return {solutionPoint:solutionPoint,tValue:tValue};
-}
+};
 
 Edge.prototype.parabolaIntersection = function(parabola) {
     //a parabola is defined as:
@@ -685,7 +785,7 @@ Edge.prototype.parabolaIntersection = function(parabola) {
         }
     }
     return null;
-}
+};
 
 function Parabola(pos,vel,accel,shouldDraw) {
     if(!pos || !vel || !accel)
@@ -709,7 +809,7 @@ function Parabola(pos,vel,accel,shouldDraw) {
     {
         this.drawParabolaPath(-1);
     }
-}
+};
 
 Parabola.prototype.drawParabolaPath = function(tVal) {
 
@@ -726,14 +826,14 @@ Parabola.prototype.drawParabolaPath = function(tVal) {
     {
         this.path.click(this.clickFunction);
     }
-}
+};
 
 Parabola.prototype.removePath = function() {
     if(this.path)
     {
         this.path.remove();
     }
-}
+};
 
 Parabola.prototype.click = function(clickFunction) {
     this.clickFunction = clickFunction;
@@ -742,7 +842,7 @@ Parabola.prototype.click = function(clickFunction) {
     {
         this.path.click(clickFunction);
     }
-}
+};
 
 
 Parabola.prototype.getPointYielder = function() {
@@ -755,7 +855,7 @@ Parabola.prototype.getPointYielder = function() {
     pointYielder = pointYielder.bind(this);
 
     return pointYielder;
-}
+};
 
 Parabola.prototype.getSlopeYielder = function() {
 
@@ -767,7 +867,7 @@ Parabola.prototype.getSlopeYielder = function() {
     slopeYielder = slopeYielder.bind(this);
 
     return slopeYielder;
-}
+};
 
 Parabola.prototype.getQuadraticBezierPoints = function(tValue) {
     var pointYielder = this.pointYielder;
@@ -787,7 +887,7 @@ Parabola.prototype.getQuadraticBezierPoints = function(tValue) {
     var intersectPoint = lineLineIntersection(p1,p2,p3,p4);
 
     return {'C1':p1,'C2':intersectPoint,'C3':p3};
-}
+};
 
 Parabola.prototype.getEndTimeValue = function(desiredTimeVal) {
 
@@ -813,7 +913,7 @@ Parabola.prototype.getEndTimeValue = function(desiredTimeVal) {
     }
 
     return t;
-}
+};
 
 Parabola.prototype.getQuadraticBezierPath = function(desiredTimeVal) {
 
@@ -835,18 +935,18 @@ Parabola.prototype.getQuadraticBezierPath = function(desiredTimeVal) {
 
     var path = p.path(str);
     return path;
-}
+};
 
 
 function KineticState(pos,vel,accel) {
     this.pos = pos;
     this.vel = vel;
     this.accel = accel;
-}
+};
 
 KineticState.prototype.toParabola = function() {
     return new Parabola(this.pos,this.vel,this.accel);
-}
+};
 
 
 function KineticPath(parabola,endTime)
@@ -867,7 +967,7 @@ function KineticPath(parabola,endTime)
     this.animateTime = 0;
     this.animateFunction = this.getAnimateFunction();
     this.doneFunction = null;
-}
+};
 
 KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
     //first remove our animationFeatures if they exist
@@ -895,7 +995,7 @@ KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
 
     //60fps?
     setTimeout(this.animateFunction,1000 * 1/60);
-}
+};
 
 KineticPath.prototype.getAnimateFunction = function() {
     var animate = function() {
@@ -903,7 +1003,7 @@ KineticPath.prototype.getAnimateFunction = function() {
     };
     animate = animate.bind(this);
     return animate;
-}
+};
 
 KineticPath.prototype.animateStep = function() {
     if(!this.animateSpeed) { throw new Error("animate speed not set!"); }
@@ -940,24 +1040,24 @@ KineticPath.prototype.animateStep = function() {
         this.vArrow.path.remove();
         this.doneFunction();
     }
-}
+};
 
 KineticPath.prototype.clearAnimation = function() {
     if(this.particleBody) { this.particleBody.remove(); }
     if(this.vArrow) { this.vArrow.remove(); }
 
     this.animateTime = 0;
-}
+};
 
 KineticPath.prototype.stopAnimating = function() {
     clearTimeout(this.ourTimeout);
-}
+};
 
 KineticPath.prototype.drawPath = function() {
 
     this.parabola.drawParabolaPath(this.endTime);
 
-}
+};
 
 KineticPath.prototype.showEndpoint = function() {
     var point = this.pointYielder(this.endTime);
@@ -966,18 +1066,18 @@ KineticPath.prototype.showEndpoint = function() {
 
     this.particleBody = cuteSmallCircle(point.x,point.y);
 
-}
+};
 
 KineticPath.prototype.clearPath = function() {
     this.parabola.removePath();
-}
+};
 
 KineticPath.prototype.clearAll = function() {
     this.clearPath();
 
     this.clearAnimation();
     this.stopAnimating();
-}
+};
 
 
 
@@ -1024,7 +1124,7 @@ function Particle(startKineticState,fieldAccel,beginState) {
 
     this.kStates.push(this.currentKineticState);
     this.tStates.push(this.traceState);
-}
+};
 
 //ELASTICITY
 Particle.prototype.elasticity = 0.5;
@@ -1042,7 +1142,7 @@ Particle.prototype.settle = function() {
 
         if(i > 1000) { throw new Error("particle tracing did not terminate"); }
     }
-}
+};
 
 //Advances the particle to the next collision or reflection point.
 //
@@ -1071,7 +1171,7 @@ Particle.prototype.advance = function() {
     {
         return {'done':false,'kPath':kPath};
     }
-}
+};
 
 Particle.prototype.freeFall = function() {
 
@@ -1137,7 +1237,7 @@ Particle.prototype.freeFall = function() {
 
     this.kPaths.push(kPath);
     return kPath;
-}
+};
 
 Particle.prototype.makeDebugClosure = function(parab,tRecord,kPath,edgeHit) {
 
@@ -1163,7 +1263,7 @@ Particle.prototype.makeDebugClosure = function(parab,tRecord,kPath,edgeHit) {
     toReturn = toReturn.bind(this);
 
     return toReturn;
-}
+};
 
 //updates kinetic state after a collision. Also in charge of determining if
 //the particle is on edge or still free falling after a collision
@@ -1238,7 +1338,7 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         this.kStates.push(this.currentKineticState);
         this.tStates.push(this.traceState);
     }
-}
+};
 
 Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
 
@@ -1314,7 +1414,7 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
         'newVelocity':vecAdd(newTangentVelocity,newNormalVelocity),
         'nowOnEdge':nowOnEdge
     };
-}
+};
 
 Particle.prototype.projectVectorOntoEdge = function(vector,edge) {
     //get the edge slope unit vector
@@ -1334,7 +1434,7 @@ Particle.prototype.projectVectorOntoEdge = function(vector,edge) {
 
     //this is the projected vector
     return newTangentVector;
-}
+};
 
 
 Particle.prototype.getArrivalVertex = function() { 
@@ -1423,15 +1523,15 @@ Particle.prototype.getArrivalVertex = function() {
         'arrivalVel':arrivalVel,
         'arrivalTime':tRecord
     };
-}
+};
 
 Particle.prototype.clearPath = function() {
     $j.each(this.kPaths,function(i,kPath) { kPath.clearPath(); });
-}
+};
 
 Particle.prototype.clearAll = function() {
     $j.each(this.kPaths,function(i,kPath) { kPath.clearAll(); });
-}
+};
 
 Particle.prototype.edgeSlide = function() {
 
@@ -1609,7 +1709,7 @@ Particle.prototype.edgeSlide = function() {
 
     this.kStates.push(newState);
     this.tStates.push(this.traceState);
-}
+};
 
 Particle.prototype.easyEdgeTrap = function(arrivalResults) {
 
@@ -1631,7 +1731,7 @@ Particle.prototype.easyEdgeTrap = function(arrivalResults) {
 
     this.kStates.push(endState);
     this.tStates.push(this.traceState);
-}
+};
 
 
 Particle.prototype.easyEdgePop = function(arrivalResults) {
@@ -1665,13 +1765,13 @@ Particle.prototype.easyEdgePop = function(arrivalResults) {
 
     this.kStates.push(kState);
     this.tStates.push(this.traceState);
-}
+};
 
 Particle.prototype.drawEntirePath = function() {
     $j.each(this.kPaths,function(i,kPath) {
         kPath.drawPath();
     });
-}
+};
 
 Particle.prototype.animateStep = function(i) {
    if(i >= this.kPaths.length)
@@ -1684,7 +1784,7 @@ Particle.prototype.animateStep = function(i) {
 
    //animate this kPath and call us when done
    this.kPaths[i].animate(doneClosure);
-}
+};
 
 Particle.prototype.getDoneClosure = function(num) {
     var toReturn = function() {
@@ -1693,7 +1793,7 @@ Particle.prototype.getDoneClosure = function(num) {
     toReturn = toReturn.bind(this);
 
     return toReturn;
-}
+};
 
 Particle.prototype.animate = function() {
     //ok so the tricky here is that we need to animate each path in succession. so when a path finishes,
@@ -1701,7 +1801,7 @@ Particle.prototype.animate = function() {
     //timeouts.... aka reasons to absolutely love JS
 
     this.animateStep(0);
-}
+};
 
 
 /**********END CLASSSES*************/
@@ -1709,13 +1809,13 @@ Particle.prototype.animate = function() {
 function commaJoin(p1)
 {
     return String(p1.x) + "," + String(p1.y);
-}
+};
 
 
 function map(input,iLower,iUpper,oLower,oUpper)
 {
     return (oUpper - oLower) * (input - iLower) / (iUpper - iLower);
-}
+};
 
 function makeVec(from,to)
 {
@@ -1724,7 +1824,7 @@ function makeVec(from,to)
         x:to.x - from.x,
         y:to.y - from.y
     };
-}
+};
 
 function convexCombo(p1,p2,t)
 {
@@ -1732,7 +1832,7 @@ function convexCombo(p1,p2,t)
         x:p1.x * t + p2.x * (1-t),
         y:p1.y * t + p2.y * (1-t)
     };
-}
+};
 
 function centerPoint(p1,p2)
 {
@@ -1740,22 +1840,22 @@ function centerPoint(p1,p2)
         x:p1.x * 0.5 + p2.x * 0.5,
         y:p1.y * 0.5 + p2.y * 0.5
     };
-}
+};
 
 function vecDot(v1,v2) {
     return v1.x * v2.x + v1.y * v2.y;
-}
+};
 
 function vecLength(vec) {
     return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
-}
+};
 
 function vecAdd(vec1,vec2) {
     return {
         x:vec1.x + vec2.x,
         y:vec1.y + vec2.y
     };
-}
+};
 
 function vecNormalize(vec) {
     var denom = vecLength(vec);
@@ -1763,39 +1863,39 @@ function vecNormalize(vec) {
         x:vec.x / denom,
         y:vec.y / denom
     };
-}
+};
 
 function vecSubtract(vec1,vec2) {
     return {
         x:vec1.x - vec2.x,
         y:vec1.y - vec2.y
     };
-}
+};
 
 function vecNegate(vec) {
     return {
         x:-vec.x,
         y:-vec.y
     };
-}
+};
 
 function vecAtan2(vec) {
     return Math.atan2(vec.y,vec.x);
-}
+};
 
 function angleToVec(angle) {
     return {
         x:Math.cos(angle),
         y:Math.sin(angle)
     };
-}
+};
 
 function vecScale(vec,scale) {
     return {
         x:vec.x * scale,
         y:vec.y * scale
     };
-}
+};
 
 //returns the intersection point (if one exists) between the two lines defined
 //by p1,p2 and p3, p4. returns false if none exists
@@ -1824,15 +1924,15 @@ function lineLineIntersection(p1,p2,p3,p4) {
 
     //return this
     return {'x':iX,'y':iY};
-}
+};
 
 function m(x,y) {
     return {x:x,y:y};
-}
+};
 
 function vecMake(x,y) {
     return {x:x,y:y};
-}
+};
 
 function randomParab(shouldDraw)
 {
@@ -1842,7 +1942,7 @@ function randomParab(shouldDraw)
     var c = m(Math.random() * 20 - 10, Math.random() * 10 - 5);
 
     return new Parabola(a,b,c,shouldDraw);
-}
+};
 
 function velocityAngle(vel)
 {
@@ -1852,7 +1952,7 @@ function velocityAngle(vel)
         angle += 2*Math.PI;
     }
     return angle;
-}
+};
 
 /*
     returns the angle BETWEEN the edges at the junction / vertex point, aka
@@ -1875,20 +1975,20 @@ function angleBetweenEdges(edge1,edge2)
 
     var dotScaled = vecDot(slope1,slope2) / (vecLength(slope1) * vecLength(slope2));
     return Math.acos(dotScaled);
-}
+};
 
 function velocityHue(vel)
 {
     var angle = velocityAngle(vel);
     var hueVal = map(angle,0,2*Math.PI,0,1);
     return hue = "hsb(" + String(hueVal) + ",0.7,0.9)";
-}
+};
 
 function velocityHueFaded(vel)
 {
     var angle = velocityAngle(vel);
     var hueVal = map(angle,0,2*Math.PI,0,1);
     return hue = "hsba(" + String(hueVal) + ",0.7,0.9,0.1)";
-}
+};
 
 
