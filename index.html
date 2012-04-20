@@ -105,12 +105,9 @@ $j(document).ready(function(){
     
     p = Raphael("canvasHolder");
 
-    //$j('#canvasHolder').bind('mousedown',canvasClick);
-    //$j('#canvasHolder').bind('mousemove',canvasMove);
-    //$j('#canvasHolder').bind('contextmenu',canvasRightClick);
-
     polygonInserter = new polygonUIControl();
     polyController = new polygonController();
+    partController = new particleController();
     particleTracer = new TraceUIControl();
 
     $j(window).resize(windowResize);
@@ -143,10 +140,19 @@ $j(document).ready(function(){
 <a id="traceButton" class="uiButton">Trace Particle
 </a>
 
-<a class="uiButton" style="position:absolute;top:100px;left:10px" onclick="javscript:bombard();">Bombard
+<a id="bombardButton" class="uiButton" onclick="javscript:bombard();">Bombard
 </a>
 
-<a id="debugButton" class="uiButton" style="position:absolute;top:140px;left:10px" onclick="javascript:toggleDebug();">Debug
+
+
+
+<a id="editPolyButton" class="uiButton uiButtonYellow">Edit Polygons
+</a>
+
+<a id="clearParticlesButton" class="uiButton uiButtonYellow" onclick="javascript:partController.clearAll();">Clear Particles
+</a>
+
+<a id="togglePathsButton" class="uiButton uiButtonYellow" onclick="javascript:partController.togglePathPreference();">Toggle Paths
 </a>
 
 </body>

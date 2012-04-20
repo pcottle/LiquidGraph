@@ -205,16 +205,100 @@ Polygon.prototype.validatePoints = function() {
     }
 }
 
+/**************GLOBAL CONTROL OBJECTS *******************/
+
 //controls the global polygons
-var polygonController = function() {
+function polygonController() {
     this.polys = [];
     this.allEdges = [];
+}
+
+polygonController.prototype.reset = function() {
+    this.polys = [];
+    this.allEdges = []; //lol garbage collection
 }
 
 polygonController.prototype.add = function(poly) {
     this.polys.push(poly);
     this.allEdges = this.allEdges.concat(poly.edges);
 }
+
+polygonController.prototype.remove = function(poly) {
+    //wish JS had a nice list remove like pyton
+    for(var i = 0; i < this.polys.length; i++)
+    {
+        if(poly == this.polys[i])
+        {
+            this.polys.splice(i,1);
+            i--;
+            //should only be one polygon but just in case
+        }
+    }
+
+    this.allEdges = [];
+    //reset edges
+    for(var i = 0; i < this.polys.length; i++)
+    {
+        this.allEdges = this.allEdges.concat(this.polys[i].edges);
+    }
+}
+
+function particleController() {
+    this.particles = [];
+
+    this.wantsPaths = true;
+}
+
+particleController.prototype.add = function(part) {
+    this.particles.push(part);
+}
+
+particleController.prototype.clearAll = function() {
+    $j.each(this.particles,function(i,particle) {
+        particle.clearAll();
+    });
+    this.particles = [];
+}
+
+particleController.prototype.makeParticle = function(kState,accel,beginState) {
+    var particle = new Particle(kState,accel,beginState);
+    this.particles.push(particle);
+
+    particle.settle();
+    if(this.wantsPaths)
+    {
+        particle.drawEntirePath();
+    }
+    particle.animate();
+
+    return particle;
+}
+
+particleController.prototype.togglePathPreference = function() {
+    if(this.wantsPaths)
+    {
+        $j.each(this.particles,function(i,particle) {
+            particle.clearPath();
+        });
+        this.wantsPaths = false;
+    }
+    else
+    {
+        $j.each(this.particles,function(i,particle) {
+            particle.drawEntirePath();
+        });
+        this.wantsPaths = true;
+    }
+}
+
+
+
+
+
+
+
+
+
 
 
 function parametricQuadSolver(a,b,c) {
@@ -786,7 +870,7 @@ KineticPath.prototype.animateStep = function() {
     //set another?
     if(this.animateTime < this.endTime)
     {
-        setTimeout(this.animateFunction,1000 * 1/60);
+        this.ourTimeout = setTimeout(this.animateFunction,1000 * 1/60);
     }
     else
     {
@@ -805,6 +889,10 @@ KineticPath.prototype.clearAnimation = function() {
     this.animateTime = 0;
 }
 
+KineticPath.prototype.stopAnimating = function() {
+    clearTimeout(this.ourTimeout);
+}
+
 KineticPath.prototype.drawPath = function() {
 
     this.parabola.drawParabolaPath(this.endTime);
@@ -818,15 +906,17 @@ KineticPath.prototype.showEndpoint = function() {
 
     this.particleBody = cuteSmallCircle(point.x,point.y);
 
-    //optional
-    //this.particleBody.glow();
 }
 
 KineticPath.prototype.clearPath = function() {
     this.parabola.removePath();
+}
+
+KineticPath.prototype.clearAll = function() {
+    this.clearPath();
 
     this.clearAnimation();
-    //can't clear the glow unfortunately :O kinda a todo
+    this.stopAnimating();
 }
 
 
@@ -1279,6 +1369,10 @@ Particle.prototype.clearPath = function() {
     $j.each(this.kPaths,function(i,kPath) { kPath.clearPath(); });
 }
 
+Particle.prototype.clearAll = function() {
+    $j.each(this.kPaths,function(i,kPath) { kPath.clearAll(); });
+}
+
 Particle.prototype.edgeSlide = function() {
 
     //first we must obtain the arrival vertex
@@ -1323,7 +1417,6 @@ Particle.prototype.edgeSlide = function() {
     //ok so if this anglebetween is less than 90
     if(angleBetween < Math.PI * 0.5)
     {
-        console.log("angle is less than 0.5");
         //so the edge meets at an acute angle:
         //
         //      -------------
@@ -1512,6 +1605,12 @@ Particle.prototype.easyEdgePop = function(arrivalResults) {
 
     this.kStates.push(kState);
     this.tStates.push(this.traceState);
+}
+
+Particle.prototype.drawEntirePath = function() {
+    $j.each(this.kPaths,function(i,kPath) {
+        kPath.drawPath();
+    });
 }
 
 Particle.prototype.animateStep = function(i) {

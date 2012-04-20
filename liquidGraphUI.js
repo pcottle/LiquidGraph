@@ -122,7 +122,7 @@ uiControl.prototype.keyDown = function(which) {
     return;
 }
 
-function UIButton(parentObj,id,text,activeText) {
+function UIButton(parentObj,id,text,activeText,buttonsToShow) {
 
     this.active = false;
     this.parentObj = parentObj;
@@ -130,6 +130,17 @@ function UIButton(parentObj,id,text,activeText) {
     this.text = text;
     this.activeText = activeText;
     this.id = id;
+
+    if(buttonsToShow) {
+        var buttons = buttonsToShow.map(function(id) { return "#" + id; });
+        this.buttonsToShow = buttons.join(',');
+    } else {
+        this.buttonsToShow = "";
+    }
+
+    this.mainButtons = ['addPolyButton','traceButton','editPolyButton'];
+    this.mainButtons = this.mainButtons.map(function(id) { return "#" + id; });
+    this.mainButtons = this.mainButtons.join(",");
 
     var cHandler = function(e) {
         this.anchorClick();
@@ -140,17 +151,25 @@ function UIButton(parentObj,id,text,activeText) {
 }
 
 UIButton.prototype.anchorClick = function() {
+
+    var nots = ":not(#" + this.id + ")";
+
     if(!this.active)
     {
         this.parentObj.activate();
         $j('#' + this.id).text(this.activeText);
-        $j('.uiButton').filter(':not(#' + this.id + ')').slideUp();
+
+        $j('.uiButton').filter(nots).slideUp();
+
+        $j(this.buttonsToShow).slideDown();
     }
     else
     {
         this.parentObj.deactivate();
         $j('#' + this.id).text(this.text);
-        $j('.uiButton').filter(':not(#' + this.id + ')').slideDown();
+
+        $j(this.buttonsToShow).slideUp();
+        $j(this.mainButtons).filter(nots).slideDown();
     }
 }
 
@@ -415,6 +434,10 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 }
 
 
+function EditUIControl() {
+
+
+}
 
 
 
@@ -424,7 +447,9 @@ function TraceUIControl() {
     this.firstTime = true;
 
     this.prototype = new uiControl(this);
-    this.UIbutton = new UIButton(this,'traceButton','Trace Particle','Stop Tracing Particles');
+    this.UIbutton = new UIButton(this,'traceButton',
+                'Trace Particle','Stop Tracing Particles',
+                ['clearParticlesButton','bombardButton','togglePathsButton']);
 }
 
 TraceUIControl.prototype.clearScreen = function() {
@@ -504,11 +529,10 @@ TraceUIControl.prototype.mouseUp = function(x,y) {
         return; //dont launch particles inside polygons
     }
 
-    var particle = new Particle(k,this.accel);
+    var particle = partController.makeParticle(k,this.accel);
+
     //DEBUG
     part = particle;
-
-    advanceDraw(particle);
 
     //make sure to reset our vars
     this.clearScreen();
@@ -750,57 +774,42 @@ function onScreen(point,accel) {
 }
 
 function bombard() {
-    var polys = polyController.polys;
-    //make 100 random parabolas and trace em
-    for(var i = 0; i < 10; i++)
-    {
-        var parab = randomParab(false);
-        var x = parab.pos.x;
-        var y = parab.pos.y;
-
-        var inside = false;
-        for(var j = 0; j < polys.length; j++)
-        {
-            if(polys[j].rPath.isPointInside(x,y))
-            {
-                inside = true;
-                break;
-            }
-        }
-        if(inside)
-        {
-            //i--;
-            continue;
-        }
-
-        //make a particle and advance
-        var k = new KineticState(parab.pos,parab.vel,parab.accel);
-        var particle = new Particle(k,parab.accel);
-
-        advanceDraw(particle);
-    }
+    bombardStep(0);
 }
 
-function advanceDraw(particle)
-{
-    particle.settle();
+function bombardStep(i) {
 
-    for(var i = 0; i < particle.kPaths.length; i++)
+    if(i > 10) { return; }
+
+    var polys = polyController.polys;
+
+    var parab = randomParab(false);
+    var x = parab.pos.x;
+    var y = parab.pos.y;
+
+    var inside = false;
+    for(var j = 0; j < polys.length; j++)
     {
-        particle.kPaths[i].drawPath();
-        //particle.kPaths[i].showEndpoint();
+        if(polys[j].rPath.isPointInside(x,y))
+        {
+            inside = true;
+            break;
+        }
     }
 
-    particle.animate();
-
-    return;
-    var results = particle.advance();
-    if(results.kPath)
+    if(inside)
     {
-        results.kPath.drawPath();
-        results.kPath.showEndpoint();
-        results.kPath.animate();
+        bombardStep(i+1);
     }
+    else
+    {
+        //make a particle and advance
+        var k = new KineticState(parab.pos,parab.vel,parab.accel);
+        var particle = partController.makeParticle(k,parab.accel);
+    }
+    setTimeout(function() {
+        bombardStep(i+1)
+    },200);
 }
 
 function toggleDebug()

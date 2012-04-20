@@ -215,8 +215,8 @@ h1 {
    text-decoration: none;
    vertical-align: middle;
    cursor:pointer;
-   
-   }
+   position:absolute;
+}
 .uiButton:hover {
    border-top-color: #28597a;
    background: #28597a;
@@ -227,17 +227,56 @@ h1 {
    background: #1b435e;
 }
 
+.uiButtonYellow {
+   border-top: 1px solid #f4ffa1;
+   background: #288708;
+   background: -webkit-gradient(linear, left top, left bottom, from(#e0e63c), to(#288708));
+   background: -webkit-linear-gradient(top, #e0e63c, #288708);
+   background: -moz-linear-gradient(top, #e0e63c, #288708);
+   background: -ms-linear-gradient(top, #e0e63c, #288708);
+   background: -o-linear-gradient(top, #e0e63c, #288708);
+}
+.uiButtonYellow:hover {
+   border-top-color: #30f03d;
+   background: #30f03d;
+   color: #000000;
+}
+.uiButtonYellow:active {
+   border-top-color: #5edb15;
+   background: #5edb15;
+}
+
+
 
 
 #traceButton {
-    position:absolute;
     top:60px;
     left:10px;
 }
 
 #addPolyButton {
-    position:absolute;
     top:20px;
     left:10px;
-    
+}
+
+#editPolyButton {
+    top:20px;
+    right:10px;
+}
+
+#clearParticlesButton {
+    top:60px;
+    right:10px;
+    display:none;
+}
+
+#togglePathsButton {
+    top:20px;
+    right:10px;
+    display:none;
+}
  
+#bombardButton {
+    top:100px;left:10px;
+    display:none;
+}
