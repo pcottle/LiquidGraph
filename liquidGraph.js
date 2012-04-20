@@ -95,11 +95,71 @@ function Polygon(rPoints,rPath) {
         this.vertices.push(vertex);
     }
 
+    this.setDragHandlers();
+
     //first validate the polygon
     this.validatePolygon();
 
     //classify vertices
     this.classifyVertices();
+}
+
+Polygon.prototype.setDragHandlers = function() {
+    var onDrag = function(dx,dy,x,y,e) {
+
+        if(!polyEditor.active)
+        {
+            return;
+        }
+
+        this.dragDeltaX = x - this.startDragX;
+        this.dragDeltaY = y - this.startDragY;
+
+        var tString = "T" + String(this.dragDeltaX) + "," + String(this.dragDeltaY);
+
+        this.rPath.transform(tString);
+
+        $j.each(this.vertices,function(i,vertex) {
+            vertex.rPoint.attr({
+                'cx':vertex.x + vertex.parentPoly.dragDeltaX,
+                'cy':vertex.y + vertex.parentPoly.dragDeltaY
+            });
+        });
+    };
+
+    var onEnd = function(e) {
+        //the delta x is what we need to shift everything by...
+
+        //we really need to make a completely new polygon here
+
+        var newPoints = [];
+        for(var i = 0; i < this.vertices.length; i++)
+        {
+            newPoints.push(this.vertices[i].rPoint);
+        }
+        var newPathString = constructPathStringFromPoints(newPoints,true);
+        var newPath = cutePath(newPathString,true);
+
+        var newPoly = new Polygon(newPoints,newPath);
+
+        this.rPath.remove();
+
+        polyController.remove(this);
+        polyController.add(newPoly);
+    };
+
+    var onStart = function(x,y,e) {
+
+        if(!polyEditor.active)
+        {
+            return;
+        }
+    
+        this.startDragX = x;
+        this.startDragY = y;
+    }
+
+    this.rPath.drag(onDrag,onStart,onEnd,this,this,this);
 }
 
 Polygon.prototype.classifyVertices = function() {

@@ -290,6 +290,7 @@ function polygonUIControl() {
     this.uiPath = null;
     this.currentPoint = null;
     this.firstTime = true;
+    this.active = false;
 
     this.prototype = new uiControl(this);
     this.UIbutton = new UIButton(this,'addPolyButton','Add Polygon','Stop Adding Polygons');
@@ -435,10 +436,60 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 
 
 function EditUIControl() {
+    //this might be pretty simple
 
-
+    this.active = false;
+    this.firstTime = true;
+    
+    this.prototype = new uiControl(this);
+    this.UIbutton = new UIButton(this,'editPolyButton','Edit Polygons','Stop Editing Polygons');
 }
 
+EditUIControl.prototype.mouseMove = function() { return; }
+EditUIControl.prototype.mouseUp = function() { return; }
+EditUIControl.prototype.leftClick = function() { return; }
+EditUIControl.prototype.keyDown = function() { return; }
+EditUIControl.prototype.rightClick = function() { return; }
+
+EditUIControl.prototype.activate = function() {
+    if(this.firstTime)
+    {
+        topNotifyTemp("Drag polygons / individual vertices",3000);
+        this.firstTime = false;
+    }
+
+    this.active = true;
+    this.UIbutton.active = true;
+
+    this.setCursor('move','pointer');
+}
+
+EditUIControl.prototype.deactivate = function() {
+    this.active = false;
+    this.UIbutton.active = false;
+
+    this.setCursor('default','default');
+}
+
+
+EditUIControl.prototype.setCursor = function(pathType,pointType) {
+
+    //go make all the polygon rPaths have the right cursor
+    for(var i = 0; i < polyController.polys.length; i++)
+    {
+        var poly = polyController.polys[i];
+        var path = poly.rPath;
+        var vertices = poly.vertices;
+
+        $j(path.node).css('cursor',pathType);
+
+        for(var j = 0; j < vertices.length; j++)
+        {
+            //$j(vertices[j].rPoint.node).css('cursor',pointType);
+        }
+    }
+
+}
 
 
 function TraceUIControl() {

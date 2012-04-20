@@ -109,6 +109,7 @@ $j(document).ready(function(){
     polyController = new polygonController();
     partController = new particleController();
     particleTracer = new TraceUIControl();
+    polyEditor = new EditUIControl();
 
     $j(window).resize(windowResize);
 });
@@ -140,7 +141,7 @@ $j(document).ready(function(){
 <a id="traceButton" class="uiButton">Trace Particle
 </a>
 
-<a id="bombardButton" class="uiButton" onclick="javscript:bombard();">Bombard
+<a id="bombardButton" class="uiButton uiButtonYellow" onclick="javscript:bombard();">Bombard
 </a>
 
 

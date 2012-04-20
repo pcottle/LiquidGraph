@@ -260,8 +260,8 @@ h1 {
 }
 
 #editPolyButton {
-    top:20px;
-    right:10px;
+    top:100px;
+    left:10px;
 }
 
 #clearParticlesButton {
@@ -277,6 +277,6 @@ h1 {
 }
  
 #bombardButton {
-    top:100px;left:10px;
+    top:100px;right:10px;
     display:none;
 }
