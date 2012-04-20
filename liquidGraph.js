@@ -1280,7 +1280,6 @@ Particle.prototype.clearPath = function() {
 }
 
 Particle.prototype.edgeSlide = function() {
-    console.log("edge sliding");
 
     //first we must obtain the arrival vertex
     var arrivalResults = this.getArrivalVertex();
@@ -1324,8 +1323,48 @@ Particle.prototype.edgeSlide = function() {
     //ok so if this anglebetween is less than 90
     if(angleBetween < Math.PI * 0.5)
     {
-        //the edge traps this, so this is easy
-        this.easyEdgeTrap(arrivalResults);
+        console.log("angle is less than 0.5");
+        //so the edge meets at an acute angle:
+        //
+        //      -------------
+        //                 /
+        //                /
+        //               /
+
+        //and the particle clearly is in the vertex in the corner. BUT! The particle
+        //can sometimes be "shot" into this corner, so we need to check the acceleration
+        //projection of the edge we are on and see if it leads into this corner.
+        //We don't need to check the top because of geometry (it's correct, just hard to
+        //explain).
+
+        var accelEdgeOn = this.projectVectorOntoEdge(this.fieldAccel,edgeWeAreOn);
+        var edgeSlopeAway = vecSubtract(edgeWeAreOn.getOtherVertex(arrivalVertex),arrivalVertex);
+
+        //if this dot product is negative, just go edge trap
+        if(vecDot(accelEdgeOn,edgeSlopeAway) <= 0)
+        {
+            this.easyEdgeTrap(arrivalResults);
+            return;
+        }
+        //we are on this edge, BUT acceleration is making is roll out, so just
+        //negate our velocity and restart
+
+        edgeSlopeAway = vecNormalize(edgeSlopeAway);
+
+        var newPos = vecAdd(arrivalVertex,vecScale(edgeSlopeAway,0.001));
+        var newVel = vecMake(0,0);
+        var newAccel = accelEdgeOn;
+
+        var newState = new KineticState(newPos,newVel,newAccel);
+        this.currentKineticState = newState;
+
+        this.traceState = {
+            'name':'onEdge',
+            'whichEdge':edgeWeAreOn
+        };
+
+        this.kStates.push(newState);
+        this.tStates.push(this.traceState);
         return;
     }
 
