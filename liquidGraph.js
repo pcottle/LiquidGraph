@@ -1353,7 +1353,7 @@ Particle.prototype.edgeSlide = function() {
 
         var newPos = vecAdd(arrivalVertex,vecScale(edgeSlopeAway,0.001));
         var newVel = vecMake(0,0);
-        var newAccel = accelEdgeOn;
+        var newAccel = vecScale(accelEdgeOn,(1-this.edgeFriction));
 
         var newState = new KineticState(newPos,newVel,newAccel);
         this.currentKineticState = newState;
