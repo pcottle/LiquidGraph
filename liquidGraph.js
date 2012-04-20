@@ -847,24 +847,24 @@ Parabola.prototype.click = function(clickFunction) {
 
 Parabola.prototype.getPointYielder = function() {
 
+    var that = this;
     var pointYielder = function(tValue) {
-        var thisX = this.pos.x + tValue * this.vel.x + 0.5 * tValue * tValue * this.accel.x;
-        var thisY = this.pos.y + tValue * this.vel.y + 0.5 * tValue * tValue * this.accel.y;
+        var thisX = that.pos.x + tValue * that.vel.x + 0.5 * tValue * tValue * that.accel.x;
+        var thisY = that.pos.y + tValue * that.vel.y + 0.5 * tValue * tValue * that.accel.y;
         return {'x':thisX,'y':thisY};
     };
-    pointYielder = pointYielder.bind(this);
 
     return pointYielder;
 };
 
 Parabola.prototype.getSlopeYielder = function() {
 
+    var that = this;
     var slopeYielder = function(tValue) {
-        var slopeX = this.vel.x + tValue * this.accel.x;
-        var slopeY = this.vel.y + tValue * this.accel.y;
+        var slopeX = that.vel.x + tValue * that.accel.x;
+        var slopeY = that.vel.y + tValue * that.accel.y;
         return {'x':slopeX,'y':slopeY};
     };
-    slopeYielder = slopeYielder.bind(this);
 
     return slopeYielder;
 };
@@ -998,10 +998,11 @@ KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
 };
 
 KineticPath.prototype.getAnimateFunction = function() {
+    var that = this;
     var animate = function() {
-        this.animateStep();
+        that.animateStep();
     };
-    animate = animate.bind(this);
+
     return animate;
 };
 
@@ -1241,9 +1242,11 @@ Particle.prototype.freeFall = function() {
 
 Particle.prototype.makeDebugClosure = function(parab,tRecord,kPath,edgeHit) {
 
+    var that = this;
+
     var toReturn = function() {
         console.log("The particle");
-        console.log(this);
+        console.log(that);
         console.log("The parabola");
         console.log(parab);
         console.log("The time we obtained");
@@ -1259,8 +1262,6 @@ Particle.prototype.makeDebugClosure = function(parab,tRecord,kPath,edgeHit) {
 
         parab.path.glow();
     };
-
-    toReturn = toReturn.bind(this);
 
     return toReturn;
 };
@@ -1787,10 +1788,10 @@ Particle.prototype.animateStep = function(i) {
 };
 
 Particle.prototype.getDoneClosure = function(num) {
+    var that = this;
     var toReturn = function() {
-        this.animateStep(num);
+        that.animateStep(num);
     };
-    toReturn = toReturn.bind(this);
 
     return toReturn;
 };

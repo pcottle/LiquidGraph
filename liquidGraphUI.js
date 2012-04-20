@@ -8,32 +8,24 @@ function uiControl(parentObj) {
 
     //we have to bind the "this" scope to our object for the
     //event handlers
+
+    var that = this;
+
     var cc = function(e) {
-        this.canvasClick(e);
+        that.canvasClick(e);
     };
     var cm = function(e) {
-        this.canvasMove(e);
+        that.canvasMove(e);
     };
     var crc = function(e) {
-        this.canvasRightClick(e);
+        that.canvasRightClick(e);
     };
     var mu = function(e) {
-        this.canvasMouseUp(e);
+        that.canvasMouseUp(e);
     };
     var kd = function(e) {
-        this.canvasKeyDown(e);
+        that.canvasKeyDown(e);
     };
-
-    try {
-    crc = crc.bind(this);
-    } catch (e) { 
-        alert("Sorry, Your browser does not support javascript function context binding! Hence this only works in Firefox / Chrome :D");
-    }
-
-    cc = cc.bind(this);
-    cm = cm.bind(this);
-    mu = mu.bind(this);
-    kd = kd.bind(this);
 
     //register event handlers
     $j('#canvasHolder').bind('mousedown',cc);
@@ -142,10 +134,10 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
     this.mainButtons = this.mainButtons.map(function(id) { return "#" + id; });
     this.mainButtons = this.mainButtons.join(",");
 
+    var that = this;
     var cHandler = function(e) {
-        this.anchorClick();
+        that.anchorClick();
     };
-    cHandler = cHandler.bind(this);
 
     $j('#' + this.id).click(cHandler);
 }
