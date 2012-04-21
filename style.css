@@ -247,6 +247,23 @@ h1 {
 }
 
 .uiButtonPink {
+   padding: 5px 10px;
+   -webkit-border-radius: 8px;
+   -moz-border-radius: 8px;
+   border-radius: 8px;
+   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;
+   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;
+   box-shadow: rgba(0,0,0,1) 0 1px 0;
+   text-shadow: rgba(0,0,0,.4) 0 1px 0;
+   color: white;
+   font-size: 14px;
+   font-family: Georgia, serif;
+   text-decoration: none;
+   vertical-align: middle;
+   cursor:pointer;
+   position:absolute;
+
+
    border-top: 1px solid #96d1f8;
    background: #80007c;
    background: -webkit-gradient(linear, left top, left bottom, from(#fa1ee0), to(#80007c));
@@ -256,13 +273,13 @@ h1 {
    background: -o-linear-gradient(top, #fa1ee0, #80007c);
 }
 .uiButtonPink:hover {
-   border-top-color: #28597a;
-   background: #28597a;
+   border-top-color: #fa1ee0;
+   background: #fa1ee0;
    color: #ccc;
 }
 .uiButtonPink:active {
-   border-top-color: #1b435e;
-   background: #1b435e;
+   border-top-color: #80007c;
+   background: #80007c;
 }
 
 
@@ -301,4 +318,41 @@ h1 {
 #importExportButton {
     bottom:20px;
     right:10px;
+}
+
+#importExportDialog {
+   border-top: 1px solid #96d1f8;
+   background: #80007c;
+   background: -webkit-gradient(linear, left top, left bottom, from(#fa1ee0), to(#80007c));
+   background: -webkit-linear-gradient(top, #fa1ee0, #80007c);
+   background: -moz-linear-gradient(top, #fa1ee0, #80007c);
+   background: -ms-linear-gradient(top, #fa1ee0, #80007c);
+   background: -o-linear-gradient(top, #fa1ee0, #80007c);
+
+    width:80%;
+    height:150px;
+    -webkit-border-radius: 8px;
+    -moz-border-radius: 8px;
+    border-radius: 8px;
+    
+    margin-left:auto;
+    margin-right:auto;
+    min-width:300px;
+}
+
+#dialogWrapper {
+    position:absolute;
+    bottom:100px;
+}
+
+#importButton {
+    position:static;
+    display:inline-block;
+    margin-right:40px;
+}
+
+#exportButton {
+    position:static;
+    display:inline-block;
+    margin-left:40px;
 }

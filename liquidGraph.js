@@ -376,6 +376,13 @@ Polygon.prototype.isPointInside = function(point) {
     return this.rPath.isPointInside(point.x,point.y);
 };
 
+Polygon.prototype.clear = function() {
+    this.rPath.remove();
+    $j.each(this.vertices,function(i,vertex) {
+        vertex.rPoint.remove();
+    });
+};
+
 Polygon.prototype.validatePoints = function() {
     for(var i = 0; i < this.vertices.length; i++)
     {
@@ -410,6 +417,11 @@ function polygonController() {
 };
 
 polygonController.prototype.reset = function() {
+    for(var i = 0; i < this.polys.length; i++)
+    {
+        this.polys[i].clear();
+    }
+
     this.polys = [];
     this.allEdges = []; //lol garbage collection
 };

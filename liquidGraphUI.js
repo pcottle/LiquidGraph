@@ -876,3 +876,98 @@ function toggleDebug()
         $j('#debugButton').text('Debug');
     }
 };
+
+function toggleImportExport()
+{
+    if($j('#dialogWrapper').hasClass('showing'))
+    {
+        $j('#dialogWrapper').css('bottom','-200px');
+        $j('#dialogWrapper').removeClass('showing');
+    }
+    else
+    {
+        $j('#dialogWrapper').css('bottom','100px');
+        $j('#dialogWrapper').addClass('showing');
+    }
+};
+
+function importGeometry()
+{
+    polyController.reset();
+
+    var importData = null;
+    try {
+        console.log($j('#jsonTextArea').val());
+        var importData = JSON.parse($j('#jsonTextArea').val());
+    } catch(e) {
+        topNotifyTemp("Error with the JSON you pasted in!");
+        console.log(String(e));
+        return;
+    }
+
+    var polys = importData.polys;
+    var particles = importData.particles;
+
+    for(var i = 0; i < polys.length; i++)
+    {
+        var polyData = polys[i];
+        var color = polyData.fillColor;
+        var vertices = polyData.vertices;
+
+        var rPoints = [];
+        for(var j = 0; j < vertices.length; j++)
+        {
+            var v = vertices[j];
+            var rPoint = cuteSmallCircle(v.x,v.y);
+            console.log(v);
+            console.log(v.x);
+            console.log(rPoint);
+            rPoints.push(rPoint);
+        }
+
+        var pathStr = constructPathStringFromPoints(rPoints);
+        var path = cutePath(pathStr,true,'#FFF',color);
+        polyController.makePolygon(rPoints,path);
+    }
+
+};
+
+function exportGeometry()
+{
+    //we need to just get an array of all the polys
+    var exportPolys = [];
+
+    for(var i = 0; i < polyController.polys.length; i++)
+    {
+        var poly = polyController.polys[i];
+
+        var color = poly.fillColor;
+        var vertices = [];
+        for(var j = 0; j < poly.vertices.length; j++)
+        {
+            var v = poly.vertices[j];
+
+            vertices.push(vecMake(v.x,v.y));
+        }
+
+        exportPolys.push({
+            'fillColor':color,
+            'vertices':vertices,
+        });
+    }
+
+    var particles = [];
+    for(var i = 0; i < partController.particles.length; i++)
+    {
+        var kState = partController.particles[i].startKineticState;
+        particles.push(kState);
+    }
+
+    var exportData = {
+        'polys':exportPolys,
+        'particles':particles
+    };
+
+    var exportString = JSON.stringify(exportData);
+    $j('#jsonTextArea').text(exportString);
+};

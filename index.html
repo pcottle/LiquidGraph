@@ -158,6 +158,29 @@ $j(document).ready(function(){
 <a id="importExportButton" class="uiButton uiButtonPink" onclick="javascript:toggleImportExport();">Import / Export
 </a>
 
+<div id="dialogWrapper" style="width:100%;" class="showing smooth">
+    <div id="importExportDialog" class="smooth">
+
+        <div style="text-align:center;margin-top:10px;">
+            <textarea id="jsonTextArea" style="width:80%;" rows="5">
+            Paste your JSON here
+            </textarea>
+        </div>
+
+        
+        <div style="text-align:center">
+            <a id="importButton" class=" uiButtonPink" onclick="javascript:importGeometry()">
+            Import
+            </a>
+
+            <a id="exportButton" class=" uiButtonPink" onclick="javascript:exportGeometry()">
+            Export
+            </a>
+        </div>
+        
+    </div>
+</div>
+
 </body>
 
 </html>
