@@ -893,11 +893,13 @@ function toggleImportExport()
 
 function importGeometry()
 {
+    var width = $j(window).width();
+    var height = $j(window).height();
+
     polyController.reset();
 
     var importData = null;
     try {
-        console.log($j('#jsonTextArea').val());
         var importData = JSON.parse($j('#jsonTextArea').val());
     } catch(e) {
         topNotifyTemp("Error with the JSON you pasted in!");
@@ -918,10 +920,11 @@ function importGeometry()
         for(var j = 0; j < vertices.length; j++)
         {
             var v = vertices[j];
-            var rPoint = cuteSmallCircle(v.x,v.y);
-            console.log(v);
-            console.log(v.x);
-            console.log(rPoint);
+            
+            var vx = v.x * width;
+            var vy = v.y * height;
+
+            var rPoint = cuteSmallCircle(vx,vy);
             rPoints.push(rPoint);
         }
 
@@ -930,12 +933,51 @@ function importGeometry()
         polyController.makePolygon(rPoints,path);
     }
 
+    for(var i = 0; i < particles.length; i++)
+    {
+        var kState = particles[i];
+        var keys = ['pos','vel','accel'];
+        var scaledState = {};
+
+        for(var i = 0; i < keys.length; i++)
+        {
+            var k = keys[i];
+            scaledState[k] = {};
+            scaledState[k].x = kState[k].x * width;
+            scaledState[k].y = kState[k].y * height;
+        }
+
+        var scaledState = new KineticState(scaledState.pos,
+                                scaledState.vel,
+                                scaledState.accel
+        );
+
+        var pos = scaledState.pos;
+        var polys = polyController.polys;
+        var inside = false;
+
+        for(var j = 0; j < polys.length; j++)
+        {
+            if(polys[j].rPath.isPointInside(pos.x,pos.y))
+            {
+                inside = true;
+                break;
+            }
+        }
+        if(inside) { continue; }
+    
+
+        partController.makeParticle(scaledState,scaledState.accel);
+    }
 };
 
 function exportGeometry()
 {
     //we need to just get an array of all the polys
     var exportPolys = [];
+
+    var width = $j(window).width();
+    var height = $j(window).height();
 
     for(var i = 0; i < polyController.polys.length; i++)
     {
@@ -947,7 +989,10 @@ function exportGeometry()
         {
             var v = poly.vertices[j];
 
-            vertices.push(vecMake(v.x,v.y));
+            var vx = v.x / width;
+            var vy = v.y / height;
+
+            vertices.push(vecMake(vx,vy));
         }
 
         exportPolys.push({
@@ -960,7 +1005,18 @@ function exportGeometry()
     for(var i = 0; i < partController.particles.length; i++)
     {
         var kState = partController.particles[i].startKineticState;
-        particles.push(kState);
+
+        var scaledState = {};
+        var keys = ['pos','vel','accel'];
+        for(var i = 0; i < keys.length; i++)
+        {
+            var k = keys[i];
+            scaledState[k] = {};
+            scaledState[k].x = kState[k].x / width;
+            scaledState[k].y = kState[k].y / height;
+        }
+
+        particles.push(scaledState);
     }
 
     var exportData = {
