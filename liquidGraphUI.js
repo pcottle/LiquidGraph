@@ -928,7 +928,7 @@ function importGeometry()
             rPoints.push(rPoint);
         }
 
-        var pathStr = constructPathStringFromPoints(rPoints);
+        var pathStr = constructPathStringFromPoints(rPoints,true);
         var path = cutePath(pathStr,true,'#FFF',color);
         polyController.makePolygon(rPoints,path);
     }
@@ -939,9 +939,9 @@ function importGeometry()
         var keys = ['pos','vel','accel'];
         var scaledState = {};
 
-        for(var i = 0; i < keys.length; i++)
+        for(var j = 0; j < keys.length; j++)
         {
-            var k = keys[i];
+            var k = keys[j];
             scaledState[k] = {};
             scaledState[k].x = kState[k].x * width;
             scaledState[k].y = kState[k].y * height;
@@ -966,7 +966,6 @@ function importGeometry()
         }
         if(inside) { continue; }
     
-
         partController.makeParticle(scaledState,scaledState.accel);
     }
 };
@@ -981,6 +980,7 @@ function exportGeometry()
 
     for(var i = 0; i < polyController.polys.length; i++)
     {
+        console.log("poly i",i);
         var poly = polyController.polys[i];
 
         var color = poly.fillColor;
@@ -1008,9 +1008,9 @@ function exportGeometry()
 
         var scaledState = {};
         var keys = ['pos','vel','accel'];
-        for(var i = 0; i < keys.length; i++)
+        for(var j = 0; j < keys.length; j++)
         {
-            var k = keys[i];
+            var k = keys[j];
             scaledState[k] = {};
             scaledState[k].x = kState[k].x / width;
             scaledState[k].y = kState[k].y / height;
