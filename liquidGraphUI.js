@@ -897,6 +897,7 @@ function importGeometry()
     var height = $j(window).height();
 
     polyController.reset();
+    partController.clearAll();
 
     var importData = null;
     try {
