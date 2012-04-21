@@ -246,7 +246,24 @@ h1 {
    background: #5edb15;
 }
 
-
+.uiButtonPink {
+   border-top: 1px solid #96d1f8;
+   background: #80007c;
+   background: -webkit-gradient(linear, left top, left bottom, from(#fa1ee0), to(#80007c));
+   background: -webkit-linear-gradient(top, #fa1ee0, #80007c);
+   background: -moz-linear-gradient(top, #fa1ee0, #80007c);
+   background: -ms-linear-gradient(top, #fa1ee0, #80007c);
+   background: -o-linear-gradient(top, #fa1ee0, #80007c);
+}
+.uiButtonPink:hover {
+   border-top-color: #28597a;
+   background: #28597a;
+   color: #ccc;
+}
+.uiButtonPink:active {
+   border-top-color: #1b435e;
+   background: #1b435e;
+}
 
 
 #traceButton {
@@ -279,4 +296,9 @@ h1 {
 #bombardButton {
     top:100px;right:10px;
     display:none;
+}
+
+#importExportButton {
+    bottom:20px;
+    right:10px;
 }

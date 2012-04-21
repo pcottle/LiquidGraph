@@ -130,7 +130,7 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
         this.buttonsToShow = "";
     }
 
-    this.mainButtons = ['addPolyButton','traceButton','editPolyButton'];
+    this.mainButtons = ['addPolyButton','traceButton','editPolyButton','importExportButton'];
     this.mainButtons = this.mainButtons.map(function(id) { return "#" + id; });
     this.mainButtons = this.mainButtons.join(",");
 
@@ -338,9 +338,27 @@ polygonUIControl.prototype.keyDown = function(which,e) {
 
 polygonUIControl.prototype.rightClick = function(x,y) {
 
-    //close the path basically and make a polygon with this
-    var c = cuteSmallCircle(x,y);
-    this.uiPoints.push(c);
+    var shouldAdd = true;
+    //check if we should add this, this is a UI thing where users make
+    //mistakes
+    for(var i = 0; i < this.uiPoints.length; i++)
+    {
+        var uX = this.uiPoints[i].attr('cx');
+        var uY = this.uiPoints[i].attr('cy');
+        var dist = distBetween(vecMake(uX,uY),vecMake(x,y));
+        if(dist < pointOverlapTolerance)
+        {
+            shouldAdd = false;
+        }
+    }
+
+    if(shouldAdd)
+    {
+        //close the path basically and make a polygon with this
+        var c = cuteSmallCircle(x,y);
+        this.uiPoints.push(c);
+    }
+
 
     var aPathString = constructPathStringFromPoints(this.uiPoints,true);
 
