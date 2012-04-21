@@ -33,7 +33,7 @@ function uiControl(parentObj) {
     $j('#canvasHolder').bind('contextmenu',crc);
     $j('#canvasHolder').bind('mouseup',mu);
     $j(document).bind('keydown',kd);
-}
+};
 
 uiControl.prototype.canvasKeyDown = function(e) {
     if(this.parentObj.active)
@@ -41,21 +41,21 @@ uiControl.prototype.canvasKeyDown = function(e) {
         var which = e.which;
         this.parentObj.keyDown(which,e);
     }
-}
+};
 
 uiControl.prototype.canvasRightClick = function(e) {
     if(this.parentObj.active)
     {
         e.preventDefault();
     }
-}
+};
 
 uiControl.prototype.canvasMouseUp = function(e) {
     if(this.parentObj.active)
     {
         this.parentObj.mouseUp(e.offsetX,e.offsetY);
     }
-}
+};
 
 uiControl.prototype.canvasMove = function(e) {
     if(this.parentObj.active)
@@ -65,7 +65,7 @@ uiControl.prototype.canvasMove = function(e) {
 
         this.parentObj.mouseMove(x,y,e);
     }
-}
+};
 
 uiControl.prototype.canvasClick = function(e) {
 
@@ -91,28 +91,28 @@ uiControl.prototype.canvasClick = function(e) {
     {
         this.parentObj.rightClick(x,y);
     }
-}
+};
 
 //stubs
 uiControl.prototype.mouseUp = function(x,y) {
     return;
-}
+};
 
 uiControl.prototype.rightClick = function(x,y) {
     return;
-}
+};
 
 uiControl.prototype.mouseMove = function(x,y) {
     return;
-}
+};
 
 uiControl.prototype.leftClick = function(x,y) {
     return;
-}
+};
 
 uiControl.prototype.keyDown = function(which) {
     return;
-}
+};
 
 function UIButton(parentObj,id,text,activeText,buttonsToShow) {
 
@@ -140,7 +140,7 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
     };
 
     $j('#' + this.id).click(cHandler);
-}
+};
 
 UIButton.prototype.anchorClick = function() {
 
@@ -163,7 +163,7 @@ UIButton.prototype.anchorClick = function() {
         $j(this.buttonsToShow).slideUp();
         $j(this.mainButtons).filter(nots).slideDown();
     }
-}
+};
 
 
 function rArrow(pos,vel) {
@@ -180,7 +180,7 @@ function rArrow(pos,vel) {
     this.path = null;
 
     this.buildPath();
-}
+};
 
 rArrow.prototype.buildPath = function() {
     //ok get the first point, that's easy
@@ -234,7 +234,7 @@ rArrow.prototype.buildPath = function() {
          'stroke-linecap':'round',
         'stroke-linejoin':'round'
     });
-}
+};
 
 rArrow.prototype.update = function(pos,vel) {
     if(this.path)
@@ -246,14 +246,14 @@ rArrow.prototype.update = function(pos,vel) {
     this.vel = vel;
 
     this.buildPath();
-}
+};
 
 rArrow.prototype.remove = function() {
     if(this.path)
     {
         this.path.remove();
     }
-}
+};
 
 rArrow.prototype.highlight = function() {
     if(this.path)
@@ -263,7 +263,7 @@ rArrow.prototype.highlight = function() {
             'stroke-width':5
         });
     }
-}
+};
 
 
 
@@ -286,7 +286,7 @@ function polygonUIControl() {
 
     this.prototype = new uiControl(this);
     this.UIbutton = new UIButton(this,'addPolyButton','Add Polygon','Stop Adding Polygons');
-}
+};
 
 polygonUIControl.prototype.deactivate = function() {
     //remove our path and points from the screen
@@ -301,7 +301,7 @@ polygonUIControl.prototype.deactivate = function() {
     //set our button as well
     this.UIbutton.active = false;
     $j('#canvasHolder').css('cursor','default');
-}
+};
 
 polygonUIControl.prototype.activate = function() {
     //just reset some variables
@@ -319,7 +319,7 @@ polygonUIControl.prototype.activate = function() {
     this.active = true;
     this.UIbutton.active = true;
     $j('#canvasHolder').css('cursor','crosshair');
-}
+};
 
 polygonUIControl.prototype.keyDown = function(which,e) {
 
@@ -334,7 +334,7 @@ polygonUIControl.prototype.keyDown = function(which,e) {
 
     //if it's a space, then go close the polygon?
     this.rightClick(x,y);
-}
+};
 
 polygonUIControl.prototype.rightClick = function(x,y) {
 
@@ -354,7 +354,7 @@ polygonUIControl.prototype.rightClick = function(x,y) {
 
     //dump the ui stuff
     this.resetUIVars();
-}
+};
 
 polygonUIControl.prototype.resetUIVars = function() {
     this.uiPath.remove();
@@ -367,7 +367,7 @@ polygonUIControl.prototype.resetUIVars = function() {
     this.uiPoints = [];
     this.uiPath = null;
     this.currentPoint = null;
-}
+};
 
 polygonUIControl.prototype.leftClick = function(x,y) {
 
@@ -381,11 +381,11 @@ polygonUIControl.prototype.leftClick = function(x,y) {
 
     //do a move to restore the path so it doesn't flicker when we are clicking
     this.mouseMove(x,y);
-}
+};
 
 polygonUIControl.prototype.mouseUp = function(x,y) {
     return;
-}
+};
 
 polygonUIControl.prototype.mouseMove = function(x,y) {
     //only do this when there is already one point
@@ -408,7 +408,7 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 
     if(this.uiPath) { this.uiPath.remove(); }
     this.uiPath = cutePath(pathString);
-}
+};
 
 
 function EditUIControl() {
@@ -419,7 +419,7 @@ function EditUIControl() {
     
     this.prototype = new uiControl(this);
     this.UIbutton = new UIButton(this,'editPolyButton','Edit Polygons','Stop Editing Polygons');
-}
+};
 
 //for some reason the stubs from the prototype dont get inherited
 EditUIControl.prototype.mouseMove = function() { return; }
@@ -442,14 +442,14 @@ EditUIControl.prototype.activate = function() {
     partController.clearAll();
 
     this.setCursor('move','pointer');
-}
+};
 
 EditUIControl.prototype.deactivate = function() {
     this.active = false;
     this.UIbutton.active = false;
 
     this.setCursor('default','default');
-}
+};
 
 
 EditUIControl.prototype.setCursor = function(pathType,pointType) {
@@ -465,11 +465,11 @@ EditUIControl.prototype.setCursor = function(pathType,pointType) {
 
         for(var j = 0; j < vertices.length; j++)
         {
-            //$j(vertices[j].rPoint.node).css('cursor',pointType);
+            $j(vertices[j].rPoint.node).css('cursor',pointType);
         }
     }
 
-}
+};
 
 
 function TraceUIControl() {
@@ -481,7 +481,7 @@ function TraceUIControl() {
     this.UIbutton = new UIButton(this,'traceButton',
                 'Trace Particle','Stop Tracing Particles',
                 ['clearParticlesButton','bombardButton','togglePathsButton']);
-}
+};
 
 TraceUIControl.prototype.clearScreen = function() {
     //clear screen
@@ -489,7 +489,7 @@ TraceUIControl.prototype.clearScreen = function() {
     if(this.endPoint) { this.endPoint.remove(); }
     if(this.parab) { this.parab.removePath(); }
     if(this.path) { this.path.remove(); }
-}
+};
 
 TraceUIControl.prototype.deactivate = function() {   
     this.clearScreen();
@@ -500,7 +500,7 @@ TraceUIControl.prototype.deactivate = function() {
     this.UIbutton.active = false;
 
     $j('#canvasHolder').css('cursor','default');
-}
+};
 
 TraceUIControl.prototype.resetVars = function() {
 
@@ -511,7 +511,7 @@ TraceUIControl.prototype.resetVars = function() {
 
     this.s = null;
     this.vel = null;
-}
+};
 
 
 TraceUIControl.prototype.activate = function() {
@@ -527,16 +527,16 @@ TraceUIControl.prototype.activate = function() {
     this.active = true;
     this.UIbutton.active = true;
     $j('#canvasHolder').css('cursor','crosshair');
-}
+};
 
 TraceUIControl.prototype.rightClick = function(x,y) {
     //just return I think? or do a random arc from here
     return;
-}
+};
 
 TraceUIControl.prototype.keyDown = function(which,e) {
     return;
-}
+};
 
 TraceUIControl.prototype.mouseUp = function(x,y) {
     //make the particle and advance it once
@@ -568,7 +568,7 @@ TraceUIControl.prototype.mouseUp = function(x,y) {
     //make sure to reset our vars
     this.clearScreen();
     this.resetVars();
-}
+};
 
 TraceUIControl.prototype.leftClick = function(x,y) {
     //this is essentially the mousedown left click
@@ -583,7 +583,7 @@ TraceUIControl.prototype.leftClick = function(x,y) {
     this.startTime = now.getTime();
 
     this.mouseMove(x,y);
-}
+};
 
 TraceUIControl.prototype.mouseMove = function(x,y,e) { 
     if(e && !e.which)
@@ -628,7 +628,7 @@ TraceUIControl.prototype.mouseMove = function(x,y,e) {
 
     //now we have start, vel, and accel
     this.parab = new Parabola(this.s,this.vel,this.accel,true);
-}
+};
 
 
 /**********END CLASSES******************/
@@ -649,7 +649,7 @@ function cuteSmallCircle(x,y,wantsSameColor) {
     c.attr("stroke-width",2);
 
     return c;
-}
+};
 
 function constructPathStringFromPoints(points,wantsToClose) {
 
@@ -666,7 +666,7 @@ function constructPathStringFromPoints(points,wantsToClose) {
     }
 
     return pathString;
-}
+};
 
 function constructPathStringFromCoords(points,wantsToClose) {
 
@@ -688,7 +688,7 @@ function constructPathStringFromCoords(points,wantsToClose) {
     }
 
     return pathString;
-}
+};
 
 
 
@@ -696,7 +696,7 @@ function randomHueString() {
     var hue = Math.random();
     var str = 'hsb(' + String(hue) + ',0.7,1)';
     return str;
-}
+};
 
 function randomGradient() {
     var hue = Math.random()*0.8;
@@ -706,13 +706,17 @@ function randomGradient() {
     var gradient = String(Math.round(Math.random()*180)) + '-' + color1 + '-' + color2;
 
     return gradient;
-}
+};
 
-function cutePath(pathString,wantsToFill,strokeColor) {
+function cutePath(pathString,wantsToFill,strokeColor,fillColor) {
     var path = p.path(pathString);
     if(!strokeColor)
     {
         strokeColor = '#FFF';
+    }
+    if(!fillColor)
+    {
+        fillColor = randomGradient();
     }
     path.attr({
         'stroke-width':2,
@@ -723,18 +727,17 @@ function cutePath(pathString,wantsToFill,strokeColor) {
 
     if(wantsToFill)
     {
-        path.attr('fill',randomGradient());
-        //path.attr('fill',randomHueString());
+        path.attr('fill',fillColor);
     }
     return path;
-}
+};
 
 function windowResize(e) {
     var width = $j('#canvasHolder').width();
     var height = $j('#canvasHolder').height();
 
     p.setSize(width,height);
-}
+};
 
 function onScreen(point,accel) {
     var x = point.x;
@@ -802,11 +805,11 @@ function onScreen(point,accel) {
 
     return checkResult;
     //we dont check for y because particles could come back down
-}
+};
 
 function bombard() {
     bombardStep(0);
-}
+};
 
 function bombardStep(i) {
 
@@ -841,7 +844,7 @@ function bombardStep(i) {
     setTimeout(function() {
         bombardStep(i+1)
     },200);
-}
+};
 
 function toggleDebug()
 {
@@ -854,4 +857,4 @@ function toggleDebug()
     {
         $j('#debugButton').text('Debug');
     }
-}
+};

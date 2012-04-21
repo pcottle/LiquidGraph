@@ -76,6 +76,7 @@ Vertex.prototype.concaveTest = function() {
 function Polygon(rPoints,rPath) {
     this.rPoints = rPoints;
     this.rPath = rPath;
+    this.fillColor = rPath.attr('fill');
 
     this.vertices = [];
     this.concaveVertices = [];
@@ -95,7 +96,8 @@ function Polygon(rPoints,rPath) {
         this.vertices.push(vertex);
     }
 
-    this.setDragHandlers();
+    this.setBodyDragHandlers();
+    this.setVertexDragHandlers();
 
     //first validate the polygon
     this.validatePolygon();
@@ -104,7 +106,111 @@ function Polygon(rPoints,rPath) {
     this.classifyVertices();
 };
 
-Polygon.prototype.setDragHandlers = function() {
+Polygon.prototype.setVertexDragHandlers = function () {
+    var onDrag = function(dx,dy,x,y,e) {
+        if(!polyEditor.active)
+        {
+            return;
+        }
+
+        if(this.dragPath) { this.dragPath.remove(); }
+        if(this.dragCircle) { this.dragCircle.remove(); }
+        if(this.dragOutline) { this.dragOutline.remove(); }
+
+        var endPoint = vecMake(x,y);
+        var startPoint = vecMake(this.startDragX,this.startDragY);
+
+        if(!this.dragEndPoint) { //first time
+            this.parentPoly.rPath.attr('fill','none');
+        }
+        this.dragEndPoint = endPoint;
+
+        var pathString = constructPathStringFromCoords([startPoint,endPoint]);
+        this.dragPath = cutePath(pathString,false);
+        this.dragCircle = cuteSmallCircle(x,y);
+
+        //go get all the vertices real quick
+        var points = [];
+        var vertices = this.parentPoly.vertices;
+        for(var i = 0; i < vertices.length; i++)
+        {
+            if(vertices[i] != this)
+            {
+                points.push(vertices[i]);
+            } else {
+                points.push(endPoint);
+            }
+        }
+
+        pathString = constructPathStringFromCoords(points);
+        this.dragOutline = cutePath(pathString,true,'#FFF',this.parentPoly.fillColor);
+    };
+
+    var onEnd = function(e) {
+
+        if(this.dragPath) { this.dragPath.remove(); }
+        if(this.dragCircle) { this.dragCircle.remove(); }
+        if(this.dragOutline) { this.dragOutline.remove(); }
+
+        //ok so we need to clone all the vertices, except for this one
+        var vertices = this.parentPoly.vertices;
+        var rPoints = [];
+
+        for(var i = 0; i < vertices.length; i++)
+        {
+            if(vertices[i] != this)
+            {
+                rPoints.push(vertices[i].rPoint.clone());
+            }
+            else
+            {
+                rPoints.push(cuteSmallCircle(this.dragEndPoint.x,this.dragEndPoint.y));
+            }
+        }
+
+        var newPathString = constructPathStringFromPoints(rPoints,true);
+        var newPath = cutePath(newPathString,true,'#FFF',this.parentPoly.fillColor);
+
+        //temporarily remove the parent poly
+        polyController.remove(this.parentPoly);
+
+        var results = polyController.makePolygon(rPoints,newPath);
+        if(!results.failed)
+        {
+            this.parentPoly.rPath.remove();
+            $j.each(this.parentPoly.vertices,function(i,vertex) { vertex.rPoint.remove(); });
+        }
+        else
+        {
+            //it failed so add ourselves back in
+            polyController.add(this.parentPoly);
+            this.parentPoly.rPath.attr('fill',this.parentPoly.fillColor);
+        }
+
+        this.dragEndPoint = null;
+    };
+
+    var onStart = function(x,y,e) {
+        if(!polyEditor.active)
+        {
+            return;
+        }
+
+        //this refers to the VERTEX being clicked!!
+        this.parentPoly.dragVertex = this;
+
+        this.startDragX = x;
+        this.startDragY = y;
+    };
+
+    for(var i = 0; i < this.vertices.length; i++)
+    {
+        var v = this.vertices[i];
+        v.rPoint.drag(onDrag,onStart,onEnd,v,v,v);
+    }
+};
+
+Polygon.prototype.setBodyDragHandlers = function() {
     var onDrag = function(dx,dy,x,y,e) {
 
         if(!polyEditor.active)
@@ -138,7 +244,7 @@ Polygon.prototype.setDragHandlers = function() {
             newPoints.push(this.vertices[i].rPoint.clone());
         }
         var newPathString = constructPathStringFromPoints(newPoints,true);
-        var newPath = cutePath(newPathString,true);
+        var newPath = cutePath(newPathString,true,'#FFF',this.fillColor);
 
         //we need to temporarily remove ourselves so validation doesnt fail
         polyController.remove(this);
