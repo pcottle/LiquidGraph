@@ -130,7 +130,7 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
         this.buttonsToShow = "";
     }
 
-    this.mainButtons = ['addPolyButton','traceButton','editPolyButton','importExportButton'];
+    this.mainButtons = ['addPolyButton','traceButton','editPolyButton','importExportButton','testButton'];
     this.mainButtons = this.mainButtons.map(function(id) { return "#" + id; });
     this.mainButtons = this.mainButtons.join(",");
 
@@ -893,6 +893,8 @@ function toggleImportExport()
 
 function importGeometry()
 {
+    toggleImportExport();
+
     var width = $j(window).width();
     var height = $j(window).height();
 
@@ -981,7 +983,6 @@ function exportGeometry()
 
     for(var i = 0; i < polyController.polys.length; i++)
     {
-        console.log("poly i",i);
         var poly = polyController.polys[i];
 
         var color = poly.fillColor;
@@ -1026,5 +1027,24 @@ function exportGeometry()
     };
 
     var exportString = JSON.stringify(exportData);
-    $j('#jsonTextArea').text(exportString);
+    console.log(exportString);
+    $j('#jsonTextArea').val(exportString);
 };
+
+
+function testSampling() {
+    var poly = polyController.polys[0];
+
+    var vToSample = null;
+    for(var i = 0; i < poly.vertices.length; i++)
+    {
+        if(poly.vertices[i].isConcave)
+        {
+            vToSample = poly.vertices[i];
+            break;
+        }
+    }
+
+    sampler = new ConcaveVertexSampler(vToSample,null,particleTracer.accel);
+    sampler.sampleConnectivity();
+}

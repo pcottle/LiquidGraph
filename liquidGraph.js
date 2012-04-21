@@ -1923,6 +1923,136 @@ Particle.prototype.animate = function() {
 };
 
 
+//this object takes in a concave vertex and samples out in different directions
+function ConcaveVertexSampler(concaveVertex,parentSolver,fieldAccel) {
+    this.concaveVertex = concaveVertex;
+    this.parentSolver = parentSolver;
+
+    this.accelStrength = vecLength(fieldAccel);
+
+    this.inEdge = concaveVertex.inEdge;
+    this.outEdge = concaveVertex.outEdge;
+
+    this.transitionSpeed = 5.5; //0.5 seconds to transition for the max case
+}
+
+ConcaveVertexSampler.prototype.sampleConnectivity = function() {
+    //we will do this by edge. The interesting thing is that the counterclockwise vs clockwise connectivity doesn't really matter
+    //unlike in Yusuke's code because we can rotate in any / either direction.
+
+    this.sampleConnectivityFromEdge(this.inEdge);
+    this.sampleConnectivityFromEdge(this.outEdge);
+}
+
+ConcaveVertexSampler.prototype.sampleConnectivityFromEdge = function(edge) {
+    //the sample speed
+
+
+    //this "edge" connects us to some other vertex. first get the normalized vector towards that edge:
+
+    var otherVertex = edge.getOtherVertex(this.concaveVertex);
+    var outVec = vecSubtract(otherVertex,this.concaveVertex);
+    outVec = vecNormalize(outVec);
+
+    //now we need the starting gravity direction, aka the negated outward normal of this edge
+    var perpVec = vecNegate(edge.outwardNormal);
+
+    //the start gravity direction and the max gravity direction are two vectors we need
+    //for the following calculations
+    var startG = vecScale(perpVec,this.accelStrength);
+    var maxG = vecScale(outVec,this.accelStrength);
+
+    var dsa = new rArrow(this.concaveVertex,startG);
+    var asd = new rArrow(this.concaveVertex,maxG);
+
+    //ok now we have an edge, a maximum gravity direction, and the starting gravity direction.
+    //
+    //lets go ahead and sample some particles inbetween these two extremes. we will
+    //go through the range of 1 degree to 89 degrees in steps
+
+    var startDegree = 1 * Math.PI / 180.0;
+    var endDegree = 89 * Math.PI / 180.0;
+
+    var step = (endDegree - startDegree) / 20.0;
+
+    for(var theta = startDegree; theta < endDegree; theta += step)
+    {
+        var progress = (theta - startDegree) / (endDegree - startDegree);
+        var time = Math.max(0.1 * this.transitionSpeed, progress * this.transitionSpeed);
+
+        this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec);
+    }
+};
+
+ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,maxG,thetaEnd,timeToTransition,outVec) {
+    //ok so here is where we do some math. I already did this in matlab but here's the deal:
+    //we need to create a function that linearly interpolates between the beginning theta (0) and the end theta(our parameter)
+    //in time. then we need to create a kinetic path out of that function, see where it ends up, and then go finally
+    //create a particle at that point with that velocity and shoot it off into space and see where it ends up.
+
+    //we need to calculate the acceleration of this vector projected onto the edge. this has the format
+    //
+    // accel = sin(thetaEnd * t / tEnd) * |maxG|
+    //
+    // or, simplified as:
+    //
+    // accel = sin(Bt) * A
+    //
+    // we then integrate this once to obtain the velocity as a function of time. We solve for the constant so
+    // velocity is 0 at the beginning
+    //
+    // vel = -cos(Bt) * A / B + A/B
+    //
+    // then we integrate once more to obtain the position as a function of time (with 0 initially). We get:
+    //
+    // pos = -1 * (A * (sin(Bt) - B*t))/ (B^2)
+    //
+    // where A = |maxG|, B = thetaEnd / tEnd
+
+    // we will then calculate parameters at the end of the transition period. Namely, we will calculate the velocity and
+    // position at the end of the transition. From there we can then just trace the particle with the given end gravity direction
+
+    var A = vecLength(maxG);
+    var B = thetaEnd / timeToTransition;
+
+    var pos = function(t) {
+        return -1 * (A * (Math.sin(B * t) - B * t)) / (B*B);
+    };
+    var vel = function(t) {
+        return -1 * Math.cos(B*t) * A / B + A/B;
+    }
+    var accel = function(t) {
+        return sin(B * t) * A;
+    }
+
+    //TODO!!! make a modified kinetic path with these transition properties so we can animate the particle rolling
+
+    var endPosVal = pos(timeToTransition);
+    var endVelVal = vel(timeToTransition);
+    console.log("our end position value",endPosVal);
+
+    //need to actually move this "endposval" in the direction we are headed
+    var realEndPos = vecAdd(this.concaveVertex,vecScale(outVec,endPosVal));
+    var realEndVel = vecScale(outVec,endVelVal);
+
+    console.log("edge outward normal",edge.outwardNormal);
+    var asd = new rArrow(realEndPos,vecScale(edge.outwardNormal,100));
+    var dsa = new rArrow(realEndPos,realEndVel);
+
+    //now make a particle at this position, 
+
+
+};
+
+
+
+
+
+
+
+
+
+
 /**********END CLASSSES*************/
 
 function commaJoin(p1)

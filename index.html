@@ -112,6 +112,9 @@ $j(document).ready(function(){
     polyEditor = new EditUIControl();
 
     $j(window).resize(windowResize);
+
+    importGeometry();
+    toggleImportExport();
 });
 
 </script>
@@ -144,7 +147,8 @@ $j(document).ready(function(){
 <a id="bombardButton" class="uiButton uiButtonYellow" onclick="javscript:bombard();">Bombard
 </a>
 
-
+<a id="testButton" style="position:absolute;bottom:20px;left:10px;" class="uiButton uiButtonPink" onclick="javascript:testSampling();">Test Sampling
+</a>
 
 <a id="editPolyButton" class="uiButton uiButtonYellow">Edit Polygons
 </a>
@@ -163,7 +167,7 @@ $j(document).ready(function(){
 
         <div style="text-align:center;margin-top:10px;">
             <textarea id="jsonTextArea" style="width:80%;" rows="5">
-            Paste your JSON here
+            {"polys":[{"fillColor":"155-hsb(0.6685405777767301,0.7,1)-hsb(0.8685405777767301,0.9,1)","vertices":[{"x":0.3284722222222222,"y":0.6925925925925925},{"x":0.28541666666666665,"y":0.2574074074074074},{"x":0.47291666666666665,"y":0.5037037037037037},{"x":0.6125,"y":0.23333333333333334},{"x":0.5458333333333333,"y":0.7351851851851852}]}],"particles":[]}
             </textarea>
         </div>
 
