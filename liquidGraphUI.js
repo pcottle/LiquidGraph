@@ -665,9 +665,16 @@ function cuteSmallCircle(x,y,wantsSameColor) {
 
     c.attr("stroke","#FFF");
     c.attr("stroke-width",2);
-
     return c;
 };
+
+function debugCircle(x,y) {
+    var c = cuteSmallCircle(x,y);
+    c.attr('stroke','#F00');
+    c.attr('stroke-width',3);
+    c.glow();
+    return c;
+}
 
 function constructPathStringFromPoints(points,wantsToClose) {
 

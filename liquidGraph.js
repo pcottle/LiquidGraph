@@ -933,6 +933,31 @@ Parabola.prototype.drawParabolaPath = function(tVal) {
 
     var hue = velocityHue(this.vel);
 
+    //fix!! sometimes with VERY straight paths you get numerical imprecision
+    //and the parabola line goes off the screen because the control point is so far away...
+
+    //fix this via:
+    var v1 = vecNormalize(this.vel);
+    var v2 = vecNormalize(this.accel);
+
+    var shouldGoBezier = true;
+
+    if(vecDot(v1,v2) > 0.99)
+    {
+        //just make it from points
+        var p1 = this.pointYielder(0);
+        var p2 = this.pointYielder(tVal);
+
+        var pString = constructPathStringFromCoords([p1,p2]);
+
+        this.path = cutePath(pString);
+        this.path.attr({
+            'stroke-width':3,
+            'stroke':hue
+        });
+        return;
+    }
+
     //convert this parabola into a quadratic bezier path
     this.path = this.getQuadraticBezierPath(tVal);
     this.path.attr({
@@ -1432,10 +1457,6 @@ Particle.prototype.collide = function(parabola,tValue,edge) {
         //we are on an edge now... project our accel onto this edge
         var newAccel = this.projectVectorOntoEdge(accel,edge);
 
-        //this new acceleration is correct
-        //var asd = new rArrow(edge.midPoint,newAccel);
-        //asd.highlight();
-
         //if our accel is 0, and our new velocity is zero, particle might not settle / move
         //
         //hence we might need to just stop here?
@@ -1626,6 +1647,8 @@ Particle.prototype.getArrivalVertex = function() {
     //if we dont have an edge hit here something is seriously wrong
     if(!edgeHit)
     {
+        p1BoundaryEdge.highlight();
+        p2BoundaryEdge.highlight();
         throw new Error("tried to intersect parabola with boundary edges but something failed.");
     }
 
@@ -1962,29 +1985,27 @@ ConcaveVertexSampler.prototype.sampleConnectivityFromEdge = function(edge) {
     var startG = vecScale(perpVec,this.accelStrength);
     var maxG = vecScale(outVec,this.accelStrength);
 
-    var dsa = new rArrow(this.concaveVertex,startG);
-    var asd = new rArrow(this.concaveVertex,maxG);
-
     //ok now we have an edge, a maximum gravity direction, and the starting gravity direction.
     //
     //lets go ahead and sample some particles inbetween these two extremes. we will
-    //go through the range of 1 degree to 89 degrees in steps
+    //go through the range of 1 degree to 80 degrees in steps
 
     var startDegree = 1 * Math.PI / 180.0;
-    var endDegree = 89 * Math.PI / 180.0;
+    var endDegree = 80 * Math.PI / 180.0;
 
     var step = (endDegree - startDegree) / 20.0;
 
-    for(var theta = startDegree; theta < endDegree; theta += step)
+    for(var theta = startDegree + step * 0; theta < endDegree; theta += step)
     {
         var progress = (theta - startDegree) / (endDegree - startDegree);
         var time = Math.max(0.1 * this.transitionSpeed, progress * this.transitionSpeed);
 
-        this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec);
+        this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec,perpVec);
+        throw new Error("hi");
     }
 };
 
-ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,maxG,thetaEnd,timeToTransition,outVec) {
+ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,maxG,thetaEnd,timeToTransition,outVec,perpVec) {
     //ok so here is where we do some math. I already did this in matlab but here's the deal:
     //we need to create a function that linearly interpolates between the beginning theta (0) and the end theta(our parameter)
     //in time. then we need to create a kinetic path out of that function, see where it ends up, and then go finally
@@ -2029,19 +2050,42 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
 
     var endPosVal = pos(timeToTransition);
     var endVelVal = vel(timeToTransition);
-    console.log("our end position value",endPosVal);
 
+    //end acceleration is a bit harder:
+    //
+    //     \___________ -> outVec
+    //      |
+    //      v perp vec
+    //
+    // theta is the angle between perpVec and the desired end gravity direction:
+
+    var endAccelVec = vecAdd(vecScale(perpVec,Math.cos(thetaEnd)),vecScale(outVec,Math.sin(thetaEnd)));
+
+    //
     //need to actually move this "endposval" in the direction we are headed
     var realEndPos = vecAdd(this.concaveVertex,vecScale(outVec,endPosVal));
     var realEndVel = vecScale(outVec,endVelVal);
 
-    console.log("edge outward normal",edge.outwardNormal);
+    var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
+
+    //also need the projected endaccel
+    var slidingAccel = Particle.prototype.projectVectorOntoEdge(realEndAccel,edge);
+
     var asd = new rArrow(realEndPos,vecScale(edge.outwardNormal,100));
-    var dsa = new rArrow(realEndPos,realEndVel);
+    console.log(realEndVel);
+    //var dsa = new rArrow(realEndPos,realEndVel);
 
-    //now make a particle at this position, 
+    //now make a particle at this position, with this velocity, edge sliding on this edge, with the end field acceleration
+    //but with the projected velocity in this case
 
+    var kState = new KineticState(realEndPos,realEndVel,slidingAccel);
+    var tState = {
+        'name':'onEdge',
+        'whichEdge':edge
+    };
 
+    //var particleHere = new Particle(kState,realEndAccel,tState);
+    partController.makeParticle(kState,realEndAccel,tState);
 };
 
 
