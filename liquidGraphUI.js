@@ -773,20 +773,23 @@ function onScreen(point,accel) {
         throw new Error("no accel specified!");
     }
 
-    var width = $j('#canvasHolder').width();
-    var height = $j('#canvasHolder').height();
+    var width = $j('#canvasHolder').width() * 3;
+    var height = $j('#canvasHolder').height() * 3;
+
+    var minW = 0 - width;
+    var minH = 0 - height;
 
     //ok so there are four boundaries. we can't check the boundary that is OPPOSITE
     //the direction of the acceleration because the particle might come back down!
 
     var bottomCheck = function(x,y) {
-        return y > 0;
+        return y > minH;
     };
     var topCheck = function(x,y) {
         return y < height;
     };
     var leftCheck = function(x,y) {
-        return x > 0;
+        return x > minW;
     };
     var rightCheck = function(x,y) {
         return x < width;

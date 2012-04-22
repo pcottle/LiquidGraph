@@ -1309,14 +1309,16 @@ Particle.prototype.settle = function() {
     {
         this.settleResults = {
             'totalTime':totalTime,
-            'endLocation':'offScreen'
+            'endLocationName':'offScreen',
+            'endLocationObj':'offScreen'
         };
     }
     else
     {
         this.settleResults = {
         'totalTime':totalTime,
-        'endLocation':this.traceState.whichVertex.id
+        'endLocationName':this.traceState.whichVertex.id,
+        'endLocationObj':this.traceState
         };
     }
     return this.settleResults;
@@ -1996,6 +1998,7 @@ function ConcaveVertexSampler(concaveVertex,parentSolver,fieldAccel) {
     this.outEdge = concaveVertex.outEdge;
 
     this.connectivity = {};
+    this.animationInfo = {};
     this.connectedNodes = [];
 
     this.transitionSpeed = 5.5; //0.5 seconds to transition for the max case
@@ -2161,37 +2164,39 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
 
     var settleResults = particleHere.settle();
 
-    this.postResults(settleResults,startG,realEndAccel,timeToTransition);
+    this.postResults(settleResults,startG,realEndAccel,timeToTransition,particleHere);
     return particleHere;
 };
 
-ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realEndAccel,timeToTransition) {
+ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realEndAccel,timeToTransition,particle) {
     //here we store all the connectivity information. This is essentially a cost-sensitive closed list
 
-    var totalTime = settleResults.time;
-    var endLocation = settleResults.endLocation;
+    var totalTime = settleResults.totalTime;
+    var endLocationName = settleResults.endLocationName;
+    var endLocationObject = settleResults.endLocationObj;
 
-    if(!this.connectivity[endLocation])
-    {
-        this.connectivity[endLocation] = totalTime;
-        this.connectedNodes.push(endLocation);
-    }
-    else
-    {
-        if(this.connectivity[endLocation] > totalTime)
-        {
-            this.connectivity[endLocation] = totalTime;
-        }
-    }
+    var animationInformation = {
+        'endLocationName':endLocationName,
+        'endLocationObj':endLocationObject,
+        'startG':startG,
+        'realEndAccel':realEndAccel,
+        'timeToTransition':timeToTransition,
+        'totalTime':totalTime,
+        'particle':particle
+    };
 
+    if(!this.connectivity[endLocationName])
+    {
+        this.connectivity[endLocationName] = totalTime;
+        this.connectedNodes.push(endLocationName);
+        this.animationInfo[endLocationName] = animationInformation;
+    }
+    else if(this.connectivity[endLocationName] > totalTime)
+    {
+        this.connectivity[endLocationName] = totalTime;
+        this.animationInfo[endLocationName] = animationInformation;
+    }
 };
-
-
-
-
-
-
-
 
 
 
