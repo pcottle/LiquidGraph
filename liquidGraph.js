@@ -2010,6 +2010,18 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
 
     this.sampleConnectivityFromEdge(this.inEdge);
     this.sampleConnectivityFromEdge(this.outEdge);
+
+    this.animateConnectivity();
+}
+
+ConcaveVertexSampler.prototype.animateConnectivity = function() {
+
+    //now animate the "fastest" particles from each
+    for(var i = 0; i < this.connectedNodes.length; i++)
+    {
+        var animation = this.animationInfo[this.connectedNodes[i]];
+        animation.particle.animate();
+    }
 }
 
 ConcaveVertexSampler.prototype.sampleConnectivityFromEdge = function(edge) {

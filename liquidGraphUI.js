@@ -1041,8 +1041,10 @@ function exportGeometry()
     $j('#jsonTextArea').val(exportString);
 };
 
+var s = [];
 
 function testSampling() {
+    s = [];
     for(var j = 0; j < polyController.polys.length; j++)
     {
         var poly = polyController.polys[j];
@@ -1055,6 +1057,8 @@ function testSampling() {
                 vToSample = poly.vertices[i];
                 sampler = new ConcaveVertexSampler(vToSample,null,particleTracer.accel);
                 sampler.sampleConnectivity();
+                console.log(sampler);
+                s.push(sampler);
             }
         }
     }
