@@ -1040,18 +1040,20 @@ function exportGeometry()
 
 
 function testSampling() {
-    var poly = polyController.polys[0];
-
-    var vToSample = null;
-    for(var i = 0; i < poly.vertices.length; i++)
+    for(var j = 0; j < polyController.polys.length; j++)
     {
-        if(poly.vertices[i].isConcave)
+        var poly = polyController.polys[j];
+
+        var vToSample = null;
+        for(var i = 0; i < poly.vertices.length; i++)
         {
-            vToSample = poly.vertices[i];
-            break;
+            if(poly.vertices[i].isConcave)
+            {
+                vToSample = poly.vertices[i];
+                sampler = new ConcaveVertexSampler(vToSample,null,particleTracer.accel);
+                sampler.sampleConnectivity();
+            }
         }
     }
 
-    sampler = new ConcaveVertexSampler(vToSample,null,particleTracer.accel);
-    sampler.sampleConnectivity();
 }

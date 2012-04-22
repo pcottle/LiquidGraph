@@ -1316,7 +1316,7 @@ Particle.prototype.settle = function() {
     {
         this.settleResults = {
         'totalTime':totalTime,
-        'endLocation':this.traceState.whichVertex
+        'endLocation':this.traceState.whichVertex.id
         };
     }
     return this.settleResults;
@@ -1706,6 +1706,10 @@ Particle.prototype.clearPath = function() {
     $j.each(this.kPaths,function(i,kPath) { kPath.clearPath(); });
 };
 
+Particle.prototype.setOpacity = function(opacity) {
+    $j.each(this.kPaths,function(i,kPath) { kPath.parabola.path.attr('stroke-opacity',opacity); });
+}
+
 Particle.prototype.clearAll = function() {
     $j.each(this.kPaths,function(i,kPath) { kPath.clearAll(); });
 };
@@ -1991,6 +1995,9 @@ function ConcaveVertexSampler(concaveVertex,parentSolver,fieldAccel) {
     this.inEdge = concaveVertex.inEdge;
     this.outEdge = concaveVertex.outEdge;
 
+    this.connectivity = {};
+    this.connectedNodes = [];
+
     this.transitionSpeed = 5.5; //0.5 seconds to transition for the max case
 }
 
@@ -2041,7 +2048,12 @@ ConcaveVertexSampler.prototype.sampleConnectivityFromEdge = function(edge) {
         var fraction = (theta - startDegree) / (endDegree - startDegree);
         var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
-        this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec,perpVec);
+        var particle = this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec,perpVec);
+
+        if(particle) {
+            particle.drawEntirePath();
+            particle.setOpacity(1 - progress + 0.1);
+        }
     }
 };
 
@@ -2122,7 +2134,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
         return;
     }
 
-    debugCircle(realEndPos.x,realEndPos.y);
+    if(debug) { debugCircle(realEndPos.x,realEndPos.y); }
 
     var realEndVel = vecScale(outVec,endVelVal);
     var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
@@ -2130,9 +2142,10 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
     //also need the projected endaccel
     var slidingAccel = Particle.prototype.projectVectorOntoEdge(realEndAccel,edge);
 
-    //TODO DEBUG:
-    var asd = new rArrow(realEndPos,vecScale(edge.outwardNormal,100));
-    var dsa = new rArrow(realEndPos,realEndVel);
+    if(debug) { 
+        var asd = new rArrow(realEndPos,vecScale(edge.outwardNormal,100));
+        var dsa = new rArrow(realEndPos,realEndVel);
+    }
 
     //now make a particle at this position, with this velocity, edge sliding on this edge, with the end field acceleration
     //but with the projected velocity in this case
@@ -2147,7 +2160,29 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
     partController.add(particleHere);
 
     var settleResults = particleHere.settle();
-    particleHere.drawEntirePath();
+
+    this.postResults(settleResults,startG,realEndAccel,timeToTransition);
+    return particleHere;
+};
+
+ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realEndAccel,timeToTransition) {
+    //here we store all the connectivity information. This is essentially a cost-sensitive closed list
+
+    var totalTime = settleResults.time;
+    var endLocation = settleResults.endLocation;
+
+    if(!this.connectivity[endLocation])
+    {
+        this.connectivity[endLocation] = totalTime;
+        this.connectedNodes.push(endLocation);
+    }
+    else
+    {
+        if(this.connectivity[endLocation] > totalTime)
+        {
+            this.connectivity[endLocation] = totalTime;
+        }
+    }
 
 };
 
