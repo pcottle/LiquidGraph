@@ -40,6 +40,12 @@
 <a id="traceButton" class="uiButton">Trace Particle
 </a>
 
+<a id="clearButton" class="uiButton uiButtonRed" onclick="javascript:clearAll();">Clear All
+</a>
+
+<a id="solveButton" class="uiButton uiButtonWhite">Solve!
+</a>
+
 <a id="bombardButton" class="uiButton uiButtonYellow" onclick="javscript:bombard();">Bombard
 </a>
 
@@ -180,6 +186,7 @@ $j(document).ready(function(){
     partController = new particleController();
     particleTracer = new TraceUIControl();
     polyEditor = new EditUIControl();
+    solveController = new SolveUIControl();
 
     $j(window).resize(windowResize);
 

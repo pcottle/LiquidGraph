@@ -163,6 +163,10 @@ Polygon.prototype.setVertexDragHandlers = function () {
     };
 
     var onEnd = function(e) {
+        if(!polyEditor.active)
+        {
+            return;
+        }
 
         if(this.dragPath) { this.dragPath.remove(); }
         if(this.dragCircle) { this.dragCircle.remove(); }
@@ -207,8 +211,13 @@ Polygon.prototype.setVertexDragHandlers = function () {
     };
 
     var onStart = function(x,y,e) {
-        if(!polyEditor.active)
+        if(!polyEditor.active && !solveController.active)
         {
+            return;
+        }
+        if(solveController.active)
+        {
+            solveController.vertexClick(this);
             return;
         }
 

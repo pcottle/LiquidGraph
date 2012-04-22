@@ -132,7 +132,8 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
         this.buttonsToShow = "";
     }
 
-    this.mainButtons = ['addPolyButton','traceButton','editPolyButton','importExportButton','testButton'];
+    this.mainButtons = ['addPolyButton','traceButton','editPolyButton',
+                        'importExportButton','testButton','clearButton','solveButton'];
     this.mainButtons = this.mainButtons.map(function(id) { return "#" + id; });
     this.mainButtons = this.mainButtons.join(",");
 
@@ -428,6 +429,78 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 
     if(this.uiPath) { this.uiPath.remove(); }
     this.uiPath = cutePath(pathString);
+};
+
+function SolveUIControl() {
+
+    this.active = false;
+    this.firstTime = true;
+
+    this.prototype = new uiControl(this);
+    this.UIbutton = new UIButton(this,'solveButton','Solve!','Stop Solving');
+};
+
+//for some reason the stubs from the prototype dont get inherited
+SolveUIControl.prototype.mouseMove = function() { return; }
+SolveUIControl.prototype.mouseUp = function() { return; }
+SolveUIControl.prototype.leftClick = function() { return; }
+SolveUIControl.prototype.keyDown = function() { return; }
+SolveUIControl.prototype.rightClick = function() { return; }
+
+SolveUIControl.prototype.vertexClick = function(vertex) {
+    partController.clearAll();
+
+    var searcher = new GraphSearcher(vertex);
+    searcher.search();
+};
+
+SolveUIControl.prototype.activate = function() {
+    if(this.firstTime)
+    {
+        topNotifyTemp("Click on a concave vertex!",3000);
+        this.firstTime = false;
+    }
+
+    this.active = true;
+    this.UIbutton.active = true;
+
+    //reset all particles
+    partController.clearAll();
+
+    this.setCursor('help',true);
+};
+
+SolveUIControl.prototype.deactivate = function() {
+    this.active = false;
+    this.UIbutton.active = false;
+
+    this.setCursor('default',false);
+};
+
+
+SolveUIControl.prototype.setCursor = function(pointType,turningOn) {
+
+    //go make all the polygon rPaths have the right cursor
+    for(var i = 0; i < polyController.polys.length; i++)
+    {
+        var poly = polyController.polys[i];
+        var path = poly.rPath;
+        var vertices = poly.vertices;
+
+        for(var j = 0; j < vertices.length; j++)
+        {
+            var v = vertices[j];
+            if(turningOn && !v.isConcave)
+            {
+                $j(v.rPoint.node).css('cursor','not-allowed');
+            }
+            else
+            {
+                $j(vertices[j].rPoint.node).css('cursor',pointType);
+            }
+        }
+    }
+
 };
 
 
@@ -891,6 +964,7 @@ function toggleDebug()
 
 function toggleImportExport()
 {
+    $j('#jsonTextArea').val("");
     if($j('#dialogWrapper').hasClass('showing'))
     {
         $j('#dialogWrapper').css('bottom','-200px');
@@ -903,9 +977,14 @@ function toggleImportExport()
     }
 };
 
+function clearAll()
+{
+    polyController.reset();
+    partController.clearAll();
+}
+
 function importGeometry()
 {
-    toggleImportExport();
 
     var width = $j(window).width();
     var height = $j(window).height();
@@ -921,6 +1000,9 @@ function importGeometry()
         console.log(String(e));
         return;
     }
+
+    //succeed so clear out
+    toggleImportExport();
 
     var polys = importData.polys;
     var particles = importData.particles;
