@@ -10,6 +10,8 @@ function Vertex(x,y,rPoint,parentPoly) {
     this.rPoint = rPoint;
     this.parentPoly = parentPoly;
 
+    this.id = polyController.requestId();
+
     this.inEdge = null;
     this.outEdge = null;
     this.isConcave = null;
@@ -142,7 +144,7 @@ Polygon.prototype.setVertexDragHandlers = function () {
             }
         }
 
-        pathString = constructPathStringFromCoords(points);
+        pathString = constructPathStringFromCoords(points,true);
         this.dragOutline = cutePath(pathString,true,'#FFF',this.parentPoly.fillColor);
     };
 
@@ -414,7 +416,16 @@ Polygon.prototype.validatePoints = function() {
 function polygonController() {
     this.polys = [];
     this.allEdges = [];
+
+    this.vertexIdToGive = 0;
 };
+
+//ensures no two vertices have same ID. i used to do this with random
+//hashes and checking but that got ugly
+polygonController.prototype.requestId = function() {
+    this.vertexIdToGive++;
+    return this.vertexIdToGive;
+}
 
 polygonController.prototype.reset = function() {
     for(var i = 0; i < this.polys.length; i++)
@@ -1286,6 +1297,30 @@ Particle.prototype.settle = function() {
 
         if(i > 1000) { throw new Error("particle tracing did not terminate"); }
     }
+
+    //get total time for settle
+    var totalTime = 0;
+    for(var i = 0; i < this.kPaths.length; i++)
+    {
+        totalTime += this.kPaths[i].endTime
+    }
+
+    if(this.traceState.name == 'offScreen')
+    {
+        this.settleResults = {
+            'totalTime':totalTime,
+            'endLocation':'offScreen'
+        };
+    }
+    else
+    {
+        this.settleResults = {
+        'totalTime':totalTime,
+        'endLocation':this.traceState.whichVertex
+        };
+    }
+    return this.settleResults;
+
 };
 
 //Advances the particle to the next collision or reflection point.
@@ -1991,17 +2026,22 @@ ConcaveVertexSampler.prototype.sampleConnectivityFromEdge = function(edge) {
     //go through the range of 1 degree to 80 degrees in steps
 
     var startDegree = 1 * Math.PI / 180.0;
-    var endDegree = 80 * Math.PI / 180.0;
+    var endDegree = 89 * Math.PI / 180.0;
 
-    var step = (endDegree - startDegree) / 20.0;
+    var degreeDelta = (endDegree - startDegree);
+    var theta = 0;
 
-    for(var theta = startDegree + step * 0; theta < endDegree; theta += step)
+    //NUMSAMPLES
+    var numSamples = 20;
+
+    for(var progress = 0; progress < 1; progress += 1/numSamples)
     {
-        var progress = (theta - startDegree) / (endDegree - startDegree);
-        var time = Math.max(0.1 * this.transitionSpeed, progress * this.transitionSpeed);
+        var theta = startDegree + progress * progress * progress * degreeDelta;
+
+        var fraction = (theta - startDegree) / (endDegree - startDegree);
+        var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
         this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec,perpVec);
-        throw new Error("hi");
     }
 };
 
@@ -2064,16 +2104,35 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
     //
     //need to actually move this "endposval" in the direction we are headed
     var realEndPos = vecAdd(this.concaveVertex,vecScale(outVec,endPosVal));
-    var realEndVel = vecScale(outVec,endVelVal);
 
+    //we need to check if this endPos is further than the other vertex
+    var otherVertex = edge.getOtherVertex(this.concaveVertex);
+    var edgeLength = vecLength(vecSubtract(otherVertex,this.concaveVertex));
+    var concaveToPosLength = vecLength(vecSubtract(realEndPos,this.concaveVertex));
+
+    if(edgeLength <= concaveToPosLength)
+    {
+        //we need to reject this particle because it rolls off the edge before we are done
+        //transitioning gravity directions. it's somewhat impossible to model spinning gravity
+        //direction parabolas with parametric equations and be able to solve their line
+        //intersections with simple/normal equations. These particles could also start
+        //hitting other things and edge sliding with transitioning accelerations which
+        //would be just a giant explosion of difficulty (unless you were doing something
+        //dumb like Euler integration on these particles). 
+        return;
+    }
+
+    debugCircle(realEndPos.x,realEndPos.y);
+
+    var realEndVel = vecScale(outVec,endVelVal);
     var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
 
     //also need the projected endaccel
     var slidingAccel = Particle.prototype.projectVectorOntoEdge(realEndAccel,edge);
 
+    //TODO DEBUG:
     var asd = new rArrow(realEndPos,vecScale(edge.outwardNormal,100));
-    console.log(realEndVel);
-    //var dsa = new rArrow(realEndPos,realEndVel);
+    var dsa = new rArrow(realEndPos,realEndVel);
 
     //now make a particle at this position, with this velocity, edge sliding on this edge, with the end field acceleration
     //but with the projected velocity in this case
@@ -2084,8 +2143,12 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
         'whichEdge':edge
     };
 
-    //var particleHere = new Particle(kState,realEndAccel,tState);
-    partController.makeParticle(kState,realEndAccel,tState);
+    var particleHere = new Particle(kState,realEndAccel,tState);
+    partController.add(particleHere);
+
+    var settleResults = particleHere.settle();
+    particleHere.drawEntirePath();
+
 };
 
 
