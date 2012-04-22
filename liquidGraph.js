@@ -2211,7 +2211,7 @@ ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realE
     if(!this.connectivity[endLocationName])
     {
         this.connectivity[endLocationName] = totalTime;
-        this.connectedNodes.push(endLocationName);
+        this.connectedNodes.push(endLocationObject);
         this.animationInfo[endLocationName] = animationInformation;
     }
     else if(this.connectivity[endLocationName] > totalTime)
