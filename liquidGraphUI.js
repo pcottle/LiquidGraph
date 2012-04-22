@@ -1062,5 +1062,4 @@ function testSampling() {
             }
         }
     }
-
 }

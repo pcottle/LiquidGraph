@@ -14,12 +14,82 @@
 
 <link href="style.css" rel="stylesheet" type="text/css"/>
 
+
+
+</head>
+
+
+<body>
+
+<div id="canvasHolder" style="border:1px solid black; box-shadow: 5px 5px 5px black">
+</div>
+
+<img src="loading.gif"class="loadingGif"/>
+
+<div id="topNotifyBarWrapper" style="width:100%;text-align:center;position:absolute;top:-100px;height:0px;">
+    <div id="topNotifyBarHolder" class="buttonGradient smooth topNotifyBar topNotifyBarHidden bubbleToStop" onclick="topNotifyClear()" style="display:inline-block;cursor:pointer">
+        <div id="topNotifyBar">
+
+        </div>
+    </div>
+</div>
+
+<a id="addPolyButton" class="uiButton">Add Polygon
+</a>
+
+<a id="traceButton" class="uiButton">Trace Particle
+</a>
+
+<a id="bombardButton" class="uiButton uiButtonYellow" onclick="javscript:bombard();">Bombard
+</a>
+
+<a id="testButton" style="position:absolute;bottom:20px;left:10px;" class="uiButton uiButtonPink" onclick="javascript:testSampling();">Test Sampling
+</a>
+
+<a id="editPolyButton" class="uiButton uiButtonYellow">Edit Polygons
+</a>
+
+<a id="clearParticlesButton" class="uiButton uiButtonYellow" onclick="javascript:partController.clearAll();">Clear Particles
+</a>
+
+<a id="togglePathsButton" class="uiButton uiButtonYellow" onclick="javascript:partController.togglePathPreference();">Toggle Paths
+</a>
+
+<a id="importExportButton" class="uiButton uiButtonPink" onclick="javascript:toggleImportExport();">Import / Export
+</a>
+
+<div id="dialogWrapper" style="width:100%;bottom:-200px" class="smooth">
+    <div id="importExportDialog" class="smooth">
+
+        <div style="text-align:center;margin-top:10px;">
+            <textarea id="jsonTextArea" style="width:80%;" rows="5">
+            {"polys":[{"fillColor":"155-hsb(0.6685405777767301,0.7,1)-hsb(0.8685405777767301,0.9,1)","vertices":[{"x":0.3284722222222222,"y":0.6925925925925925},{"x":0.28541666666666665,"y":0.2574074074074074},{"x":0.47291666666666665,"y":0.5037037037037037},{"x":0.6125,"y":0.23333333333333334},{"x":0.5458333333333333,"y":0.7351851851851852}]}],"particles":[]}
+            </textarea>
+        </div>
+
+        
+        <div style="text-align:center">
+            <a id="importButton" class=" uiButtonPink" onclick="javascript:importGeometry()">
+            Import
+            </a>
+
+            <a id="exportButton" class=" uiButtonPink" onclick="javascript:exportGeometry()">
+            Export
+            </a>
+        </div>
+        
+    </div>
+</div>
+
+
 <script type="text/javascript" src="Tween.js"></script>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <!-- <script type="text/javascript" src="jquery.min.js"></script> -->
 <script type="text/javascript" src="raphael-min.js"></script>
 <script type="text/javascript" src="liquidGraphUI.js"></script>
 <script type="text/javascript" src="liquidGraph.js"></script>
+<script type="text/javascript" src="liquidGraphAI.js"></script>
+
 
 <script type="text/javascript">
 
@@ -118,72 +188,6 @@ $j(document).ready(function(){
 });
 
 </script>
-
-
-</head>
-
-
-<body>
-
-<div id="canvasHolder" style="border:1px solid black; box-shadow: 5px 5px 5px black">
-</div>
-
-<img src="loading.gif"class="loadingGif"/>
-
-<div id="topNotifyBarWrapper" style="width:100%;text-align:center;position:absolute;top:-100px;height:0px;">
-    <div id="topNotifyBarHolder" class="buttonGradient smooth topNotifyBar topNotifyBarHidden bubbleToStop" onclick="topNotifyClear()" style="display:inline-block;cursor:pointer">
-        <div id="topNotifyBar">
-
-        </div>
-    </div>
-</div>
-
-<a id="addPolyButton" class="uiButton">Add Polygon
-</a>
-
-<a id="traceButton" class="uiButton">Trace Particle
-</a>
-
-<a id="bombardButton" class="uiButton uiButtonYellow" onclick="javscript:bombard();">Bombard
-</a>
-
-<a id="testButton" style="position:absolute;bottom:20px;left:10px;" class="uiButton uiButtonPink" onclick="javascript:testSampling();">Test Sampling
-</a>
-
-<a id="editPolyButton" class="uiButton uiButtonYellow">Edit Polygons
-</a>
-
-<a id="clearParticlesButton" class="uiButton uiButtonYellow" onclick="javascript:partController.clearAll();">Clear Particles
-</a>
-
-<a id="togglePathsButton" class="uiButton uiButtonYellow" onclick="javascript:partController.togglePathPreference();">Toggle Paths
-</a>
-
-<a id="importExportButton" class="uiButton uiButtonPink" onclick="javascript:toggleImportExport();">Import / Export
-</a>
-
-<div id="dialogWrapper" style="width:100%;bottom:-200px" class="smooth">
-    <div id="importExportDialog" class="smooth">
-
-        <div style="text-align:center;margin-top:10px;">
-            <textarea id="jsonTextArea" style="width:80%;" rows="5">
-            {"polys":[{"fillColor":"155-hsb(0.6685405777767301,0.7,1)-hsb(0.8685405777767301,0.9,1)","vertices":[{"x":0.3284722222222222,"y":0.6925925925925925},{"x":0.28541666666666665,"y":0.2574074074074074},{"x":0.47291666666666665,"y":0.5037037037037037},{"x":0.6125,"y":0.23333333333333334},{"x":0.5458333333333333,"y":0.7351851851851852}]}],"particles":[]}
-            </textarea>
-        </div>
-
-        
-        <div style="text-align:center">
-            <a id="importButton" class=" uiButtonPink" onclick="javascript:importGeometry()">
-            Import
-            </a>
-
-            <a id="exportButton" class=" uiButtonPink" onclick="javascript:exportGeometry()">
-            Export
-            </a>
-        </div>
-        
-    </div>
-</div>
 
 </body>
 
