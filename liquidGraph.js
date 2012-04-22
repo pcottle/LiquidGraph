@@ -1138,7 +1138,7 @@ KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
     //first remove our animationFeatures if they exist
     if(!animateSpeed)
     {
-        animateSpeed = 0.2;
+        animateSpeed = 0.3;
         //animateSpeed = 0.01;
     }
     this.doneFunction = doneFunction;
@@ -1158,8 +1158,8 @@ KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
 
     //start animation with timeout
 
-    //60fps?
-    setTimeout(this.animateFunction,1000 * 1/60);
+    //frames per second... FPS
+    setTimeout(this.animateFunction,1000 * 1/40);
 };
 
 KineticPath.prototype.getAnimateFunction = function() {
@@ -1329,7 +1329,7 @@ Particle.prototype.settle = function() {
         this.settleResults = {
         'totalTime':totalTime,
         'endLocationName':this.traceState.whichVertex.id,
-        'endLocationObj':this.traceState
+        'endLocationObj':this.traceState.whichVertex
         };
     }
     return this.settleResults;
@@ -1999,9 +1999,8 @@ Particle.prototype.animate = function() {
 
 
 //this object takes in a concave vertex and samples out in different directions
-function ConcaveVertexSampler(concaveVertex,parentSolver,fieldAccel) {
+function ConcaveVertexSampler(concaveVertex,fieldAccel) {
     this.concaveVertex = concaveVertex;
-    this.parentSolver = parentSolver;
 
     this.accelStrength = vecLength(fieldAccel);
 
@@ -2010,7 +2009,8 @@ function ConcaveVertexSampler(concaveVertex,parentSolver,fieldAccel) {
 
     this.connectivity = {};
     this.animationInfo = {};
-    this.connectedNodes = [];
+    this.connectedNodeNames = [];
+    this.nameToObject = {};
 
     this.transitionSpeed = 5.5; //0.5 seconds to transition for the max case
 }
@@ -2027,10 +2027,14 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
 
 ConcaveVertexSampler.prototype.animateConnectivity = function() {
 
+    console.log(this.connectedNodeNames);
+    console.log(this.animationInfo);
+
     //now animate the "fastest" particles from each
-    for(var i = 0; i < this.connectedNodes.length; i++)
+    for(var i = 0; i < this.connectedNodeNames.length; i++)
     {
-        var animation = this.animationInfo[this.connectedNodes[i]];
+        var cName = this.connectedNodeNames[i];
+        var animation = this.animationInfo[cName];
         animation.particle.animate();
     }
 }
@@ -2211,8 +2215,10 @@ ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realE
     if(!this.connectivity[endLocationName])
     {
         this.connectivity[endLocationName] = totalTime;
-        this.connectedNodes.push(endLocationObject);
+        this.connectedNodeNames.push(endLocationName);
         this.animationInfo[endLocationName] = animationInformation;
+        this.nameToObject[endLocationName] = endLocationObject;
+
     }
     else if(this.connectivity[endLocationName] > totalTime)
     {
@@ -2270,6 +2276,8 @@ function vecCross(v1,v2) {
 };
 
 function vecLength(vec) {
+    if(vec == undefined || vec.x == undefined) { throw new Error("bad arg"); }
+
     return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
 };
 

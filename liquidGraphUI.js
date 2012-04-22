@@ -1,4 +1,6 @@
+//globals
 
+var globalAccel = {y:50,x:0.5};
 /*****************CLASSES*******************/
 
 function uiControl(parentObj) {
@@ -492,8 +494,8 @@ EditUIControl.prototype.setCursor = function(pathType,pointType) {
 
 function TraceUIControl() {
     this.resetVars();
-    this.accel = {'x':0.5,'y':50};
     this.firstTime = true;
+    this.accel = globalAccel;
 
     this.prototype = new uiControl(this);
     this.UIbutton = new UIButton(this,'traceButton',

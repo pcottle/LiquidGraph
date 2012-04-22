@@ -6,7 +6,10 @@
 
 /********* Classes **********/
 
-function Node(concaveVertex) {
+function Node(concaveVertex,accelDirection) {
+    if(!accelDirection) { throw new Error("need field accel at this node!"); }
+
+    this.concaveVertex = concaveVertex;
 
     if(concaveVertex == 'offScreen')
     {
@@ -14,8 +17,9 @@ function Node(concaveVertex) {
         this.cvs = null;
         return;
     }
+    console.log("making concave vertex sampler");
 
-    this.cvs = new concaveVertexSampler(concaveVertex);
+    this.cvs = new ConcaveVertexSampler(concaveVertex,accelDirection);
     this.isGoal = false;
 }
 
@@ -23,7 +27,13 @@ Node.prototype.expand = function() {
     this.cvs.sampleConnectivity();
     this.cvs.animateConnectivity();
 
-    return this.cvs.connectedNodes;
+    var connectedObjects = [];
+    for(var i = 0; i < this.cvs.connectedNodeNames.length; i++)
+    {
+        connectedObjects.push(this.cvs.nameToObject[this.cvs.connectedNodeNames[i]]);
+    }
+
+    return connectedObjects;
 }
 
 
@@ -48,7 +58,11 @@ function PartialPlan(parentPlan,node) {
         var sourceNode = this.nodes[i];
         var destNode = this.nodes[i+1];
 
-        var time = sourceNode.cvs.animationInfo[destNode.concaveVertex.id].totalTime;
+        var name = destNode.concaveVertex;
+        //god this is horrible hahaha
+        if(name != 'offScreen') { name = name.id; }
+
+        var time = sourceNode.cvs.animationInfo[name].totalTime;
         console.log('found ',time,'between s',sourceNode,'and dest',destNode);
 
         totalTime += time;
@@ -58,17 +72,27 @@ function PartialPlan(parentPlan,node) {
 };
 
 
-function GraphSearcher(initalConcaveVertex) {
+function GraphSearcher(initialConcaveVertex) {
+
+    //the initial accel will just be negated sum of
+    //the two edge outward normals, scaled to the length of the field
+    //accel
+    var iv = initialConcaveVertex;
+
+    var gDirection = vecNormalize(vecAdd(iv.inEdge.outwardNormal,iv.outEdge.outwardNormal));
+    var startAccel = vecScale(vecNegate(gDirection),vecLength(globalAccel));
+    this.startAccel = startAccel;
 
     //this is the standard UCS. aka have a priority queue of partial plans, yadda
     //yadda yadda
 
+    this.poppedPlans = [];
     this.planPriorityQueue = [];
     this.sortFunction = function(a,b) {
         return a.totalTime - b.totalTime;
     };
 
-    var n = new Node(initialConcaveVertex);
+    var n = new Node(initialConcaveVertex,startAccel);
     var plan = new PartialPlan(null,n);
 
     this.planPriorityQueue.push(plan);
@@ -80,18 +104,28 @@ GraphSearcher.prototype.searchStep = function() {
     //pop off the top plan
     var planToExpand = this.planPriorityQueue.pop();
 
+    this.poppedPlans.push(planToExpand);
+
     //expand this top node to get a bunch of other nodes
     var nodeToExpand = planToExpand.nodes[planToExpand.nodes.length - 1];
 
+    if(!nodeToExpand)
+    {
+        //no solution found :(
+        return "NoSolution";
+    }
+
+
     if(nodeToExpand.isGoal)
     {
-        return true;
+        this.solution = planToExpand;
+        return "FoundSolution";
     }
 
     var newLocationObjects = nodeToExpand.expand();
     for(var i = 0; i < newLocationObjects.length; i++)
     {
-        var newNode = new Node(newLocationObjects[i]);
+        var newNode = new Node(newLocationObjects[i],this.startAccel);
         var newPlan = new PartialPlan(planToExpand,newNode);
         this.planPriorityQueue.push(newPlan);
     }
@@ -100,25 +134,32 @@ GraphSearcher.prototype.searchStep = function() {
     this.planPriorityQueue.sort(this.sortFunction);
 
     //not at goal yet
-    return false;
+    return "StillSearching";
 };
 
 GraphSearcher.prototype.search = function() {
     this.searchStepAsync();
 };
 
-GraphSeacher.prototype.searchStepAsync = function() {
+GraphSearcher.prototype.searchStepAsync = function() {
     var results = this.searchStep();
 
-    if(results)
+    var poppedPlan = this.poppedPlans[this.poppedPlans.length - 1];
+
+    if(results == "FoundSolution")
     {
-        topNotifyTemp("Found a solution!");
+        topNotify("Found a solution!");
+    }
+    else if(results == "NoSolution")
+    {
+        topNotify("No Solution Found");
     }
     else
     {
+        var that = this;
         //TODO: make this take the time of the fastest one...
         setTimeout(function() {
-            this.searchStepAsync();
+            that.searchStepAsync();
         },500);
     }
 };
