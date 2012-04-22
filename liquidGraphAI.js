@@ -6,12 +6,20 @@
 
 /********* Classes **********/
 
-function Node(concaveVertex,accelDirection) {
+function Node(locationObj,accelDirection) {
     if(!accelDirection) { throw new Error("need field accel at this node!"); }
 
-    this.concaveVertex = concaveVertex;
+    this.locationObj = locationObj;
+    if(this.locationObj != 'offScreen')
+    {
+        this.locationName = this.locationObj.id;
+    }
+    else
+    {
+        this.locationName = 'offScreen';
+    }
 
-    if(concaveVertex == 'offScreen')
+    if(locationObj == 'offScreen')
     {
         this.isGoal = true;
         this.cvs = null;
@@ -19,7 +27,7 @@ function Node(concaveVertex,accelDirection) {
     }
     console.log("making concave vertex sampler");
 
-    this.cvs = new ConcaveVertexSampler(concaveVertex,accelDirection);
+    this.cvs = new ConcaveVertexSampler(locationObj,accelDirection);
     this.isGoal = false;
 }
 
@@ -58,9 +66,7 @@ function PartialPlan(parentPlan,node) {
         var sourceNode = this.nodes[i];
         var destNode = this.nodes[i+1];
 
-        var name = destNode.concaveVertex;
-        //god this is horrible hahaha
-        if(name != 'offScreen') { name = name.id; }
+        var name = destNode.locationName;
 
         var time = sourceNode.cvs.animationInfo[name].totalTime;
         console.log('found ',time,'between s',sourceNode,'and dest',destNode);
@@ -149,6 +155,11 @@ GraphSearcher.prototype.searchStepAsync = function() {
     if(results == "FoundSolution")
     {
         topNotify("Found a solution!");
+        var that = this;
+
+        setTimeout(function() {
+            that.animateSolution();
+        },3000);
     }
     else if(results == "NoSolution")
     {
@@ -161,6 +172,24 @@ GraphSearcher.prototype.searchStepAsync = function() {
         setTimeout(function() {
             that.searchStepAsync();
         },500);
+    }
+};
+
+GraphSearcher.prototype.animateSolution = function() {
+    if(!this.solution)
+    {
+        throw new Error("no solution to animate!"); 
+    }
+
+    var nodes = this.solution.nodes;
+    for(var i = 0; i < nodes.length - 1; i++)
+    {
+        var sourceNode = nodes[i];
+        var destNode = nodes[i+1];
+        var name = destNode.locationName;
+
+        var animation = sourceNode.cvs.animationInfo[name];
+        animation.particle.animate();
     }
 };
 
