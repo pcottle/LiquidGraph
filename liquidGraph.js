@@ -39,32 +39,23 @@ Vertex.prototype.getOtherEdge = function(edge) {
 Vertex.prototype.concaveTest = function() {
     //the concavity test is as follows:
     //
-    //get the two adjacent vertices. if the avg of those two
-    //vertices is inside our path, then we are convex,
-    //otherwise we are concave
+    //take the cross product of the outward normal vs the
+    //inward normal. This will be positive if the vector turned "outward",
+    //but will be negative if the vector turned inward. But before this
+    //we need to know if the polygon is ordered clockwised or counterclockwise...
 
-    //note: the ordering of the edges is very sensitive here
-    var before = this.inEdge.p1;
-    var after = this.outEdge.p2;
+    var before = this.inEdge.getOtherVertex(this);
+    var after = this.outEdge.getOtherVertex(this);
 
-    //we have to test a bunch of points on the line. I wish there was a way
-    //in Raphael to just test if an entire line lies within a polygon or not
-    this.isConcave = true;
+    var inEdgeNormal = this.inEdge.outwardNormal;
+    var outEdgeNormal = this.outEdge.outwardNormal;
 
-    //hit both 0.01 and 0.99. this test isn't as robust as I would like it to be but
-    //it's good enough in practice
-    for(var t = 0.01; t < 1; t += 0.098)
+    //we just take the cross here to determine concavity / convexity
+    if(vecCross(outEdgeNormal,inEdgeNormal) > 0)
     {
-        var point = convexCombo(before,after,t);
-        var inside = this.parentPoly.isPointInside(point);
-
-        //we only need ONE point to lie inside the polygon on the 'ear'
-        //in order to classify this as convex
-        if(inside)
-        {
-            this.isConcave = false;
-            break;
-        }
+        this.isConcave = !this.parentPoly.CCW;
+    } else {
+        this.isConcave = this.parentPoly.CCW;
     }
 
     return this.isConcave;
@@ -97,15 +88,38 @@ function Polygon(rPoints,rPath) {
         var vertex = new Vertex(x,y,rPoint,this);
         this.vertices.push(vertex);
     }
+    //first validate the polygon
+    this.validatePolygon();
+
+    this.determineOrdering();
 
     this.setBodyDragHandlers();
     this.setVertexDragHandlers();
 
-    //first validate the polygon
-    this.validatePolygon();
-
     //classify vertices
     this.classifyVertices();
+};
+
+Polygon.prototype.determineOrdering = function() {
+    //determine the area of the polygon. aka go around summing up
+    //triangle areas of each edge,
+
+    var totalArea = 0;
+
+    for(var i = 0; i < this.edges.length; i++)
+    {
+        var thisArea = vecCross(this.edges[i].p1,this.edges[i].p2);
+        totalArea += thisArea;
+    }
+
+    if(totalArea < 0)
+    {
+        this.CCW = true;
+    }
+    else
+    {
+        this.CCW = false;
+    }
 };
 
 Polygon.prototype.setVertexDragHandlers = function () {
@@ -293,9 +307,6 @@ Polygon.prototype.classifyVertices = function() {
     if(this.vertices.length == 3)
     {
         //all are convex, its a triangle.
-        //
-        //this is the only part where ear cutting fails, so we
-        //have a special case here
         return;
     }
 
@@ -2252,6 +2263,10 @@ function centerPoint(p1,p2)
 
 function vecDot(v1,v2) {
     return v1.x * v2.x + v1.y * v2.y;
+};
+
+function vecCross(v1,v2) {
+    return v1.x * v2.y - v1.y * v2.x;
 };
 
 function vecLength(vec) {
