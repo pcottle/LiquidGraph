@@ -106,6 +106,18 @@ function GraphSearcher(initialConcaveVertex) {
 
 };
 
+GraphSearcher.prototype.printPlan = function(plan) {
+    var str = '';
+
+    for(var i = 0; i < plan.nodes.length; i++)
+    {
+        var n = plan.nodes[i];
+        str = str + node.locationName + '->';
+    }
+
+    console.log(str);
+};
+
 GraphSearcher.prototype.searchStep = function() {
     //pop off the top plan
     var planToExpand = this.planPriorityQueue.pop();
@@ -149,6 +161,12 @@ GraphSearcher.prototype.search = function() {
 
 GraphSearcher.prototype.searchStepAsync = function() {
     var results = this.searchStep();
+    if(debug)
+    {
+        gs = this;
+        console.log(this);
+        return;
+    }
 
     var poppedPlan = this.poppedPlans[this.poppedPlans.length - 1];
 

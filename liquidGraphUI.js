@@ -1139,7 +1139,7 @@ function testSampling() {
             if(poly.vertices[i].isConcave)
             {
                 vToSample = poly.vertices[i];
-                sampler = new ConcaveVertexSampler(vToSample,null,particleTracer.accel);
+                sampler = new ConcaveVertexSampler(vToSample,globalAccel);
                 sampler.sampleConnectivity();
                 console.log(sampler);
                 s.push(sampler);
