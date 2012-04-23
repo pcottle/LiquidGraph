@@ -264,6 +264,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
         lastG = startingG;
 
         //ok so to animate a solution, first transition between these gravity directions
+        //TODO: This should be TWO separate transitions, the last G and starting g....?
         this.animateStepFunctions.push(gravTransition);
 
         //then animate the actual node node animation
@@ -316,8 +317,6 @@ GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time) {
     var doneFunction = function() {
         _this.animateStep();
     };
-
-    console.log('making g tweener',gStart,gEnd,time);
 
     var gt = new GravityTweener(gStart,gEnd,time,doneFunction);
     gt.start();
