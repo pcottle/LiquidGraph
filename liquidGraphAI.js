@@ -58,6 +58,8 @@ function PartialPlan(parentPlan,node) {
 
     this.nodes.push(node);
 
+    console.log("this is my plan");
+    
     var totalTime = 0;
     for(var i = 0; i < this.nodes.length - 1; i++)
     {
@@ -73,8 +75,12 @@ function PartialPlan(parentPlan,node) {
 
         totalTime += time;
     }
-
+    
     this.totalTime = totalTime;
+};
+
+PartialPlan.prototype.lastNode = function() {
+    return this.nodes[this.nodes.length - 1];
 };
 
 
@@ -89,10 +95,12 @@ function GraphSearcher(initialConcaveVertex) {
     var startAccel = vecScale(vecNegate(gDirection),vecLength(globalAccel));
     this.startAccel = startAccel;
 
-    //this is the standard UCS. aka have a priority queue of partial plans, yadda
-    //yadda yadda
+    //this is the standard UCS. aka have a priority queue of partial plans,
+    //a closed set for visited graphs, etc.
 
     this.poppedPlans = [];
+    this.visitedStates = {};
+    
     this.planPriorityQueue = [];
     this.sortFunction = function(a,b) {
         return a.totalTime - b.totalTime;
@@ -109,10 +117,12 @@ function GraphSearcher(initialConcaveVertex) {
 GraphSearcher.prototype.printPlan = function(plan) {
     var str = '';
 
+    console.log("THIS PLAN IS:");
+    
     for(var i = 0; i < plan.nodes.length; i++)
     {
         var n = plan.nodes[i];
-        str = str + node.locationName + '->';
+        str = str + n.locationName + '->';
     }
 
     console.log(str);
@@ -122,8 +132,17 @@ GraphSearcher.prototype.searchStep = function() {
     //pop off the top plan
     var planToExpand = this.planPriorityQueue.pop();
 
+    var topNode = planToExpand.lastNode();
+    var topNodeName = topNode.locationName;
+    
+    if(this.visitedStates[topNodeName])
+    {
+        return;
+    }
+    this.visitedStates[topNodeName] = true;
+    
     this.poppedPlans.push(planToExpand);
-
+    this.printPlan(planToExpand);
     //expand this top node to get a bunch of other nodes
     var nodeToExpand = planToExpand.nodes[planToExpand.nodes.length - 1];
 

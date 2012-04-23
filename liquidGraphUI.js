@@ -450,7 +450,7 @@ SolveUIControl.prototype.rightClick = function() { return; }
 SolveUIControl.prototype.vertexClick = function(vertex) {
     partController.clearAll();
 
-    var searcher = new GraphSearcher(vertex);
+    searcher = new GraphSearcher(vertex);
     searcher.search();
 };
 
