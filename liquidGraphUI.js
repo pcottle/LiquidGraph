@@ -448,6 +448,11 @@ SolveUIControl.prototype.keyDown = function() { return; }
 SolveUIControl.prototype.rightClick = function() { return; }
 
 SolveUIControl.prototype.vertexClick = function(vertex) {
+    if(!vertex.isConcave)
+    {
+        return;
+    }
+
     partController.clearAll();
 
     searcher = new GraphSearcher(vertex);
