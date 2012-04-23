@@ -1,7 +1,8 @@
 //Globals
 var pointOverlapTolerance = 5;
 var endpointPointOverlapTolerance = 1.5;
-var part = null
+var globalAnimateSpeed = 0.3;
+
 /*********** CLASSES ********/
 
 function Vertex(x,y,rPoint,parentPoly) {
@@ -1143,17 +1144,12 @@ function KineticPath(parabola,endTime)
     this.doneFunction = null;
 };
 
-KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
-    //first remove our animationFeatures if they exist
-    if(!animateSpeed)
-    {
-        animateSpeed = 0.3;
-        //animateSpeed = 0.01;
-    }
+KineticPath.prototype.animate = function(doneFunction) {
     this.doneFunction = doneFunction;
+    this.animateSpeed = globalAnimateSpeed;
 
+    //clear our animation if we are starting over
     this.clearAnimation();
-    this.animateSpeed = animateSpeed;
 
     //now set our graphical stuff to the beginning at t=0
     var startPoint = this.pointYielder(0);

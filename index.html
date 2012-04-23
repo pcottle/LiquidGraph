@@ -86,8 +86,6 @@
     </div>
 </div>
 
-
-<script type="text/javascript" src="Tween.js"></script>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <!-- <script type="text/javascript" src="jquery.min.js"></script> -->
 <script type="text/javascript" src="raphael-min.js"></script>
@@ -192,8 +190,8 @@ $j(document).ready(function(){
     
     //get the hidden svg later for rotation
     rotationLayer = $j('svg')[0];
-    rotationLayerDeg = 0;
-    $j(rotationLayer).css('-webkit-transform','rotate3d(0,0,1,0deg)');
+    rotationLayerRad = 0;
+    $j(rotationLayer).css('-webkit-transform','rotate3d(0,0,1,0rad)');
     
     if(/demo/.test(location.href))
     {

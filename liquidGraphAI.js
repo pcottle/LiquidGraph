@@ -159,6 +159,8 @@ GraphSearcher.prototype.searchStep = function() {
     if(nodeToExpand.isGoal)
     {
         this.solution = planToExpand;
+        this.buildSolutionAnimation();
+
         return "FoundSolution";
     }
 
@@ -225,6 +227,27 @@ GraphSearcher.prototype.searchStepAsync = function() {
     }
 };
 
+GraphSearcher.prototype.buildSolutionAnimation = function() {
+    //ok so this is the deal. we need to build a ton of functions that will animate
+    //between two arbitrary things. these are the types of functions we will have:
+
+    // gravityTransition:
+    //      animates between two different gravity directions. useful for
+    //      the initial transition and when "rotating" the board with a
+    //      trapped particle
+
+    // gravityParticleTransition:
+    //      this one is kinda intense. we will animate a gravity transition WHILE
+    //      animating a particle.
+
+    // particleAnimation:
+    //
+    //      this one is easy. just take two nodes in our plan solution,
+    //      get the transition particle, and animate that sucker.
+
+
+};
+
 GraphSearcher.prototype.animateSolution = function() {
     if(!this.solution)
     {
@@ -232,11 +255,10 @@ GraphSearcher.prototype.animateSolution = function() {
     }
     partController.clearAll();
 
-    this.animateStep(0);
-
+    this.animateStep();
 };
 
-GraphSearcher.prototype.animateStep = function(connectionToAnimate) {
+GraphSearcher.prototype.animateStep = function() {
 
     if(connectionToAnimate >= this.solution.nodes.length -1)
     {

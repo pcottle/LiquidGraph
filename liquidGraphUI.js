@@ -61,31 +61,133 @@ BulkAnimator.prototype.animateAll = function() {
     }
 };
 
+function gravityTweener(gStart,gEnd,time,doneFunction) {
 
-function gravityTweener(gStart,gEnd,time) {
     //the "rotationLayer" is the HTML node we need to rotate to show the gravity direction.
 
-    this.gStart = gStart;
+    //check for bad vectors
+    if( String(gStart.x) == 'NaN' || String(gEnd.x) == 'NaN')
+    { throw new Error("NAN in gt"); }
+
+    this.doneFunction = doneFunction;
+    this.totalTime = time;
     this.gEnd = gEnd;
 
-    var startSituation = rotationLayerDeg;
+    var startSituation = rotationLayerRad;
 
-    if(vecCross(gStart,gEnd) > 0)
+    //lets compare the start and end situations to avoid "snapping" the grid. first, we need to understand
+    //how gravity directions correspond to their "angles" of rotation. In this situation, an angle of rotation
+    //of 0 corresponds to a gravity direction of "down" when viewing the screen. unfortunately, the screen
+    //coordinates are flipped so this acceleration vector is actually pointing up! so the
+    //atan2 of the acceleration vector is + Pi / 2, and the rotation angle is just 0
+    this.direction = -1;
+
+    //hence, in order to get a gravity vector for a rotation angle, we add Math.PI * 0.5
+    var currentGravDirection = this.degToVec(startSituation - Math.PI * 0.5);
+
+    //then we get our normalize gravity vector
+    var gStartN = vecNormalize(vecMake(gStart.x,-gStart.y));
+
+    //now we can see if the current degree of rotation of the grid
+    //corresponds to our starting gravity direction:
+    if(vecDot(gStartN,currentGravDirection) < 0.98)
     {
-        this.CCW = true;
+        console.warn("Current situation and our starting grav direction don't agree!!");
     }
-    else
+
+    //ok, lets get some values here
+    this.startAngle = this.gToDeg(gStart);
+    this.endAngle = this.gToDeg(gEnd);
+
+    //there is one tricky situation with wraparound of angles where we might rotate in the wrong direction.
+    //this is why we can't use Tween.js because it doesn't recognize trig wraparounds. so, if we are animating
+    //between two vectors like this:
+    //
+    //        n |
+    //         \|
+    //  --------+---------
+    //         /|
+    //        v |
+    //
+
+    //the _sum_ of their vectors has a negative x component; one vector has a positive y component
+    //and the other vector has a negative y component
+
+    var sum = vecAdd(gStart,gEnd);
+    var quadsGood = ((gStart.y > 0 && gEnd.y < 0) || (gStart.y < 0 && gEnd.y > 0));
+
+    if(sum.x < 0 && quadsGood)
     {
-        this.CCW = false;
+        //we want to modify one of the angles by 2 pi to wrap it around so a linear interp
+        //or cubic easeinout works correctly. If one angle is positive, subtract by 2pi.
+        if(this.startAngle > 0)
+        {
+            this.startAngle -= Math.PI * 2;
+        }
+        else if(this.startAngle < 0)
+        {
+            this.startAngle += Math.PI * 2;
+        }
     }
+
+    //wraparound should be good, go interp between these two angles
+};
+
+gravityTweener.prototype.start = function() {
 
     this.animateStep(0);
 };
 
-gravityTweener.prototype.animateStep = function(progress) {
+gravityTweener.prototype.degToVec = function(deg) {
+    return vecMake(Math.cos(deg),Math.sin(deg));
+};
 
-    //we need to set the rotation of the rotation layer to a certain degree...
+gravityTweener.prototype.gToDeg = function(vector) {
+    var angle = Math.atan2(-vector.y,vector.x);
+    angle += Math.PI * 0.5;
+    return angle;
+};
 
+gravityTweener.prototype.cubicEaseInOut = function(x) {
+    //here x is just between 0 and 1... b = 0, c = 1, etc
+    var t = x / 0.5;
+    if(t < 1)
+    {
+        return 0.5 * t * t * t;
+    }
+    t -= 2;
+    return 0.5 * (t * t * t + 2);
+};
+
+gravityTweener.prototype.animateStep = function(timeVal) {
+
+    var progressX = timeVal / this.totalTime;
+
+    if(progressX > 1)
+    {
+        rotationLayerRad = this.gToDeg(this.gEnd);
+        globalAccel = this.gEnd;
+        if(this.doneFunction) {
+            this.doneFunction();
+        }
+        return;
+    }
+
+    var progressY = this.cubicEaseInOut(progressX);
+
+    var rotAngleNow = this.startAngle + progressY * (this.endAngle - this.startAngle);
+
+    var toSet = 'rotate3d(0,0,1,' + String(rotAngleNow) + 'rad)';
+    //set it
+    $j(rotationLayer).css('-webkit-transform',toSet);
+
+    //add ourselves :D
+    var _this = this;
+    var f = function() {
+        _this.animateStep(timeVal + globalAnimateSpeed);
+    };
+
+    bAnimator.add(f);
 };
 
 
@@ -699,6 +801,7 @@ TraceUIControl.prototype.resetVars = function() {
 
 
 TraceUIControl.prototype.activate = function() {
+    this.accel = globalAccel;
     //just reset some variables
     this.resetVars();
 
@@ -755,6 +858,8 @@ TraceUIControl.prototype.mouseUp = function(x,y) {
 };
 
 TraceUIControl.prototype.leftClick = function(x,y) {
+    this.accel = globalAccel;
+
     //this is essentially the mousedown left click
     this.startPoint = cuteSmallCircle(x,y);
 
