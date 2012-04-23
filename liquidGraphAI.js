@@ -191,8 +191,8 @@ GraphSearcher.prototype.searchStepAsync = function() {
 
     if(results == "FoundSolution")
     {
-        //topNotify("Found a solution!");
-        console.log("Found a solution!");
+        topNotify("Found a solution!");
+        //console.log("Found a solution!");
         var that = this;
 
         setTimeout(function() {

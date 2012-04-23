@@ -1034,7 +1034,7 @@ function importGeometry()
         var path = cutePath(pathStr,true,'#FFF',color);
         polyController.makePolygon(rPoints,path);
     }
-
+    return;
     for(var i = 0; i < particles.length; i++)
     {
         var kState = particles[i];
@@ -1119,6 +1119,7 @@ function exportGeometry()
 
         particles.push(scaledState);
     }
+    particles = []; // turn off particle import / export for now
 
     var exportData = {
         'polys':exportPolys,
