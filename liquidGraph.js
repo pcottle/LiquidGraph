@@ -1021,10 +1021,10 @@ Parabola.prototype.click = function(clickFunction) {
 
 Parabola.prototype.getPointYielder = function() {
 
-    var that = this;
+    var _this = this;
     var pointYielder = function(tValue) {
-        var thisX = that.pos.x + tValue * that.vel.x + 0.5 * tValue * tValue * that.accel.x;
-        var thisY = that.pos.y + tValue * that.vel.y + 0.5 * tValue * tValue * that.accel.y;
+        var thisX = _this.pos.x + tValue * _this.vel.x + 0.5 * tValue * tValue * _this.accel.x;
+        var thisY = _this.pos.y + tValue * _this.vel.y + 0.5 * tValue * tValue * _this.accel.y;
         return {'x':thisX,'y':thisY};
     };
 
@@ -1033,10 +1033,10 @@ Parabola.prototype.getPointYielder = function() {
 
 Parabola.prototype.getSlopeYielder = function() {
 
-    var that = this;
+    var _this = this;
     var slopeYielder = function(tValue) {
-        var slopeX = that.vel.x + tValue * that.accel.x;
-        var slopeY = that.vel.y + tValue * that.accel.y;
+        var slopeX = _this.vel.x + tValue * _this.accel.x;
+        var slopeY = _this.vel.y + tValue * _this.accel.y;
         return {'x':slopeX,'y':slopeY};
     };
 
@@ -1167,14 +1167,14 @@ KineticPath.prototype.animate = function(doneFunction,animateSpeed) {
 
     //start animation with timeout
 
-    //frames per second... FPS
-    setTimeout(this.animateFunction,1000 * 1/40);
+    //setTimeout(this.animateFunction,1000 * 1/40);
+    bAnimator.add(this.animateFunction);
 };
 
 KineticPath.prototype.getAnimateFunction = function() {
-    var that = this;
+    var _this = this;
     var animate = function() {
-        that.animateStep();
+        _this.animateStep();
     };
 
     return animate;
@@ -1445,11 +1445,11 @@ Particle.prototype.freeFall = function() {
 
 Particle.prototype.makeDebugClosure = function(parab,tRecord,kPath,edgeHit) {
 
-    var that = this;
+    var _this = this;
 
     var toReturn = function() {
         console.log("The particle");
-        console.log(that);
+        console.log(_this);
         console.log("The parabola");
         console.log(parab);
         console.log("The time we obtained");
@@ -1737,6 +1737,10 @@ Particle.prototype.setOpacity = function(opacity) {
 
 Particle.prototype.clearAll = function() {
     $j.each(this.kPaths,function(i,kPath) { kPath.clearAll(); });
+
+    //also clear the animations in bAnimator
+    bAnimator.stopAnimating;
+
 };
 
 Particle.prototype.edgeSlide = function() {
@@ -1982,7 +1986,12 @@ Particle.prototype.drawEntirePath = function() {
 Particle.prototype.animateStep = function(i) {
    if(i >= this.kPaths.length)
    {
-       return; //we are done animating all paths!
+        //we are done animating all paths! call our done function if we have one
+        if(this.doneAnimatingFunction)
+        {
+            this.doneAnimatingFunction();
+        }
+        return; 
    }
 
    //make a done closure object
@@ -1993,18 +2002,23 @@ Particle.prototype.animateStep = function(i) {
 };
 
 Particle.prototype.getDoneClosure = function(num) {
-    var that = this;
+    var _this = this;
     var toReturn = function() {
-        that.animateStep(num);
+        _this.animateStep(num);
     };
 
     return toReturn;
 };
 
-Particle.prototype.animate = function() {
+Particle.prototype.animate = function(doneFunction) {
     //ok so the tricky here is that we need to animate each path in succession. so when a path finishes,
     //it must call it's parent particle to animate the next one. this is all done with closures and
     //timeouts.... aka reasons to absolutely love JS
+
+    if(doneFunction)
+    {
+        this.doneAnimatingFunction = doneFunction;
+    }
 
     this.animateStep(0);
 };

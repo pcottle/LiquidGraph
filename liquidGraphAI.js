@@ -205,10 +205,10 @@ GraphSearcher.prototype.searchStepAsync = function() {
     {
         topNotify("Found a solution!");
         //console.log("Found a solution!");
-        var that = this;
+        var _this = this;
 
         setTimeout(function() {
-            that.animateSolution();
+            _this.animateSolution();
         },3000);
     }
     else if(results == "NoSolution")
@@ -217,11 +217,11 @@ GraphSearcher.prototype.searchStepAsync = function() {
     }
     else
     {
-        var that = this;
-        //TODO: make this take the time of the fastest one...
-        setTimeout(function() {
-            that.searchStepAsync();
-        },500);
+        var _this = this;
+        var f = function() {
+            _this.searchStepAsync();
+        };
+        bAnimator.add(f);
     }
 };
 
@@ -230,16 +230,36 @@ GraphSearcher.prototype.animateSolution = function() {
     {
         throw new Error("no solution to animate!"); 
     }
+    partController.clearAll();
+
+    this.animateStep(0);
+
+};
+
+GraphSearcher.prototype.animateStep = function(connectionToAnimate) {
+
+    if(connectionToAnimate >= this.solution.nodes.length -1)
+    {
+        //we are done!
+        return;
+    }
+    var i = connectionToAnimate;
 
     var nodes = this.solution.nodes;
-    for(var i = 0; i < nodes.length - 1; i++)
-    {
-        var sourceNode = nodes[i];
-        var destNode = nodes[i+1];
-        var name = destNode.locationName;
+    var sourceNode = nodes[i];
+    var destNode = nodes[i+1];
+    var name = destNode.locationName;
 
-        var animation = sourceNode.cvs.animationInfo[name];
-        animation.particle.animate();
-    }
+    var animation = sourceNode.cvs.animationInfo[name];
+
+    //ok we would like to animate this particle and then have it call ourselves
+    //when it's done
+
+    var _this = this;
+    var done = function() {
+        _this.animateStep(i+1);
+    };
+
+    animation.particle.animate(done);
 };
 

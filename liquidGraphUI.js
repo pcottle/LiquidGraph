@@ -26,10 +26,10 @@ BulkAnimator.prototype.checkOrSetTimeout = function() {
     }
     this.animating = true;
 
-    var that = this;
+    var _this = this;
 
     var toCall = function() {
-        that.animateAll();
+        _this.animateAll();
     };
 
     //now we can add functions to this for the next interval amount of time
@@ -38,6 +38,11 @@ BulkAnimator.prototype.checkOrSetTimeout = function() {
     //Async particles -> async animating -> collection into bulkAnimator -> sync drawing
 
     this.timeout = setTimeout(toCall,this.interval);
+};
+
+BulkAnimator.prototype.stopAnimating = function() {
+    this.animating = false;
+    this.functionsToCall = [];
 };
 
 BulkAnimator.prototype.animateAll = function() {
@@ -57,6 +62,32 @@ BulkAnimator.prototype.animateAll = function() {
 };
 
 
+function gravityTweener(gStart,gEnd,time) {
+    //the "rotationLayer" is the HTML node we need to rotate to show the gravity direction.
+
+    this.gStart = gStart;
+    this.gEnd = gEnd;
+
+    var startSituation = rotationLayerDeg;
+
+    if(vecCross(gStart,gEnd) > 0)
+    {
+        this.CCW = true;
+    }
+    else
+    {
+        this.CCW = false;
+    }
+
+    this.animateStep(0);
+};
+
+gravityTweener.prototype.animateStep = function(progress) {
+
+    //we need to set the rotation of the rotation layer to a certain degree...
+
+};
+
 
 function uiControl(parentObj) {
     this.active = false;
@@ -66,22 +97,22 @@ function uiControl(parentObj) {
     //we have to bind the "this" scope to our object for the
     //event handlers
 
-    var that = this;
+    var _this = this;
 
     var cc = function(e) {
-        that.canvasClick(e);
+        _this.canvasClick(e);
     };
     var cm = function(e) {
-        that.canvasMove(e);
+        _this.canvasMove(e);
     };
     var crc = function(e) {
-        that.canvasRightClick(e);
+        _this.canvasRightClick(e);
     };
     var mu = function(e) {
-        that.canvasMouseUp(e);
+        _this.canvasMouseUp(e);
     };
     var kd = function(e) {
-        that.canvasKeyDown(e);
+        _this.canvasKeyDown(e);
     };
 
     //register event handlers
@@ -192,9 +223,9 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
     this.mainButtons = this.mainButtons.map(function(id) { return "#" + id; });
     this.mainButtons = this.mainButtons.join(",");
 
-    var that = this;
+    var _this = this;
     var cHandler = function(e) {
-        that.anchorClick();
+        _this.anchorClick();
     };
 
     $j('#' + this.id).click(cHandler);
@@ -1089,7 +1120,7 @@ function importGeometry()
         var path = cutePath(pathStr,true,'#FFF',color);
         polyController.makePolygon(rPoints,path);
     }
-
+    return;
     for(var i = 0; i < particles.length; i++)
     {
         var kState = particles[i];
