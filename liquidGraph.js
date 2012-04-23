@@ -2036,8 +2036,8 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
 
 ConcaveVertexSampler.prototype.animateConnectivity = function() {
 
-    console.log(this.connectedNodeNames);
-    console.log(this.animationInfo);
+    //console.log(this.connectedNodeNames);
+    //console.log(this.animationInfo);
 
     //now animate the "fastest" particles from each
     for(var i = 0; i < this.connectedNodeNames.length; i++)

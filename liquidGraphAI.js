@@ -71,7 +71,7 @@ function PartialPlan(parentPlan,node) {
         var name = destNode.locationName;
 
         var time = sourceNode.cvs.animationInfo[name].totalTime;
-        console.log('found ',time,'between s',sourceNode,'and dest',destNode);
+        //console.log('found ',time,'between s',sourceNode,'and dest',destNode);
 
         totalTime += time;
     }
@@ -130,7 +130,7 @@ GraphSearcher.prototype.printPlan = function(plan) {
 
 GraphSearcher.prototype.searchStep = function() {
     //pop off the top plan
-    var planToExpand = this.planPriorityQueue.pop();
+    var planToExpand = this.planPriorityQueue.shift();
 
     var topNode = planToExpand.lastNode();
     var topNodeName = topNode.locationName;
@@ -169,6 +169,15 @@ GraphSearcher.prototype.searchStep = function() {
 
     //maintain the priorty queue
     this.planPriorityQueue.sort(this.sortFunction);
+
+    var times = [];
+    for(var i = 0; i < this.planPriorityQueue.length; i++)
+    {
+        times.push(this.planPriorityQueue[i].totalTime);
+    }
+
+    console.log("SORTED LIST OF TIMES IS");
+    console.log(times.join(','));
 
     //not at goal yet
     return "StillSearching";
