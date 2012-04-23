@@ -33,7 +33,8 @@ function Node(locationObj,accelDirection) {
 
 Node.prototype.expand = function() {
     this.cvs.sampleConnectivity();
-    this.cvs.animateConnectivity();
+    //DEBUG / OPTIONAL -- animate connectivity
+    //this.cvs.animateConnectivity();
 
     var connectedObjects = [];
     for(var i = 0; i < this.cvs.connectedNodeNames.length; i++)
@@ -137,6 +138,8 @@ GraphSearcher.prototype.searchStep = function() {
     
     if(this.visitedStates[topNodeName])
     {
+        //call ourselves when in async mode
+        //this.searchStep();
         return;
     }
     this.visitedStates[topNodeName] = true;

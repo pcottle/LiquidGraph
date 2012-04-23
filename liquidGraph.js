@@ -1205,7 +1205,8 @@ KineticPath.prototype.animateStep = function() {
     //set another?
     if(this.animateTime < this.endTime)
     {
-        this.ourTimeout = setTimeout(this.animateFunction,1000 * 1/60);
+        //do the bulk animator object instead!
+        bAnimator.add(this.animateFunction);
     }
     else
     {
@@ -1225,7 +1226,9 @@ KineticPath.prototype.clearAnimation = function() {
 };
 
 KineticPath.prototype.stopAnimating = function() {
-    clearTimeout(this.ourTimeout);
+    if(this.ourTimeout) {
+        clearTimeout(this.ourTimeout);
+    }
 };
 
 KineticPath.prototype.drawPath = function() {
@@ -2031,7 +2034,8 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
     this.sampleConnectivityFromEdge(this.inEdge);
     this.sampleConnectivityFromEdge(this.outEdge);
 
-    this.animateConnectivity();
+    //OPTIONAL / TODO : animate
+    //this.animateConnectivity();
 }
 
 ConcaveVertexSampler.prototype.animateConnectivity = function() {

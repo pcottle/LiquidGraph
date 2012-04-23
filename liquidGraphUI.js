@@ -3,6 +3,61 @@
 var globalAccel = {y:50,x:0.5};
 /*****************CLASSES*******************/
 
+function BulkAnimator() {
+
+    this.timeout = null;
+    this.functionsToCall = [];
+
+    this.interval = 1000 * 1/40;
+
+    this.animating = false;
+};
+
+BulkAnimator.prototype.add = function(functionToAdd) {
+    this.functionsToCall.push(functionToAdd);
+
+    this.checkOrSetTimeout();
+};
+
+BulkAnimator.prototype.checkOrSetTimeout = function() {
+    if(this.animating)
+    {
+        return;
+    }
+    this.animating = true;
+
+    var that = this;
+
+    var toCall = function() {
+        that.animateAll();
+    };
+
+    //now we can add functions to this for the next interval amount of time
+    //and they will all be updated at once. I'm hoping this severely improves performance, because
+    //it will essentially be more like "frame draws" than all this sync drawing. So it's going
+    //Async particles -> async animating -> collection into bulkAnimator -> sync drawing
+
+    this.timeout = setTimeout(toCall,this.interval);
+};
+
+BulkAnimator.prototype.animateAll = function() {
+
+    //we have to reset our vars here because the functions we call might
+    //start adding new functions
+
+    var functions = this.functionsToCall;
+
+    this.animating = false;
+    this.functionsToCall = [];
+
+    for(var i = 0; i < functions.length; i++)
+    {
+        functions[i]();
+    }
+};
+
+
+
 function uiControl(parentObj) {
     this.active = false;
     this.UIbutton = null;
@@ -1034,7 +1089,7 @@ function importGeometry()
         var path = cutePath(pathStr,true,'#FFF',color);
         polyController.makePolygon(rPoints,path);
     }
-    return;
+
     for(var i = 0; i < particles.length; i++)
     {
         var kState = particles[i];
@@ -1119,7 +1174,7 @@ function exportGeometry()
 
         particles.push(scaledState);
     }
-    particles = []; // turn off particle import / export for now
+    //particles = []; // turn off particle import / export for now
 
     var exportData = {
         'polys':exportPolys,
