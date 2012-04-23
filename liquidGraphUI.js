@@ -61,7 +61,7 @@ BulkAnimator.prototype.animateAll = function() {
     }
 };
 
-function gravityTweener(gStart,gEnd,time,doneFunction) {
+function GravityTweener(gStart,gEnd,time,doneFunction) {
 
     //the "rotationLayer" is the HTML node we need to rotate to show the gravity direction.
 
@@ -133,22 +133,22 @@ function gravityTweener(gStart,gEnd,time,doneFunction) {
     //wraparound should be good, go interp between these two angles
 };
 
-gravityTweener.prototype.start = function() {
+GravityTweener.prototype.start = function() {
 
     this.animateStep(0);
 };
 
-gravityTweener.prototype.degToVec = function(deg) {
+GravityTweener.prototype.degToVec = function(deg) {
     return vecMake(Math.cos(deg),Math.sin(deg));
 };
 
-gravityTweener.prototype.gToDeg = function(vector) {
+GravityTweener.prototype.gToDeg = function(vector) {
     var angle = Math.atan2(-vector.y,vector.x);
     angle += Math.PI * 0.5;
     return angle;
 };
 
-gravityTweener.prototype.cubicEaseInOut = function(x) {
+GravityTweener.prototype.cubicEaseInOut = function(x) {
     //here x is just between 0 and 1... b = 0, c = 1, etc
     var t = x / 0.5;
     if(t < 1)
@@ -159,7 +159,7 @@ gravityTweener.prototype.cubicEaseInOut = function(x) {
     return 0.5 * (t * t * t + 2);
 };
 
-gravityTweener.prototype.animateStep = function(timeVal) {
+GravityTweener.prototype.animateStep = function(timeVal) {
 
     var progressX = timeVal / this.totalTime;
 

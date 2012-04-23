@@ -25,7 +25,6 @@ function Node(locationObj,accelDirection) {
         this.cvs = null;
         return;
     }
-    console.log("making concave vertex sampler");
 
     this.cvs = new ConcaveVertexSampler(locationObj,accelDirection);
     this.isGoal = false;
@@ -59,8 +58,6 @@ function PartialPlan(parentPlan,node) {
 
     this.nodes.push(node);
 
-    console.log("this is my plan");
-    
     var totalTime = 0;
     for(var i = 0; i < this.nodes.length - 1; i++)
     {
@@ -181,8 +178,8 @@ GraphSearcher.prototype.searchStep = function() {
         times.push(this.planPriorityQueue[i].totalTime);
     }
 
-    console.log("SORTED LIST OF TIMES IS");
-    console.log(times.join(','));
+    //console.log("SORTED LIST OF TIMES IS");
+    //console.log(times.join(','));
 
     //not at goal yet
     return "StillSearching";
@@ -240,11 +237,43 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     //      this one is kinda intense. we will animate a gravity transition WHILE
     //      animating a particle.
 
-    // particleAnimation:
+    // nodeNodeAnimation:
     //
     //      this one is easy. just take two nodes in our plan solution,
     //      get the transition particle, and animate that sucker.
 
+    this.animateStepFunctions = [];
+
+    //first, pop on a function that takes in the global accel and rotates to the starting accel
+
+    var _this = this;
+    var initialAccel = globalAccel;
+    var lastG = globalAccel;
+
+    //now loop through nodes
+    for(var i = 0; i < this.solution.nodes.length -1; i++)
+    {
+        //get information
+        var sourceNode = this.solution.nodes[i];
+        var destNode = this.solution.nodes[i+1];
+        var name = destNode.locationName;
+        var animation = sourceNode.cvs.animationInfo[name];
+
+        var startingG = animation.startG;
+        var gravTransition = this.makeGravityClosure(lastG,startingG,15);
+        lastG = startingG;
+
+        //ok so to animate a solution, first transition between these gravity directions
+        this.animateStepFunctions.push(gravTransition);
+
+        //then animate the actual node node animation
+        var particleAnimation = this.makeNodeNodeClosure(i);
+        this.animateStepFunctions.push(particleAnimation);
+    }
+
+    //push one to return to our original position
+    gravTransition = this.makeGravityClosure(lastG,initialAccel,15);
+    this.animateStepFunctions.push(gravTransition);
 
 };
 
@@ -255,17 +284,63 @@ GraphSearcher.prototype.animateSolution = function() {
     }
     partController.clearAll();
 
+    this.animateStepNum = 0;
+
     this.animateStep();
 };
 
 GraphSearcher.prototype.animateStep = function() {
-
-    if(connectionToAnimate >= this.solution.nodes.length -1)
+    if(this.animateStepNum >= this.animateStepFunctions.length)
     {
+        topNotifyClear();
+        return;
+    }
+
+    //animating!!
+    this.animateStepFunctions[this.animateStepNum]();
+
+    this.animateStepNum++;
+};
+
+GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time) {
+
+    var _this = this;
+    var gravTransition = function() {
+        _this.gravityAnimation(startG,endG,time);
+    };
+    return gravTransition;
+};
+
+GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time) {
+    var _this = this;
+    var doneFunction = function() {
+        _this.animateStep();
+    };
+
+    console.log('making g tweener',gStart,gEnd,time);
+
+    var gt = new GravityTweener(gStart,gEnd,time,doneFunction);
+    gt.start();
+};
+
+GraphSearcher.prototype.makeNodeNodeClosure = function(nodeIndex) {
+    var _this = this;
+    var particleAnimation = function() {
+        _this.nodeNodeAnimation(nodeIndex);
+    };
+    return particleAnimation;
+};
+
+GraphSearcher.prototype.nodeNodeAnimation = function(nodeIndex) {
+
+    if(nodeIndex >= this.solution.nodes.length -1)
+    {
+        console.warn("called particle animation for a node that didn't exist");
         //we are done!
         return;
     }
-    var i = connectionToAnimate;
+
+    var i = nodeIndex;
 
     var nodes = this.solution.nodes;
     var sourceNode = nodes[i];
@@ -279,7 +354,7 @@ GraphSearcher.prototype.animateStep = function() {
 
     var _this = this;
     var done = function() {
-        _this.animateStep(i+1);
+        _this.animateStep();
     };
 
     animation.particle.animate(done);
