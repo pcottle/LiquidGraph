@@ -1190,8 +1190,15 @@ function importGeometry()
     var width = $j(window).width();
     var height = $j(window).height();
 
+    var scaler = Math.min(width,height);
+    width = scaler;
+    height = scaler;
+
     polyController.reset();
     partController.clearAll();
+
+    var furthestWidthPoint = 0;
+    var furthestHeightPoint = 0;
 
     var importData = null;
     try {
@@ -1208,6 +1215,35 @@ function importGeometry()
     var polys = importData.polys;
     var particles = importData.particles;
 
+    //first do the loop once just to get the maxes
+
+    for(var i = 0; i < polys.length; i++)
+    {
+        var polyData = polys[i];
+        var vertices = polyData.vertices;
+
+        for(var j = 0; j < vertices.length; j++)
+        {
+            var v = vertices[j];
+            
+            var vx = v.x * width;
+            var vy = v.y * height;
+
+            furthestWidthPoint = Math.max(vx,furthestWidthPoint);
+            furthestHeightPoint = Math.max(vy,furthestHeightPoint);
+        }
+    }
+
+    //now actually make them, but we need to offset by the deltas to center the parts in the canvas.
+    //man raphael really needs support for stuff like this. originally i was moving the div but then
+    //the click events TOTALLY got thrown off and it was a mess.
+
+    var windowWidth = $j(window).width();
+    var windowHeight = $j(window).height();
+
+    var deltaX = windowWidth - furthestWidthPoint;
+    var deltaY = windowHeight - furthestHeightPoint;
+
     for(var i = 0; i < polys.length; i++)
     {
         var polyData = polys[i];
@@ -1219,8 +1255,9 @@ function importGeometry()
         {
             var v = vertices[j];
             
-            var vx = v.x * width;
-            var vy = v.y * height;
+            var vx = v.x * width + deltaX/2;
+            var vy = v.y * height + deltaY/2;
+
 
             var rPoint = cuteSmallCircle(vx,vy);
             rPoints.push(rPoint);
@@ -1230,7 +1267,8 @@ function importGeometry()
         var path = cutePath(pathStr,true,'#FFF',color);
         polyController.makePolygon(rPoints,path);
     }
-    return;
+
+    return; //we don't import particles anymore
     for(var i = 0; i < particles.length; i++)
     {
         var kState = particles[i];
