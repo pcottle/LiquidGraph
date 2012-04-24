@@ -1124,116 +1124,8 @@ KineticState.prototype.toParabola = function() {
 };
 
 
-
-function KineticTransitionPath(posYielder,velYielder,accelYielder,endTime) {
-    this.pointYielder = posYielder;
-    this.slopeYielder = velYielder;
-    this.accelYielder = accelYielder;
-
-    this.animateFunction = this.getAnimateFunction();
-    this.animateTime = 0;
-    this.endTime = endTime;
-};
-
-KineticTransitionPath.prototype.getAnimateFunction = function() {
-    var _this = this;
-    var f = function() {
-        _this.animateStep();
-    };
-    return f;
-};
-
-KineticTransitionPath.prototype.animate = function(doneFunction) {
-    this.doneFunction = doneFunction;
-    this.animateSpeed = globalAnimateSpeed;
-
-    //clear
-    this.clearAnimation();
-
-    var startPoint = this.pointYielder(0);
-    var startVel = this.slopeYielder(0);
-
-    this.pos = startPoint;
-    this.vel = startVel;
-
-    this.particleBody = cuteSmallCircle(startPoint.x,startPoint.y);
-    this.vArrow = new rArrow(startPoint,startVel);
-
-    //add ourselves to the bAnimator
-    bAnimator.add(this.animateFunction);
-};
-
-KineticTransitionPath.prototype.animateStep = function() {
-    this.animateTime += this.animateSpeed;
-
-    if(this.animateTime > this.endTime)
-    {
-        this.animateTime = this.endTime;
-    }
-
-    this.pos = this.pointYielder(this.animateTime);
-    this.vel = this.slopeYielder(this.animateTime);
-
-    this.particleBody.attr({
-        'cx':this.pos.x,
-        'cy':this.pos.y
-    });
-
-    this.vArrow.update(this.pos,this.vel);
-
-    if(this.animateTime < this.endTime)
-    {
-        bAnimator.add(this.animateFunction);
-    }
-    else
-    {
-        this.particleBody.remove();
-        this.vArrow.path.remove();
-        if(this.doneFunction)
-        {
-            this.doneFunction();
-        }
-    }
-};
-
-//kind of depreciated since we have bAnimator
-KineticTransitionPath.prototype.clearAnimation = function() {
-    if(this.particleBody) { this.particleBody.remove(); }
-    if(this.vArrow) { this.vArrow.remove(); }
-
-    this.animateTime = 0;
-};
-
-
-KineticTransitionPath.prototype.drawPath = function() {
-    var posOne = this.pointYielder(0);
-    var posTwo = this.pointYielder(this.endTime);
-
-    var pathString = constructPathStringFromCoords([posOne,posTwo]);
-    this.path = p.path(pathString);
-
-    this.path.attr({
-        'stroke-width':2,
-        'stroke':velocityHue(this.slopeYielder(0)),
-    });
-};
-
-KineticTransitionPath.prototype.clearPath = function() {
-    if(this.path)
-    { this.path.remove(); }
-};
-
-KineticTransitionPath.prototype.clearAll = function() {
-    this.clearPath();
-    this.clearAnimation();
-};
-
-
-
-
-
-function KineticPath(parabola,endTime) {
-
+function KineticPath(parabola,endTime)
+{
     this.pointYielder = parabola.pointYielder;
     this.slopeYielder = parabola.slopeYielder;
     this.parabola = parabola;
@@ -1270,6 +1162,8 @@ KineticPath.prototype.animate = function(doneFunction) {
     this.vArrow = new rArrow(startPoint,startVel);
 
     //start animation with timeout
+
+    //setTimeout(this.animateFunction,1000 * 1/40);
     bAnimator.add(this.animateFunction);
 };
 
@@ -1334,7 +1228,9 @@ KineticPath.prototype.stopAnimating = function() {
 };
 
 KineticPath.prototype.drawPath = function() {
+
     this.parabola.drawParabolaPath(this.endTime);
+
 };
 
 KineticPath.prototype.showEndpoint = function() {
@@ -1343,6 +1239,7 @@ KineticPath.prototype.showEndpoint = function() {
     this.clearAnimation();
 
     this.particleBody = cuteSmallCircle(point.x,point.y);
+
 };
 
 KineticPath.prototype.clearPath = function() {
@@ -1493,6 +1390,10 @@ Particle.prototype.freeFall = function() {
     var tRecord = -1;
     var edgeHit = null;
 
+    //maybetODO: do this with webworkers in parallel? we can't really block though...
+    //and if we wanted to do the vertex classification in parallel, we would have to
+    //copy the entire Raphael reference as well for the inside test. hmm. more thought
+    //on this is required
     for(var i = 0; i < edges.length; i++)
     {
         var edge = edges[i];    
@@ -1957,7 +1858,9 @@ Particle.prototype.edgeSlide = function() {
 
         var otherVertex = edgeWeAreHitting.getOtherVertex(arrivalVertex);
         var directionWeAreHeaded = vecNormalize(vecSubtract(otherVertex,arrivalVertex));
-        var newPos = vecAdd(arrivalPos,vecScale(directionWeAreHeaded,0.001));
+        //DEBUG: TODO: need to decide
+        var newPos = vecAdd(arrivalPos,vecScale(directionWeAreHeaded,0.1));
+        //var newPos = arrivalPos;
 
         var newState = new KineticState(newPos,newVelocity,newAccel);
 
@@ -2140,6 +2043,9 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
 
     this.sampleConnectivityFromEdge(this.inEdge);
     this.sampleConnectivityFromEdge(this.outEdge);
+
+    //OPTIONAL / TODO : animate
+    //this.animateConnectivity();
 }
 
 ConcaveVertexSampler.prototype.animateConnectivity = function() {
@@ -2180,13 +2086,13 @@ ConcaveVertexSampler.prototype.sampleConnectivityFromEdge = function(edge) {
     //go through the range of 1 degree to 80 degrees in steps
 
     var startDegree = 1 * Math.PI / 180.0;
-    var endDegree = 65 * Math.PI / 180.0;
+    var endDegree = 89 * Math.PI / 180.0;
 
     var degreeDelta = (endDegree - startDegree);
     var theta = 0;
 
     //NUMSAMPLES
-    var numSamples = 10;
+    var numSamples = 20;
 
     for(var progress = 0; progress < 1; progress += 1/numSamples)
     {
@@ -2234,7 +2140,6 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
 
     var A = vecLength(maxG);
     var B = thetaEnd / timeToTransition;
-    var _this = this;
 
     var pos = function(t) {
         return -1 * (A * (Math.sin(B * t) - B * t)) / (B*B);
@@ -2246,17 +2151,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
         return sin(B * t) * A;
     }
 
-    var posYielder = function(t) {
-        var posVec = vecAdd(_this.concaveVertex,vecScale(outVec,pos(t)));
-        return posVec;
-    };
-    var velYielder = function(t) {
-        var velVec = vecScale(outVec,vel(t));
-        return velVec;
-    };
-
-    //make a modified kinetic path with these transition properties so we can animate the particle rolling
-    var transitionParticle = new KineticTransitionPath(posYielder,velYielder,accel,timeToTransition);
+    //TODO!!! make a modified kinetic path with these transition properties so we can animate the particle rolling
 
     var endPosVal = pos(timeToTransition);
     var endVelVal = vel(timeToTransition);
@@ -2271,6 +2166,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
 
     var endAccelVec = vecAdd(vecScale(perpVec,Math.cos(thetaEnd)),vecScale(outVec,Math.sin(thetaEnd)));
 
+    //
     //need to actually move this "endposval" in the direction we are headed
     var realEndPos = vecAdd(this.concaveVertex,vecScale(outVec,endPosVal));
 
@@ -2318,11 +2214,11 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
 
     var settleResults = particleHere.settle();
 
-    this.postResults(settleResults,startG,realEndAccel,timeToTransition,particleHere,transitionParticle);
+    this.postResults(settleResults,startG,realEndAccel,timeToTransition,particleHere);
     return particleHere;
 };
 
-ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realEndAccel,timeToTransition,particle,transParticle) {
+ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realEndAccel,timeToTransition,particle) {
     //here we store all the connectivity information. This is essentially a cost-sensitive closed list
 
     var totalTime = settleResults.totalTime;
@@ -2336,8 +2232,7 @@ ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realE
         'realEndAccel':realEndAccel,
         'timeToTransition':timeToTransition,
         'totalTime':totalTime,
-        'particle':particle,
-        'transParticle':transParticle,
+        'particle':particle
     };
 
     if(!this.connectivity[endLocationName])

@@ -269,6 +269,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
         var gravTransition = this.makeGravityClosure(transPos,lastG,startingG,15);
 
         //ok so to animate a solution, first transition between these gravity directions
+        //TODO: This should be TWO separate transitions, the last G and starting g....?
         this.animateStepFunctions.push(gravTransition);
 
         //then animate between the startingG, the realEndG, WHILE animating the particle
@@ -286,6 +287,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     //push one to return to our original position
     gravTransition = this.makeGravityClosure(null,lastG,initialAccel,15);
     this.animateStepFunctions.push(gravTransition);
+
 };
 
 GraphSearcher.prototype.animateSolution = function() {
