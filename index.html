@@ -141,32 +141,34 @@ function executeDemo() {
 
     hideDemoDiv();
     windowResize();
-
-    importGeometry();
-    toggleImportExport();
-    
-    //hack up the solve mode
-    solveController.active = true;
-    solveController.UIbutton.active = true;
-    solveController.UIbutton.hideAllButtons();
-    
-    var id = 31; //31, 86, 166, all good
-    
-    var v = polyController.getVertexById(id);
-    var circle = cuteSmallCircle(v.x,v.y);
-    circle.attr({
-        r:200
-    });
-    circle.animate({
-        r:4
-    },3000,'easeInOut');
-    topNotifyTemp("Looking for solution here",3000);
-    
     setTimeout(function() {
+
+        importGeometry();
+        toggleImportExport();
+        
+        //hack up the solve mode
+        solveController.active = true;
+        solveController.UIbutton.active = true;
+        solveController.UIbutton.hideAllButtons();
+        
+        var id = 31; //31, 86, 166, all good
+        
         var v = polyController.getVertexById(id);
-        searcher = new GraphSearcher(v);
-        searcher.search();
-    },4000);
+        var circle = cuteSmallCircle(v.x,v.y);
+        circle.attr({
+            r:200
+        });
+        circle.animate({
+            r:4
+        },3000,'easeInOut');
+        topNotifyTemp("Looking for solution here",3000);
+        
+        setTimeout(function() {
+            var v = polyController.getVertexById(id);
+            searcher = new GraphSearcher(v);
+            searcher.search();
+        },4000);
+    },500);
 }
 
 function startLoadingWithText(theText) {
