@@ -260,12 +260,22 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
         var animation = sourceNode.cvs.animationInfo[name];
 
         var startingG = animation.startG;
+        var realEndG = animation.realEndAccel;
+        var transParticle = animation.transParticle;
+        var timeToTransition = animation.timeToTransition;
+
         var gravTransition = this.makeGravityClosure(lastG,startingG,15);
-        lastG = startingG;
 
         //ok so to animate a solution, first transition between these gravity directions
-        //TODO: This should be TWO separate transitions, the last G and starting g....?
         this.animateStepFunctions.push(gravTransition);
+
+        //then animate between the startingG, the realEndG, WHILE animating the particle
+        var gravParticleTransition = this.makeGravityParticleTransitionClosure(startingG,realEndG,
+                                                        transParticle,timeToTransition);
+        this.animateStepFunctions.push(gravParticleTransition);
+        console.log("adding this gravpartilce transition function with",startingG,realEndG,transParticle,timeToTransition);
+
+        lastG = realEndG;
 
         //then animate the actual node node animation
         var particleAnimation = this.makeNodeNodeClosure(i);
@@ -275,7 +285,6 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     //push one to return to our original position
     gravTransition = this.makeGravityClosure(lastG,initialAccel,15);
     this.animateStepFunctions.push(gravTransition);
-
 };
 
 GraphSearcher.prototype.animateSolution = function() {
@@ -301,6 +310,15 @@ GraphSearcher.prototype.animateStep = function() {
     this.animateStepFunctions[this.animateStepNum]();
 
     this.animateStepNum++;
+};
+
+GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(startingG,realEndG,transParticle,timeToTransition) {
+    var _this = this;
+    var gravParticleTransition = function() {
+        _this.gravityAnimation(startingG,realEndG,timeToTransition);
+        transParticle.animate();
+    };
+    return gravParticleTransition;
 };
 
 GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time) {
