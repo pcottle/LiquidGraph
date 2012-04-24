@@ -1652,10 +1652,10 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
         console.log("result was",vecDot(velocity,edge.outwardNormal));
         console.log(velocity);
 
-        var asd = new rArrow(edge.p1,velocity);
-        edge.highlight();
+        //var asd = new rArrow(edge.p1,velocity);
+        //edge.highlight();
         console.log(this);
-        part = this;
+        //part = this;
 
         throw new Error('Projecting vector onto edge with same facing outward normal!');
     }
@@ -2316,7 +2316,11 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
     var particleHere = new Particle(kState,realEndAccel,tState);
     partController.add(particleHere);
 
+    try {
     var settleResults = particleHere.settle();
+    } catch(e) {
+        return;
+    }
 
     this.postResults(settleResults,startG,realEndAccel,timeToTransition,particleHere,transitionParticle);
     return particleHere;
