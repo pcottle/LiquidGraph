@@ -65,6 +65,11 @@ function GravityTweener(gStart,gEnd,time,doneFunction) {
 
     //the "rotationLayer" is the HTML node we need to rotate to show the gravity direction.
 
+    if(!gStart || !gEnd || !time)
+    {
+        throw new Error("bad args in gravity tweener");
+    }
+
     //check for bad vectors
     if( String(gStart.x) == 'NaN' || String(gEnd.x) == 'NaN')
     { throw new Error("NAN in gt"); }

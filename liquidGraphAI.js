@@ -244,12 +244,14 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
 
     this.animateStepFunctions = [];
 
+    //first, pop on a function that takes in the global accel and rotates to the starting accel
+
+    var _this = this;
     var initialAccel = globalAccel;
     var lastG = globalAccel;
 
-    //first draw our circle
-    var firstV = this.solution.nodes[0].cvs.concaveVertex;
-    this.pBody = cuteSmallCircle(firstV.x,firstV.y);
+    var startPos = this.solution.nodes[0].cvs.concaveVertex;
+    this.pBody = cuteSmallCircle(startPos.x,startPos.y);
 
     //now loop through nodes
     for(var i = 0; i < this.solution.nodes.length -1; i++)
@@ -259,17 +261,17 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
         var destNode = this.solution.nodes[i+1];
         var name = destNode.locationName;
         var animation = sourceNode.cvs.animationInfo[name];
-        var transPos = sourceNode.cvs.concaveVertex;
 
         var startingG = animation.startG;
         var realEndG = animation.realEndAccel;
         var transParticle = animation.transParticle;
+
+        var transPos = sourceNode.cvs.concaveVertex;
         var timeToTransition = animation.timeToTransition;
 
         var gravTransition = this.makeGravityClosure(transPos,lastG,startingG,15);
 
         //ok so to animate a solution, first transition between these gravity directions
-        //TODO: This should be TWO separate transitions, the last G and starting g....?
         this.animateStepFunctions.push(gravTransition);
 
         //then animate between the startingG, the realEndG, WHILE animating the particle
@@ -287,7 +289,6 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     //push one to return to our original position
     gravTransition = this.makeGravityClosure(null,lastG,initialAccel,15);
     this.animateStepFunctions.push(gravTransition);
-
 };
 
 GraphSearcher.prototype.animateSolution = function() {
@@ -318,7 +319,6 @@ GraphSearcher.prototype.animateStep = function() {
 GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(startingG,realEndG,transParticle,timeToTransition) {
     var _this = this;
     var gravParticleTransition = function() {
-        _this.pBody.hide();
         _this.gravityAnimation(null,startingG,realEndG,timeToTransition);
         transParticle.animate();
     };
@@ -328,29 +328,35 @@ GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(starting
 GraphSearcher.prototype.makeGravityClosure = function(transPos,startG,endG,time) {
 
     var _this = this;
+    
     var gravTransition = function() {
+        if(transPos && false)
+        {
+            _this.pBody.attr({
+                cx:transPos.x,
+                cy:transPos.y
+            });
+        }
+
         _this.gravityAnimation(transPos,startG,endG,time);
     };
     return gravTransition;
 };
 
-GraphSearcher.prototype.gravityAnimation = function(transitionPos,gStart,gEnd,time) {
-    //update our particleBody to be where the particle sits during transition, if its not a
-    //particleGravityTransition
-    if(transitionPos)
+GraphSearcher.prototype.gravityAnimation = function(transPos,gStart,gEnd,time) {
+    if(transPos)
     {
         this.pBody.attr({
-            cx:transitionPos.x,
-            cy:transitionPos.y
+            cx:transPos.x,
+            cy:transPos.y
         });
         this.pBody.show();
     }
 
     var _this = this;
     var doneFunction = function() {
-        //hide the pbody
-        _this.pBody.hide();
         _this.animateStep();
+        _this.pBody.hide();
     };
 
     var gt = new GravityTweener(gStart,gEnd,time,doneFunction);
