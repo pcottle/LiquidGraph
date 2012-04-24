@@ -216,6 +216,7 @@ GraphSearcher.prototype.searchStepAsync = function() {
     else if(results == "NoSolution")
     {
         topNotify("No Solution Found");
+        partController.clearAll();
     }
     else
     {
