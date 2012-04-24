@@ -134,6 +134,11 @@ GraphSearcher.prototype.searchStep = function() {
     //pop off the top plan
     var planToExpand = this.planPriorityQueue.shift();
 
+    if(!planToExpand)
+    {
+        return "NoSolution";
+    }
+
     var topNode = planToExpand.lastNode();
     var topNodeName = topNode.locationName;
     
@@ -149,13 +154,6 @@ GraphSearcher.prototype.searchStep = function() {
     this.printPlan(planToExpand);
     //expand this top node to get a bunch of other nodes
     var nodeToExpand = planToExpand.nodes[planToExpand.nodes.length - 1];
-
-    if(!nodeToExpand)
-    {
-        //no solution found :(
-        return "NoSolution";
-    }
-
 
     if(nodeToExpand.isGoal)
     {
