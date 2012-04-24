@@ -141,8 +141,10 @@ function executeDemo() {
 
     hideDemoDiv();
     windowResize();
+    startLoading();
     setTimeout(function() {
 
+        stopLoading();
         importGeometry();
         toggleImportExport();
         
