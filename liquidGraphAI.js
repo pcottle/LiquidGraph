@@ -354,7 +354,7 @@ GraphSearcher.prototype.makeGravityClosure = function(transPos,startG,endG,time,
                 r:200
             });
             _this.pBody.animate({
-                r:5
+                r:4
             },4000,'easeIn');
         }
 

@@ -124,6 +124,7 @@ function stopLoadingWithText() {
 function topNotifyClear() {
     $j('#topNotifyBar').html('');
     $j('#topNotifyBarHolder').addClass('topNotifyBarHidden');
+    if(notifyTimeout) { clearTimeout(notifyTimeout); }
 }
 
 function startLoading() {
@@ -149,7 +150,7 @@ function topNotify(theText) {
 function topNotifyTemp(theText,time) {
     if(!time) { time = 3000; }
     topNotify(theText);
-    setTimeout('topNotifyClear();',time);
+    notifyTimeout = setTimeout('topNotifyClear();',time);
 }
 
 function topNotifyHtml(theText) {
@@ -201,6 +202,11 @@ $j(document).ready(function(){
         importGeometry();
         toggleImportExport();
         
+        //hack up the solve mode
+        solveController.active = true;
+        solveController.UIbutton.active = true;
+        solveController.UIbutton.hideAllButtons();
+        
         var id = 86; //31, 86, both good
         
         var v = polyController.getVertexById(id);
@@ -209,7 +215,7 @@ $j(document).ready(function(){
             r:200
         });
         circle.animate({
-            r:3
+            r:4
         },3000,'easeInOut');
         topNotifyTemp("Looking for solution here",3000);
         
