@@ -61,6 +61,23 @@ BulkAnimator.prototype.animateAll = function() {
     }
 };
 
+function GravityArrow() {
+    var height = $j(window).height();
+    var pos = vecMake(40,height-60);
+
+    this.pos = pos;
+    this.rArrow = new rArrow(pos,globalAccel);
+    this.text = p.text(pos.x,pos.y + 40,"Gravity");
+    this.text.attr({
+        'fill':'#FFF',
+        'stroke':'#FFF',
+        'stroke-width':0,
+        'font-size':20
+    });
+};
+
+GravityArrow.update
+
 function GravityTweener(gStart,gEnd,time,doneFunction) {
 
     //the "rotationLayer" is the HTML node we need to rotate to show the gravity direction.
@@ -115,23 +132,28 @@ function GravityTweener(gStart,gEnd,time,doneFunction) {
     //        v |
     //
 
-    //the _sum_ of their vectors has a negative x component; one vector has a positive y component
-    //and the other vector has a negative y component
-
-    var sum = vecAdd(gStart,gEnd);
-    var quadsGood = ((gStart.y > 0 && gEnd.y < 0) || (gStart.y < 0 && gEnd.y > 0));
-
-    if(sum.x < 0 && quadsGood)
+    //we will accidentally rotate way more degrees than necessary. to detect this...
+    if(Math.abs(this.endAngle - this.startAngle) > Math.PI)
     {
+        //we are rotating too much. there are a couple of situations here....
+
         //we want to modify one of the angles by 2 pi to wrap it around so a linear interp
-        //or cubic easeinout works correctly. If one angle is positive, subtract by 2pi.
-        if(this.startAngle > 0)
+        //or cubic easeinout works correctly.
+        if(this.startAngle > Math.PI)
         {
             this.startAngle -= Math.PI * 2;
         }
-        else if(this.startAngle < 0)
+        else if(this.endAngle > Math.PI)
+        {
+            this.endAngle -= Math.PI * 2;
+        }
+        else if(this.startAngle < -1*Math.PI)
         {
             this.startAngle += Math.PI * 2;
+        }
+        else if(this.endAngle < -1 * Math.PI)
+        {
+            this.endAngle += Math.PI * 2;
         }
     }
 
@@ -181,6 +203,13 @@ GravityTweener.prototype.animateStep = function(timeVal) {
     var progressY = this.cubicEaseInOut(progressX);
 
     var rotAngleNow = this.startAngle + progressY * (this.endAngle - this.startAngle);
+
+    var gVec = this.degToVec(rotAngleNow + Math.PI * 0.5);
+    if(gArrow)
+    {
+        gArrow.rArrow.remove();
+        gArrow.rArrow = new rArrow(gArrow.pos,vecScale(gVec,vecLength(globalAccel)));
+    }
 
     var toSet = 'rotate3d(0,0,1,' + String(rotAngleNow) + 'rad)';
     //set it
@@ -326,7 +355,7 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
     }
 
     this.mainButtons = ['addPolyButton','traceButton','editPolyButton',
-                        'importExportButton','testButton','clearButton','solveButton'];
+                        'importExportButton','clearButton','solveButton'];
     this.mainButtons = this.mainButtons.map(function(id) { return "#" + id; });
     this.mainButtons = this.mainButtons.join(",");
 

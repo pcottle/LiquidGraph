@@ -49,7 +49,7 @@
 <a id="bombardButton" class="uiButton uiButtonYellow" onclick="javscript:bombard();">Bombard
 </a>
 
-<a id="testButton" style="position:absolute;bottom:20px;left:10px;" class="uiButton uiButtonPink" onclick="javascript:testSampling();">Test Sampling (Beware)
+<a id="testButton" style="position:absolute;bottom:20px;left:10px;display:none" class="uiButton uiButtonPink" onclick="javascript:testSampling();">Test Sampling (Beware)
 </a>
 
 <a id="editPolyButton" class="uiButton uiButtonYellow">Edit Polygons
@@ -89,6 +89,25 @@
     </div>
 </div>
 
+
+<div id="demoWrapper" class="smooth">
+
+    <div id="demoDiv" class="smooth">
+
+        <h2> Welcome! </h2>
+
+        <p>
+            This application finds a series of rotations to roll a small ball (or particle) out of a maze with a gravity field. It's related to my current research at UC Berkeley and combines concepts from ray tracing, artifical intelligence search, computational geometry, and mesh generation. Enjoy!
+        </p>
+
+        <div style="text-align:center;margin:20px;">
+        <a onclick="javascript:executeDemo();" id="demoButton" class="uiButton" style="position:static"> Show me the demo! </a>
+        </div>
+
+
+    </div>
+</div>
+
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <!-- <script type="text/javascript" src="jquery.min.js"></script> -->
 <script type="text/javascript" src="raphael-min.js"></script>
@@ -110,6 +129,45 @@ var polyController = null;
 
 var debug = false;
 
+function showDemoDiv() {
+    $j('#demoWrapper').css('top','100px');
+}
+
+function hideDemoDiv() {
+    $j('#demoWrapper').css('top','-600px');
+}
+
+function executeDemo() {
+
+    hideDemoDiv();
+    windowResize();
+
+    importGeometry();
+    toggleImportExport();
+    
+    //hack up the solve mode
+    solveController.active = true;
+    solveController.UIbutton.active = true;
+    solveController.UIbutton.hideAllButtons();
+    
+    var id = 31; //31, 86, both good
+    
+    var v = polyController.getVertexById(id);
+    var circle = cuteSmallCircle(v.x,v.y);
+    circle.attr({
+        r:200
+    });
+    circle.animate({
+        r:4
+    },3000,'easeInOut');
+    topNotifyTemp("Looking for solution here",3000);
+    
+    setTimeout(function() {
+        var v = polyController.getVertexById(id);
+        searcher = new GraphSearcher(v);
+        searcher.search();
+    },4000);
+}
 
 function startLoadingWithText(theText) {
     startLoading();
@@ -144,7 +202,7 @@ function stopLoading() {
 
 
 function topNotify(theText) {
-    topNotifyHtml("<h1>" + theText + "</h1>");
+    topNotifyHtml('<h2 style="font-size:40px">' + theText + "</h2>");
 }
 
 function topNotifyTemp(theText,time) {
@@ -190,6 +248,7 @@ $j(document).ready(function(){
     polyEditor = new EditUIControl();
     solveController = new SolveUIControl();
     bAnimator = new BulkAnimator();
+    gArrow = false;
 
     $j(window).resize(windowResize);
     
@@ -197,37 +256,20 @@ $j(document).ready(function(){
     rotationLayer = $j('svg')[0];
     rotationLayerRad = 0;
     $j(rotationLayer).css('-webkit-transform','rotate3d(0,0,1,0rad)');
+
+    if(!/WebKit/.test(window.navigator.userAgent))
+    {
+        alert("Oh no! This application uses -webkit-transform to animate the final solutions, which your browser doesn't seem to support. Everything will still work, but during the solution animation, you'll have to look at the gravity arrow in the corner that I coded just for you instead of having the part rotate in an intuitive manner.");
+        gArrow = new GravityArrow();
+    }
     
     if(/demo/.test(location.href))
     {
-        importGeometry();
-        toggleImportExport();
-        
-        //hack up the solve mode
-        solveController.active = true;
-        solveController.UIbutton.active = true;
+        showDemoDiv();
         solveController.UIbutton.hideAllButtons();
-        
-        var id = 31; //31, 86, both good
-        
-        var v = polyController.getVertexById(id);
-        var circle = cuteSmallCircle(v.x,v.y);
-        circle.attr({
-            r:200
-        });
-        circle.animate({
-            r:4
-        },3000,'easeInOut');
-        topNotifyTemp("Looking for solution here",3000);
-        
-        setTimeout(function() {
-            var v = polyController.getVertexById(id);
-            searcher = new GraphSearcher(v);
-            searcher.search();
-        },4000);
+        $j('#demoButton').slideDown();
     }
-    
-    
+        
 });
 
 </script>

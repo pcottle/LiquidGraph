@@ -371,7 +371,36 @@ h1 {
     right:10px;
 }
 
-#importExportDialog {
+#demoWrapper {
+    position:absolute;
+    top:-600px;
+    text-align:center;
+    width:100%;
+    height:10px;
+}
+
+#demoDiv {
+    padding:20px;
+    border-top: 1px solid #96d1f8;
+    background: #80007c;
+    background: -webkit-gradient(linear, left top, left bottom, from(#fa1ee0), to(#80007c));
+    background: -webkit-linear-gradient(top, #fa1ee0, #80007c);
+    background: -moz-linear-gradient(top, #fa1ee0, #80007c);
+    background: -ms-linear-gradient(top, #fa1ee0, #80007c);
+    background: -o-linear-gradient(top, #fa1ee0, #80007c);
+
+    width:80%;
+    min-width:300px;
+    min-height:100px;
+    -webkit-border-radius:8px;
+    -moz-border-radius:8px;
+    border-radius:8px;
+
+    margin-left:auto;
+    margin-right:auto;
+}
+
+#importExportDialog{
    border-top: 1px solid #96d1f8;
    background: #80007c;
    background: -webkit-gradient(linear, left top, left bottom, from(#fa1ee0), to(#80007c));

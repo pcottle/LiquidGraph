@@ -256,13 +256,15 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     var lastG = globalAccel;
 
     var startPos = this.solution.nodes[0].cvs.concaveVertex;
-    this.pBody = cuteSmallCircle(startPos.x,startPos.y);
     this.ring = p.circle(startPos.x,startPos.y,40,40);
+
     this.ring.attr({
         'stroke-width':5,
         'stroke':'rgba(255,255,255,0.5)',
         'fill':'rgba(0,0,0,0)'
     });
+
+    this.pBody = cuteSmallCircle(startPos.x,startPos.y);
 
     //now loop through nodes
     for(var i = 0; i < this.solution.nodes.length -1; i++)
