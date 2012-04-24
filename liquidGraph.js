@@ -1,5 +1,5 @@
 //Globals
-var pointOverlapTolerance = 5;
+var pointOverlapTolerance = 2;
 var endpointPointOverlapTolerance = 1.5;
 var globalAnimateSpeed = 0.3;
 
@@ -11,7 +11,7 @@ function Vertex(x,y,rPoint,parentPoly) {
     this.rPoint = rPoint;
     this.parentPoly = parentPoly;
 
-    this.id = polyController.requestId();
+    this.id = polyController.requestId(this);
 
     this.inEdge = null;
     this.outEdge = null;
@@ -439,14 +439,21 @@ function polygonController() {
     this.allEdges = [];
 
     this.vertexIdToGive = 0;
+    this.idToVertex = {};
 };
 
 //ensures no two vertices have same ID. i used to do this with random
 //hashes and checking but that got ugly
-polygonController.prototype.requestId = function() {
+polygonController.prototype.requestId = function(vertex) {
     this.vertexIdToGive++;
+
+    this.idToVertex[this.vertexIdToGive] = vertex;
     return this.vertexIdToGive;
-}
+};
+
+polygonController.prototype.getVertexById = function(id) {
+    return this.idToVertex[id];
+};
 
 polygonController.prototype.reset = function() {
     for(var i = 0; i < this.polys.length; i++)

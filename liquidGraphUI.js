@@ -542,7 +542,7 @@ polygonUIControl.prototype.rightClick = function(x,y) {
         var uX = this.uiPoints[i].attr('cx');
         var uY = this.uiPoints[i].attr('cy');
         var dist = distBetween(vecMake(uX,uY),vecMake(x,y));
-        if(dist < pointOverlapTolerance)
+        if(dist < 5)
         {
             shouldAdd = false;
         }
@@ -1200,6 +1200,11 @@ function importGeometry()
     var furthestWidthPoint = 0;
     var furthestHeightPoint = 0;
 
+    //can't assume min as at zero
+    var minX = Number.MAX_VALUE;
+    var minY = Number.MAX_VALUE;
+
+
     var importData = null;
     try {
         var importData = JSON.parse($j('#jsonTextArea').val());
@@ -1216,7 +1221,6 @@ function importGeometry()
     var particles = importData.particles;
 
     //first do the loop once just to get the maxes
-
     for(var i = 0; i < polys.length; i++)
     {
         var polyData = polys[i];
@@ -1231,18 +1235,22 @@ function importGeometry()
 
             furthestWidthPoint = Math.max(vx,furthestWidthPoint);
             furthestHeightPoint = Math.max(vy,furthestHeightPoint);
+
+            minX = Math.min(minX,vx);
+            minY = Math.min(minY,vy);
         }
     }
 
     //now actually make them, but we need to offset by the deltas to center the parts in the canvas.
     //man raphael really needs support for stuff like this. originally i was moving the div but then
-    //the click events TOTALLY got thrown off and it was a mess.
+    //the click events TOTALLY got thrown off and it was a mess. I would make a patch but
+    //i think it would need an entire transformation / camera system 
 
     var windowWidth = $j(window).width();
     var windowHeight = $j(window).height();
 
-    var deltaX = windowWidth - furthestWidthPoint;
-    var deltaY = windowHeight - furthestHeightPoint;
+    var deltaX = windowWidth - (furthestWidthPoint - minX);
+    var deltaY = windowHeight - (furthestHeightPoint - minY);
 
     for(var i = 0; i < polys.length; i++)
     {
@@ -1255,9 +1263,8 @@ function importGeometry()
         {
             var v = vertices[j];
             
-            var vx = v.x * width + deltaX/2;
-            var vy = v.y * height + deltaY/2;
-
+            var vx = v.x * width + deltaX/2 - minX;
+            var vy = v.y * height + deltaY/2 - minY;
 
             var rPoint = cuteSmallCircle(vx,vy);
             rPoints.push(rPoint);
@@ -1313,6 +1320,13 @@ function exportGeometry()
 
     var width = $j(window).width();
     var height = $j(window).height();
+    var scaler = Math.min(width,height);
+
+    width = scaler;
+    height = scaler;
+
+    var minX = Number.MAX_VALUE;
+    var minY = Number.MAX_VALUE;
 
     for(var i = 0; i < polyController.polys.length; i++)
     {
@@ -1327,6 +1341,24 @@ function exportGeometry()
             var vx = v.x / width;
             var vy = v.y / height;
 
+            minX = Math.min(minX,vx);
+            minY = Math.min(minY,vy);
+        }
+    }
+
+    for(var i = 0; i < polyController.polys.length; i++)
+    {
+        var poly = polyController.polys[i];
+
+        var color = poly.fillColor;
+        var vertices = [];
+        for(var j = 0; j < poly.vertices.length; j++)
+        {
+            var v = poly.vertices[j];
+
+            var vx = v.x / width - minX;
+            var vy = v.y / height - minY;
+     
             vertices.push(vecMake(vx,vy));
         }
 

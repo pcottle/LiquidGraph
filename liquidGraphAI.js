@@ -269,7 +269,10 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
         var transPos = sourceNode.cvs.concaveVertex;
         var timeToTransition = animation.timeToTransition;
 
-        var gravTransition = this.makeGravityClosure(transPos,lastG,startingG,15);
+        var time = 15;
+        if(i == 0) { time = time * 3; }
+
+        var gravTransition = this.makeGravityClosure(transPos,lastG,startingG,time,i);
 
         //ok so to animate a solution, first transition between these gravity directions
         this.animateStepFunctions.push(gravTransition);
@@ -287,7 +290,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     }
 
     //push one to return to our original position
-    gravTransition = this.makeGravityClosure(null,lastG,initialAccel,15);
+    gravTransition = this.makeGravityClosure(null,lastG,initialAccel,time,i);
     this.animateStepFunctions.push(gravTransition);
 };
 
@@ -307,6 +310,7 @@ GraphSearcher.prototype.animateStep = function() {
     if(this.animateStepNum >= this.animateStepFunctions.length)
     {
         topNotifyClear();
+        this.pBody.remove();
         return;
     }
 
@@ -325,17 +329,20 @@ GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(starting
     return gravParticleTransition;
 };
 
-GraphSearcher.prototype.makeGravityClosure = function(transPos,startG,endG,time) {
+GraphSearcher.prototype.makeGravityClosure = function(transPos,startG,endG,time,index) {
 
     var _this = this;
     
     var gravTransition = function() {
-        if(transPos && false)
+        //do a cross hair on the first
+        if(index == 0)
         {
             _this.pBody.attr({
-                cx:transPos.x,
-                cy:transPos.y
+                r:200
             });
+            _this.pBody.animate({
+                r:5
+            },4000,'easeIn');
         }
 
         _this.gravityAnimation(transPos,startG,endG,time);
