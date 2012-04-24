@@ -201,11 +201,21 @@ $j(document).ready(function(){
         importGeometry();
         toggleImportExport();
         
+        var v = polyController.polys[3].vertices[1];
+        var circle = cuteSmallCircle(v.x,v.y);
+        circle.attr({
+            r:200
+        });
+        circle.animate({
+            r:3
+        },3000,'easeInOut');
+        topNotifyTemp("Looking for solution here",3000);
+        
         setTimeout(function() {
             var v = polyController.polys[3].vertices[1];
             searcher = new GraphSearcher(v);
             searcher.search();
-        },1000);
+        },4000);
     }
     
     
