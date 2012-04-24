@@ -338,6 +338,16 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
     $j('#' + this.id).click(cHandler);
 };
 
+UIButton.prototype.hideAllButtons = function() {
+    console.warn("hiding all buttons");
+    $j('.uiButton').slideUp();
+};
+
+UIButton.prototype.showMainButtons = function() {
+    console.warn("showing main buttons");
+    $j(this.mainButtons).slideDown();
+};
+
 UIButton.prototype.anchorClick = function() {
 
     var nots = ":not(#" + this.id + ")";
@@ -628,6 +638,7 @@ function SolveUIControl() {
 
     this.active = false;
     this.firstTime = true;
+    this.isAnimating = false;
 
     this.prototype = new uiControl(this);
     this.UIbutton = new UIButton(this,'solveButton','Solve!','Stop Solving');
@@ -643,6 +654,11 @@ SolveUIControl.prototype.rightClick = function() { return; }
 SolveUIControl.prototype.vertexClick = function(vertex) {
     if(!vertex.isConcave)
     {
+        return;
+    }
+    if(this.isAnimating)
+    {
+        topNotifyTemp("One solution at a time!");
         return;
     }
 

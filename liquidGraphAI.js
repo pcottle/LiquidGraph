@@ -186,6 +186,7 @@ GraphSearcher.prototype.searchStep = function() {
 };
 
 GraphSearcher.prototype.search = function() {
+
     this.searchStepAsync();
 };
 
@@ -290,7 +291,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     }
 
     //push one to return to our original position
-    gravTransition = this.makeGravityClosure(null,lastG,initialAccel,time,i);
+    gravTransition = this.makeGravityClosure(null,lastG,initialAccel,time,"end");
     this.animateStepFunctions.push(gravTransition);
 };
 
@@ -301,6 +302,10 @@ GraphSearcher.prototype.animateSolution = function() {
     }
     partController.clearAll();
 
+    solveController.isAnimating = true;
+
+    solveController.UIbutton.hideAllButtons();
+
     this.animateStepNum = 0;
 
     this.animateStep();
@@ -309,8 +314,16 @@ GraphSearcher.prototype.animateSolution = function() {
 GraphSearcher.prototype.animateStep = function() {
     if(this.animateStepNum >= this.animateStepFunctions.length)
     {
+        //we are done, clean up after ourselves
         topNotifyClear();
         this.pBody.remove();
+
+        solveController.UIbutton.anchorClick();
+        solveController.UIbutton.showMainButtons();
+
+        //also tell the solve UI that we are done
+        solveController.isAnimating = false;
+
         return;
     }
 
