@@ -256,7 +256,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     this.ring = p.circle(startPos.x,startPos.y,40,40);
     this.ring.attr({
         'stroke-width':5,
-        'stroke':'rgba(1,1,1,0.5)',
+        'stroke':'rgba(255,255,255,0.5)',
         'fill':'rgba(0,0,0,0)'
     });
 

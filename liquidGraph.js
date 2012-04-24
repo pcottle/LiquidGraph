@@ -1166,7 +1166,7 @@ KineticTransitionPath.prototype.animate = function(doneFunction) {
     this.particleBody = cuteSmallCircle(startPoint.x,startPoint.y);
     this.ring = p.circle(startPoint.x,startPoint.y,40,40);
     this.ring.attr({
-        'stroke':'rgba(1,1,1,0.5)',
+        'stroke':'rgba(255,255,255,0.5)',
         'fill':'rgba(0,0,0,0)',
         'stroke-width':5
     });
@@ -1291,7 +1291,7 @@ KineticPath.prototype.animate = function(doneFunction,wantsRing) {
     if(wantsRing) {
         this.ring = p.circle(startPoint.x,startPoint.y,40,40);
         this.ring.attr({
-            'stroke':'rgba(1,1,1,0.5)',
+            'stroke':'rgba(255,255,255,0.5)',
             'fill':'rgba(0,0,0,0)',
             'stroke-width':5
         });
