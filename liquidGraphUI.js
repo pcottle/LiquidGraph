@@ -339,12 +339,10 @@ function UIButton(parentObj,id,text,activeText,buttonsToShow) {
 };
 
 UIButton.prototype.hideAllButtons = function() {
-    console.warn("hiding all buttons");
     $j('.uiButton').slideUp();
 };
 
 UIButton.prototype.showMainButtons = function() {
-    console.warn("showing main buttons");
     $j(this.mainButtons).slideDown();
 };
 

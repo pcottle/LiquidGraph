@@ -177,9 +177,10 @@ function topNotifyHtml(theText) {
 
 $j(document).ready(function(){
 
-    startLoadingWithText("Hello world!");
-    setTimeout('stopLoadingWithText();',1000);
-    
+    startLoading();
+    setTimeout(function() {
+        stopLoading();
+    },1000);
     p = Raphael("canvasHolder");
 
     polygonInserter = new polygonUIControl();

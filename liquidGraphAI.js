@@ -115,12 +115,16 @@ function GraphSearcher(initialConcaveVertex) {
 GraphSearcher.prototype.printPlan = function(plan) {
     var str = '';
 
-    console.log("THIS PLAN IS:");
+    console.log("This plan is:");
     
     for(var i = 0; i < plan.nodes.length; i++)
     {
         var n = plan.nodes[i];
-        str = str + n.locationName + '->';
+        str = str + n.locationName;
+        if(i < plan.nodes.length - 1)
+        {
+            str = str + '->';
+        }
     }
 
     console.log(str);
@@ -331,6 +335,8 @@ GraphSearcher.prototype.animateStep = function() {
         //also tell the solve UI that we are done
         solveController.isAnimating = false;
 
+        partController.clearAll();
+
         return;
     }
 
@@ -431,5 +437,6 @@ GraphSearcher.prototype.nodeNodeAnimation = function(nodeIndex) {
     };
 
     animation.particle.animate(done,true);
+    partController.add(animation.particle);
 };
 

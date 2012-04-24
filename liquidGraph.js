@@ -1332,12 +1332,14 @@ KineticPath.prototype.animateStep = function() {
         'cy':this.pos.y
     });
 
-    if(this.ring)
+    if(this.ring) //solution animation mode
     {
         this.ring.attr({
             'cx':this.pos.x,
             'cy':this.pos.y
         });
+        this.parabola.removePath();
+        this.parabola.drawParabolaPath(this.animateTime);
     }
  
     this.vArrow.update(this.pos,this.vel);
