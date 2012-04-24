@@ -2131,7 +2131,7 @@ function ConcaveVertexSampler(concaveVertex,fieldAccel) {
     this.connectedNodeNames = [];
     this.nameToObject = {};
 
-    this.transitionSpeed = 5.5; //0.5 seconds to transition for the max case
+    this.transitionSpeed = 25.5; //0.5 seconds to transition for the max case
 }
 
 ConcaveVertexSampler.prototype.sampleConnectivity = function() {
