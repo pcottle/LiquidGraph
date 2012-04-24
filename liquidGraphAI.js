@@ -339,6 +339,12 @@ GraphSearcher.prototype.animateStep = function() {
 
         partController.clearAll();
 
+        //if this is the demo, keep solving for a bit
+        if(/demo/.test(location.href))
+        {
+            solveController.UIbutton.anchorClick();
+        }
+
         return;
     }
 
