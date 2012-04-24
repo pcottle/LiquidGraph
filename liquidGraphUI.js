@@ -946,7 +946,7 @@ TraceUIControl.prototype.mouseMove = function(x,y,e) {
 function cuteSmallCircle(x,y,wantsSameColor) {
     var c = p.circle(x,y,4,4);
 
-    if(wantsSameColor)
+    if(!wantsSameColor)
     {
         c.attr("fill","hsba(0.5,0.8,0.7,1)");
     }

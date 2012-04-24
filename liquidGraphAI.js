@@ -253,6 +253,12 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
 
     var startPos = this.solution.nodes[0].cvs.concaveVertex;
     this.pBody = cuteSmallCircle(startPos.x,startPos.y);
+    this.ring = p.circle(startPos.x,startPos.y,40,40);
+    this.ring.attr({
+        'stroke-width':5,
+        'stroke':'rgba(1,1,1,0.5)',
+        'fill':'rgba(0,0,0,0)'
+    });
 
     //now loop through nodes
     for(var i = 0; i < this.solution.nodes.length -1; i++)
@@ -317,6 +323,7 @@ GraphSearcher.prototype.animateStep = function() {
         //we are done, clean up after ourselves
         topNotifyClear();
         this.pBody.remove();
+        this.ring.remove();
 
         solveController.UIbutton.anchorClick();
         solveController.UIbutton.showMainButtons();
@@ -370,6 +377,11 @@ GraphSearcher.prototype.gravityAnimation = function(transPos,gStart,gEnd,time) {
             cx:transPos.x,
             cy:transPos.y
         });
+        this.ring.attr({
+            cx:transPos.x,
+            cy:transPos.y
+        });
+        this.ring.show();
         this.pBody.show();
     }
 
@@ -377,6 +389,7 @@ GraphSearcher.prototype.gravityAnimation = function(transPos,gStart,gEnd,time) {
     var doneFunction = function() {
         _this.animateStep();
         _this.pBody.hide();
+        _this.ring.hide();
     };
 
     var gt = new GravityTweener(gStart,gEnd,time,doneFunction);
@@ -417,6 +430,6 @@ GraphSearcher.prototype.nodeNodeAnimation = function(nodeIndex) {
         _this.animateStep();
     };
 
-    animation.particle.animate(done);
+    animation.particle.animate(done,true);
 };
 

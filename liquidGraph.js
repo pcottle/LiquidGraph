@@ -20,7 +20,7 @@ function Vertex(x,y,rPoint,parentPoly) {
 
 Vertex.prototype.highlight = function() {
     this.rPoint.animate({
-        'r':6,
+        'r':5,
         'stroke':'#000',
         'stroke-width':3,
     },800,'easeInOut');
@@ -1164,6 +1164,12 @@ KineticTransitionPath.prototype.animate = function(doneFunction) {
     this.vel = startVel;
 
     this.particleBody = cuteSmallCircle(startPoint.x,startPoint.y);
+    this.ring = p.circle(startPoint.x,startPoint.y,40,40);
+    this.ring.attr({
+        'stroke':'rgba(1,1,1,0.5)',
+        'fill':'rgba(0,0,0,0)',
+        'stroke-width':5
+    });
     this.vArrow = new rArrow(startPoint,startVel);
 
     //add ourselves to the bAnimator
@@ -1185,6 +1191,10 @@ KineticTransitionPath.prototype.animateStep = function() {
         'cx':this.pos.x,
         'cy':this.pos.y
     });
+    this.ring.attr({
+        'cx':this.pos.x,
+        'cy':this.pos.y
+    });
 
     this.vArrow.update(this.pos,this.vel);
 
@@ -1195,6 +1205,7 @@ KineticTransitionPath.prototype.animateStep = function() {
     else
     {
         this.particleBody.remove();
+        this.ring.remove();
         this.vArrow.path.remove();
         if(this.doneFunction)
         {
@@ -1206,6 +1217,7 @@ KineticTransitionPath.prototype.animateStep = function() {
 //kind of depreciated since we have bAnimator
 KineticTransitionPath.prototype.clearAnimation = function() {
     if(this.particleBody) { this.particleBody.remove(); }
+    if(this.ring) { this.ring.remove(); }
     if(this.vArrow) { this.vArrow.remove(); }
 
     this.animateTime = 0;
@@ -1252,6 +1264,7 @@ function KineticPath(parabola,endTime) {
     this.endTime = parabola.getEndTimeValue(endTime);
 
     this.particleBody = null;
+    this.ring = null;
     this.vArrow = null;
 
     this.animateTime = 0;
@@ -1259,7 +1272,7 @@ function KineticPath(parabola,endTime) {
     this.doneFunction = null;
 };
 
-KineticPath.prototype.animate = function(doneFunction) {
+KineticPath.prototype.animate = function(doneFunction,wantsRing) {
     this.doneFunction = doneFunction;
     this.animateSpeed = globalAnimateSpeed;
 
@@ -1274,6 +1287,16 @@ KineticPath.prototype.animate = function(doneFunction) {
     this.vel = startVel;
 
     this.particleBody = cuteSmallCircle(startPoint.x,startPoint.y);
+
+    if(wantsRing) {
+        this.ring = p.circle(startPoint.x,startPoint.y,40,40);
+        this.ring.attr({
+            'stroke':'rgba(1,1,1,0.5)',
+            'fill':'rgba(0,0,0,0)',
+            'stroke-width':5
+        });
+    }
+
     this.vArrow = new rArrow(startPoint,startVel);
 
     //start animation with timeout
@@ -1309,6 +1332,14 @@ KineticPath.prototype.animateStep = function() {
         'cy':this.pos.y
     });
 
+    if(this.ring)
+    {
+        this.ring.attr({
+            'cx':this.pos.x,
+            'cy':this.pos.y
+        });
+    }
+ 
     this.vArrow.update(this.pos,this.vel);
 
     //set another?
@@ -1323,6 +1354,11 @@ KineticPath.prototype.animateStep = function() {
         //also remove our body and arrow
         this.particleBody.remove();
         this.vArrow.path.remove();
+
+        if(this.ring)
+        {
+            this.ring.remove();
+        }
         this.doneFunction();
     }
 };
@@ -2098,7 +2134,7 @@ Particle.prototype.animateStep = function(i) {
    var doneClosure = this.getDoneClosure(i+1);
 
    //animate this kPath and call us when done
-   this.kPaths[i].animate(doneClosure);
+   this.kPaths[i].animate(doneClosure,this.wantsRing);
 };
 
 Particle.prototype.getDoneClosure = function(num) {
@@ -2110,10 +2146,18 @@ Particle.prototype.getDoneClosure = function(num) {
     return toReturn;
 };
 
-Particle.prototype.animate = function(doneFunction) {
+Particle.prototype.animate = function(doneFunction,wantsRing) {
     //ok so the tricky here is that we need to animate each path in succession. so when a path finishes,
     //it must call it's parent particle to animate the next one. this is all done with closures and
     //timeouts.... aka reasons to absolutely love JS
+    if(wantsRing)
+    {
+        this.wantsRing = true;
+    }
+    else
+    {
+        this.wantsRing = false;
+    }
 
     if(doneFunction)
     {
