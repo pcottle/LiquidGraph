@@ -1363,7 +1363,7 @@ function exportGeometry()
 
     var width = $j(window).width();
     var height = $j(window).height();
-    var scaler = Math.min(width,height);
+    var scaler = Math.max(width,height);
 
     width = scaler;
     height = scaler;
