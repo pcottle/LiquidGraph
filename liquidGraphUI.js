@@ -214,6 +214,7 @@ GravityTweener.prototype.animateStep = function(timeVal) {
     var toSet = 'rotate3d(0,0,1,' + String(rotAngleNow) + 'rad)';
     //set it
     $j(rotationLayer).css('-webkit-transform',toSet);
+    $j(rotationLayer).css('-moz-transform',toSet);
 
     //add ourselves :D
     var _this = this;
@@ -1247,10 +1248,15 @@ function importGeometry()
     var minX = Number.MAX_VALUE;
     var minY = Number.MAX_VALUE;
 
-
+    var text = $j('#jsonTextArea').val();
+    if(!text)
+    {
+        text = $j('#jsonTextArea').text();
+    }
+    
     var importData = null;
     try {
-        var importData = JSON.parse($j('#jsonTextArea').val());
+        var importData = JSON.parse(text);
     } catch(e) {
         topNotifyTemp("Error with the JSON you pasted in!");
         console.log(String(e));
@@ -1363,7 +1369,7 @@ function exportGeometry()
 
     var width = $j(window).width();
     var height = $j(window).height();
-    var scaler = Math.min(width,height);
+    var scaler = Math.max(width,height);
 
     width = scaler;
     height = scaler;
