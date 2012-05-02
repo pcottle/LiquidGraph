@@ -260,7 +260,7 @@ $j(document).ready(function(){
     rotationLayerRad = 0;
     $j(rotationLayer).css('-webkit-transform','rotate3d(0,0,1,0rad)');
 
-    if(!/WebKit/.test(window.navigator.userAgent))
+    if(!/WebKit/.test(window.navigator.userAgent) && !/Firefox/.test(window.navigator.userAgent))
     {
         alert("Oh no! This application uses -webkit-transform to animate the final solutions, which your browser doesn't seem to support. Everything will still work, but during the solution animation, you'll have to look at the gravity arrow in the corner that I coded just for you instead of having the part rotate in an intuitive manner.");
         gArrow = new GravityArrow();
