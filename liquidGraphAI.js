@@ -3,7 +3,6 @@
 
                                                                                 ********/
 
-
 /********* Classes **********/
 
 function Node(locationObj,accelDirection) {
