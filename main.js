@@ -19,23 +19,26 @@ function hideDemoDiv() {
 }
 
 function executeDemo() {
+  hideDemoDiv();
+  windowResize();
+  startLoading();
+  setTimeout(function() {
+    stopLoading();
+    importGeometry();
+    toggleImportExport();
 
-    hideDemoDiv();
-    windowResize();
-    startLoading();
-    setTimeout(function() {
-      stopLoading();
-      importGeometry();
-      toggleImportExport();
+    //hack up the solve mode
+    solveController.active = true;
+    solveController.UIbutton.active = true;
+    solveController.UIbutton.hideAllButtons();
 
-      //hack up the solve mode
-      solveController.active = true;
-      solveController.UIbutton.active = true;
-      solveController.UIbutton.hideAllButtons();
+    var ids = (DEMO_VERTEX_ID) ? [DEMO_VERTEX_ID] : DEMO_VERTEX_IDS;
+    var vertices = [];
 
-      var id = DEMO_VERTEX_ID;
-
+    _.each(ids, function(id) {
       var v = polyController.getVertexById(id);
+      vertices.push(v);
+
       var circle = cuteSmallCircle(v.x,v.y);
       circle.attr({
           r:200
@@ -43,14 +46,15 @@ function executeDemo() {
       circle.animate({
           r:4
       },200,'easeInOut');
-      // TODO -- switch back
-      //topNotifyTemp("Looking for solution here",3000);
+    });
 
-      setTimeout(function() {
-        var v = polyController.getVertexById(id);
-        searcher = new GraphSearcher([v]);
-        searcher.search();
-      },250);
+    // TODO -- switch back
+    //topNotifyTemp("Looking for solution here",3000);
+
+    setTimeout(function() {
+      searcher = new GraphSearcher(vertices);
+      searcher.search();
+    },250);
   },200);
 }
 

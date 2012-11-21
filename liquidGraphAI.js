@@ -33,16 +33,16 @@ Node.prototype.stringifyLocations = function(locationObjs) {
 };
 
 Node.prototype.expand = function() {
-    this.cvs.sampleConnectivity();
-    //DEBUG / OPTIONAL -- animate connectivity
-    //this.cvs.animateConnectivity();
+  this.cvs.sampleConnectivity();
+  //DEBUG / OPTIONAL -- animate connectivity
+  //this.cvs.animateConnectivity();
 
-    var connectedObjects = [];
-    for(var i = 0; i < this.cvs.connectedNodeNames.length; i++) {
-      connectedObjects.push(this.cvs.nameToObject[this.cvs.connectedNodeNames[i]]);
-    }
+  var connectedObjects = [];
+  for(var i = 0; i < this.cvs.connectedNodeNames.length; i++) {
+    connectedObjects.push(this.cvs.nameToObject[this.cvs.connectedNodeNames[i]]);
+  }
 
-    return connectedObjects;
+  return connectedObjects;
 }
 
 function PartialPlan(parentPlan,node) {
