@@ -8,7 +8,7 @@ var polygonInsertControl = null;
 var polyController = null;
 
 var debug = false;
-var WORST = true; // go for the longest plans
+var WORST = false; // go for the longest plans
 
 function showDemoDiv() {
     $j('#demoWrapper').css('top','100px');

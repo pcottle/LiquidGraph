@@ -177,7 +177,7 @@ GraphSearcher.prototype.searchStep = function() {
     this.visitedStates[topNodeName] = true;
 
     var newLocationObjects = nodeToExpand.expand();
-    for(var i = 0; i < newLocationObjects.length; i++) {
+    for (var i = 0; i < newLocationObjects.length; i++) {
         // TODO: all location objects??
         var newNode = new Node([newLocationObjects[i]],this.startAccel);
         var newPlan = new PartialPlan(planToExpand,newNode);
