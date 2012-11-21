@@ -89,6 +89,7 @@ function GraphSearcher(concaveVertices) {
   //a closed set for visited graphs, etc.
 
   this.poppedPlans = [];
+  this.goalPlans = [];
   this.visitedStates = {};
   
   this.planPriorityQueue = [];
@@ -101,9 +102,10 @@ function GraphSearcher(concaveVertices) {
 
   this.planPriorityQueue.push(plan);
   this.planPriorityQueue.sort(this.sortFunction);
+  /*
   if (WORST) {
     this.planPriorityQueue.reverse();
-  }
+  }*/
 };
 
 GraphSearcher.prototype.printPlan = function(plan) {
@@ -128,38 +130,54 @@ GraphSearcher.prototype.searchStep = function() {
     //pop off the top plan
     var planToExpand = this.planPriorityQueue.shift();
 
-    if(!planToExpand)
-    {
-        return "NoSolution";
+    console.log('the plan i popped or shifted was', planToExpand);
+    if (planToExpand) {
+      this.printPlan(planToExpand);
     }
 
-    var topNode = planToExpand.lastNode();
-    var topNodeName = topNode.locationName;
-    
-    if(this.visitedStates[topNodeName])
-    {
-        //call ourselves when in async mode
-        //this.searchStep();
-        return;
+    if (!planToExpand) {
+      if (!WORST) {
+        return "NoSolution";
+      }
+
+      console.log('trying to find worst solution because i exhausted all...');
+      // see if we found any goal
+      if (!this.goalPlans.length) {
+        return "NoSolution";
+      }
+      this.solution = this.goalPlans.pop();
+      this.buildSolutionAnimation();
+      return "FoundSolution";
     }
-    this.visitedStates[topNodeName] = true;
-    
-    this.poppedPlans.push(planToExpand);
-    this.printPlan(planToExpand);
+
+    var topNodeName = planToExpand.lastNode().locationName;
+    if (this.visitedStates[topNodeName]) {
+      console.log('already visited state', topNodeName);
+      return;
+    }
+
     //expand this top node to get a bunch of other nodes
     var nodeToExpand = planToExpand.nodes[planToExpand.nodes.length - 1];
 
-    if(nodeToExpand.isGoal)
-    {
+    // now we are actually expanding a plan from here
+    this.poppedPlans.push(planToExpand);
+    this.printPlan(planToExpand);
+
+    if (nodeToExpand.isGoal) {
+      if (!WORST) {
         this.solution = planToExpand;
         this.buildSolutionAnimation();
-
         return "FoundSolution";
+      }
+      // want to just add this
+      this.goalPlans.push(planToExpand);
+      this.goalPlans.sort(this.sortFunction);
+      return;
     }
+    this.visitedStates[topNodeName] = true;
 
     var newLocationObjects = nodeToExpand.expand();
-    for(var i = 0; i < newLocationObjects.length; i++)
-    {
+    for(var i = 0; i < newLocationObjects.length; i++) {
         // TODO: all location objects??
         var newNode = new Node([newLocationObjects[i]],this.startAccel);
         var newPlan = new PartialPlan(planToExpand,newNode);
@@ -173,9 +191,8 @@ GraphSearcher.prototype.searchStep = function() {
     }
 
     var times = [];
-    for(var i = 0; i < this.planPriorityQueue.length; i++)
-    {
-        times.push(this.planPriorityQueue[i].totalTime);
+    for (var i = 0; i < this.planPriorityQueue.length; i++) {
+      times.push(this.planPriorityQueue[i].totalTime);
     }
 
     console.log("SORTED LIST OF TIMES IS");
@@ -192,37 +209,31 @@ GraphSearcher.prototype.search = function() {
 
 GraphSearcher.prototype.searchStepAsync = function() {
     var results = this.searchStep();
-    if(debug)
-    {
-        gs = this;
-        console.log(this);
-        return;
+    if (debug) {
+      gs = this;
+      console.log(this);
+      return;
     }
 
     var poppedPlan = this.poppedPlans[this.poppedPlans.length - 1];
 
-    if(results == "FoundSolution")
-    {
-        topNotify("Found a solution!");
-        //console.log("Found a solution!");
-        var _this = this;
+    if(results == "FoundSolution") {
+      topNotify("Found a solution!");
+      //console.log("Found a solution!");
+      var _this = this;
 
-        setTimeout(function() {
-            _this.animateSolution();
-        },3000);
-    }
-    else if(results == "NoSolution")
-    {
-        topNotify("No Solution Found");
-        partController.clearAll();
-    }
-    else
-    {
-        var _this = this;
-        var f = function() {
-            _this.searchStepAsync();
-        };
-        bAnimator.add(f);
+      setTimeout(function() {
+          _this.animateSolution();
+      }, 3000);
+    } else if(results == "NoSolution") {
+      topNotify("No Solution Found");
+      partController.clearAll();
+    } else {
+      var _this = this;
+      var f = function() {
+          _this.searchStepAsync();
+      };
+      bAnimator.add(f);
     }
 };
 
