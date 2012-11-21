@@ -74,33 +74,36 @@ PartialPlan.prototype.lastNode = function() {
 };
 
 function GraphSearcher(concaveVertices) {
-    //the initial accel will just be negated sum of
-    //the two edge outward normals, scaled to the length of the field
-    //accel
-    var iv = concaveVertices[0];
+  //the initial accel will just be negated sum of
+  //the two edge outward normals, scaled to the length of the field
+  //accel
+  var iv = concaveVertices[0];
 
-    // TODO -- starting acceleration calculation revamp. needs to be some average of all of these
-    // nodes.... hmm
-    var gDirection = vecNormalize(vecAdd(iv.inEdge.outwardNormal,iv.outEdge.outwardNormal));
-    var startAccel = vecScale(vecNegate(gDirection),vecLength(globalAccel));
-    this.startAccel = startAccel;
+  // TODO -- starting acceleration calculation revamp. needs to be some average of all of these
+  // nodes.... hmm
+  var gDirection = vecNormalize(vecAdd(iv.inEdge.outwardNormal,iv.outEdge.outwardNormal));
+  var startAccel = vecScale(vecNegate(gDirection),vecLength(globalAccel));
+  this.startAccel = startAccel;
 
-    //this is the standard UCS. aka have a priority queue of partial plans,
-    //a closed set for visited graphs, etc.
+  //this is the standard UCS. aka have a priority queue of partial plans,
+  //a closed set for visited graphs, etc.
 
-    this.poppedPlans = [];
-    this.visitedStates = {};
-    
-    this.planPriorityQueue = [];
-    this.sortFunction = function(a,b) {
-        return a.totalTime - b.totalTime;
-    };
+  this.poppedPlans = [];
+  this.visitedStates = {};
+  
+  this.planPriorityQueue = [];
+  this.sortFunction = function(a,b) {
+      return a.totalTime - b.totalTime;
+  };
 
-    var n = new Node(concaveVertices,startAccel);
-    var plan = new PartialPlan(null,n);
+  var n = new Node(concaveVertices,startAccel);
+  var plan = new PartialPlan(null,n);
 
-    this.planPriorityQueue.push(plan);
-    this.planPriorityQueue.sort(this.sortFunction);
+  this.planPriorityQueue.push(plan);
+  this.planPriorityQueue.sort(this.sortFunction);
+  if (WORST) {
+    this.planPriorityQueue.reverse();
+  }
 };
 
 GraphSearcher.prototype.printPlan = function(plan) {
@@ -165,6 +168,9 @@ GraphSearcher.prototype.searchStep = function() {
 
     //maintain the priorty queue
     this.planPriorityQueue.sort(this.sortFunction);
+    if (WORST) {
+      this.planPriorityQueue.reverse();
+    }
 
     var times = [];
     for(var i = 0; i < this.planPriorityQueue.length; i++)
