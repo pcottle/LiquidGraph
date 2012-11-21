@@ -5,24 +5,22 @@
 
 /********* Classes **********/
 
-function Node(locationObj,accelDirection) {
+function Node(locationObj, accelDirection) {
     if(!accelDirection) { throw new Error("need field accel at this node!"); }
 
     this.locationObj = locationObj;
-    if(this.locationObj != 'offScreen')
-    {
-        this.locationName = this.locationObj.id;
-    }
-    else
-    {
-        this.locationName = 'offScreen';
+    this.locationName = null;
+
+    if(this.locationObj != 'offScreen') {
+      this.locationName = this.locationObj.id;
+    } else {
+      this.locationName = 'offScreen';
     }
 
-    if(locationObj == 'offScreen')
-    {
-        this.isGoal = true;
-        this.cvs = null;
-        return;
+    if(locationObj == 'offScreen') {
+      this.isGoal = true;
+      this.cvs = null;
+      return;
     }
 
     this.cvs = new ConcaveVertexSampler(locationObj,accelDirection);
@@ -35,24 +33,18 @@ Node.prototype.expand = function() {
     //this.cvs.animateConnectivity();
 
     var connectedObjects = [];
-    for(var i = 0; i < this.cvs.connectedNodeNames.length; i++)
-    {
-        connectedObjects.push(this.cvs.nameToObject[this.cvs.connectedNodeNames[i]]);
+    for(var i = 0; i < this.cvs.connectedNodeNames.length; i++) {
+      connectedObjects.push(this.cvs.nameToObject[this.cvs.connectedNodeNames[i]]);
     }
 
     return connectedObjects;
 }
 
-
-
 function PartialPlan(parentPlan,node) {
-    if(!parentPlan)
-    {
-        this.nodes = [];
-    }
-    else
-    {
-        this.nodes = parentPlan.nodes.slice(0);
+    if(!parentPlan) {
+      this.nodes = [];
+    } else {
+      this.nodes = parentPlan.nodes.slice(0);
     }
 
     this.nodes.push(node);
@@ -68,7 +60,7 @@ function PartialPlan(parentPlan,node) {
         var name = destNode.locationName;
 
         var time = sourceNode.cvs.animationInfo[name].totalTime;
-        //console.log('found ',time,'between s',sourceNode,'and dest',destNode);
+        console.log('found ',time,'between s',sourceNode,'and dest',destNode);
 
         totalTime += time;
     }
@@ -80,14 +72,14 @@ PartialPlan.prototype.lastNode = function() {
     return this.nodes[this.nodes.length - 1];
 };
 
-
 function GraphSearcher(initialConcaveVertex) {
-
     //the initial accel will just be negated sum of
     //the two edge outward normals, scaled to the length of the field
     //accel
     var iv = initialConcaveVertex;
 
+    // TODO -- starting acceleration calculation revamp. needs to be some average of all of these
+    // nodes
     var gDirection = vecNormalize(vecAdd(iv.inEdge.outwardNormal,iv.outEdge.outwardNormal));
     var startAccel = vecScale(vecNegate(gDirection),vecLength(globalAccel));
     this.startAccel = startAccel;
@@ -108,7 +100,6 @@ function GraphSearcher(initialConcaveVertex) {
 
     this.planPriorityQueue.push(plan);
     this.planPriorityQueue.sort(this.sortFunction);
-
 };
 
 GraphSearcher.prototype.printPlan = function(plan) {
