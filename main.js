@@ -42,15 +42,16 @@ function executeDemo() {
       });
       circle.animate({
           r:4
-      },3000,'easeInOut');
-      topNotifyTemp("Looking for solution here",3000);
+      },200,'easeInOut');
+      // TODO -- switch back
+      //topNotifyTemp("Looking for solution here",3000);
 
       setTimeout(function() {
         var v = polyController.getVertexById(id);
-        searcher = new GraphSearcher(v);
+        searcher = new GraphSearcher([v]);
         searcher.search();
-      },4000);
-  },500);
+      },250);
+  },200);
 }
 
 function startLoadingWithText(theText) {
@@ -149,9 +150,11 @@ $j(document).ready(function(){
 
     if(/demo/.test(location.href))
     {
-        showDemoDiv();
-        solveController.UIbutton.hideAllButtons();
-        $j('#demoButton').slideDown();
+        executeDemo();
+        // TODO
+        //showDemoDiv();
+        //solveController.UIbutton.hideAllButtons();
+        //$j('#demoButton').slideDown();
     }
 
 });

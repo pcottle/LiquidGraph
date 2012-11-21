@@ -5,26 +5,32 @@
 
 /********* Classes **********/
 
-function Node(locationObj, accelDirection) {
-    if(!accelDirection) { throw new Error("need field accel at this node!"); }
+function Node(locationObjs, accelDirection) {
+  if (!accelDirection) { throw new Error("need field accel at this node!"); }
 
-    this.locationObj = locationObj;
-    this.locationName = null;
+  this.locationObjs = locationObjs;
+  this.isGoal = true;
+  this.locationName = '';
+  this.cvs = null;
 
-    if(this.locationObj != 'offScreen') {
-      this.locationName = this.locationObj.id;
+  _.each(locationObjs, function(locationObj) {
+
+    if (locationObj != 'offScreen') {
+      this.locationName += String(locationObj.id)
+      this.isGoal = false;
     } else {
       this.locationName = 'offScreen';
     }
 
-    if(locationObj == 'offScreen') {
-      this.isGoal = true;
-      this.cvs = null;
-      return;
-    }
+    this.locationName += ', ';
+  }, this);
+  this.locationName = this.locationName.slice(0, -2);
 
-    this.cvs = new ConcaveVertexSampler(locationObj,accelDirection);
-    this.isGoal = false;
+  if (!this.isGoal) {
+    // TODO we need to pass in all the location objs...
+    console.log('the location objs are', locationObjs);
+    this.cvs = new ConcaveVertexSampler(locationObjs[0],accelDirection);
+  }
 }
 
 Node.prototype.expand = function() {
@@ -72,14 +78,14 @@ PartialPlan.prototype.lastNode = function() {
     return this.nodes[this.nodes.length - 1];
 };
 
-function GraphSearcher(initialConcaveVertex) {
+function GraphSearcher(concaveVertices) {
     //the initial accel will just be negated sum of
     //the two edge outward normals, scaled to the length of the field
     //accel
-    var iv = initialConcaveVertex;
+    var iv = concaveVertices[0];
 
     // TODO -- starting acceleration calculation revamp. needs to be some average of all of these
-    // nodes
+    // nodes.... hmm
     var gDirection = vecNormalize(vecAdd(iv.inEdge.outwardNormal,iv.outEdge.outwardNormal));
     var startAccel = vecScale(vecNegate(gDirection),vecLength(globalAccel));
     this.startAccel = startAccel;
@@ -95,7 +101,7 @@ function GraphSearcher(initialConcaveVertex) {
         return a.totalTime - b.totalTime;
     };
 
-    var n = new Node(initialConcaveVertex,startAccel);
+    var n = new Node(concaveVertices,startAccel);
     var plan = new PartialPlan(null,n);
 
     this.planPriorityQueue.push(plan);
@@ -156,7 +162,8 @@ GraphSearcher.prototype.searchStep = function() {
     var newLocationObjects = nodeToExpand.expand();
     for(var i = 0; i < newLocationObjects.length; i++)
     {
-        var newNode = new Node(newLocationObjects[i],this.startAccel);
+        // TODO: all location objects??
+        var newNode = new Node([newLocationObjects[i]],this.startAccel);
         var newPlan = new PartialPlan(planToExpand,newNode);
         this.planPriorityQueue.push(newPlan);
     }
@@ -170,8 +177,8 @@ GraphSearcher.prototype.searchStep = function() {
         times.push(this.planPriorityQueue[i].totalTime);
     }
 
-    //console.log("SORTED LIST OF TIMES IS");
-    //console.log(times.join(','));
+    console.log("SORTED LIST OF TIMES IS");
+    console.log(times.join(','));
 
     //not at goal yet
     return "StillSearching";

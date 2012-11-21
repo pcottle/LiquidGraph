@@ -692,7 +692,7 @@ SolveUIControl.prototype.vertexClick = function(vertex) {
 
     partController.clearAll();
 
-    searcher = new GraphSearcher(vertex);
+    searcher = new GraphSearcher([vertex]);
     searcher.search();
 };
 
