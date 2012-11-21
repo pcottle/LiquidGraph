@@ -10,21 +10,16 @@ function Node(locationObjs, accelDirection) {
 
   this.locationObjs = locationObjs;
   this.isGoal = true;
-  this.locationName = '';
   this.cvs = null;
 
-  _.each(locationObjs, function(locationObj) {
-
-    if (locationObj != 'offScreen') {
-      this.locationName += String(locationObj.id)
-      this.isGoal = false;
-    } else {
-      this.locationName = 'offScreen';
-    }
-
-    this.locationName += ', ';
+  var tupleEntries = [];
+  _.each(locationObjs, function(locationObj, i) {
+    // we are only the goal if ALL of our entries are offscreen
+    this.isGoal =  this.isGoal && (locationObj === 'offScreen');
+    tupleEntries.push((locationObj.id) ? String(locationObj.id) : 'offScreen');
   }, this);
-  this.locationName = this.locationName.slice(0, -2);
+
+  this.locationName = tupleEntries.join(',');
 
   if (!this.isGoal) {
     // TODO we need to pass in all the location objs...
@@ -47,6 +42,7 @@ Node.prototype.expand = function() {
 }
 
 function PartialPlan(parentPlan,node) {
+  // if no parent plan, then we start with an empty array
   this.nodes = (parentPlan) ? parentPlan.nodes.slice(0) : [];
 
   this.nodes.push(node);
@@ -80,7 +76,7 @@ function GraphSearcher(concaveVertices) {
   var iv = concaveVertices[0];
 
   // TODO -- starting acceleration calculation revamp. needs to be some average of all of these
-  // nodes.... hmm
+  // nodes.... hmm ? maybe not
   var gDirection = vecNormalize(vecAdd(iv.inEdge.outwardNormal,iv.outEdge.outwardNormal));
   var startAccel = vecScale(vecNegate(gDirection),vecLength(globalAccel));
   this.startAccel = startAccel;
@@ -98,32 +94,20 @@ function GraphSearcher(concaveVertices) {
   };
 
   var n = new Node(concaveVertices,startAccel);
-  var plan = new PartialPlan(null,n);
+  var plan = new PartialPlan(null, n);
 
   this.planPriorityQueue.push(plan);
   this.planPriorityQueue.sort(this.sortFunction);
-  /*
-  if (WORST) {
-    this.planPriorityQueue.reverse();
-  }*/
 };
 
 GraphSearcher.prototype.printPlan = function(plan) {
     var str = '';
+    _.each(plan.nodes, function(n, i) {
+      str += n.locationName
+      str += (i < plan.nodes.length - 1) ? '->' : '';
+    });
 
-    console.log("This plan is:");
-    
-    for(var i = 0; i < plan.nodes.length; i++)
-    {
-        var n = plan.nodes[i];
-        str = str + n.locationName;
-        if(i < plan.nodes.length - 1)
-        {
-            str = str + '->';
-        }
-    }
-
-    console.log(str);
+    console.log("This plan is: ", str);
 };
 
 GraphSearcher.prototype.searchStep = function() {
