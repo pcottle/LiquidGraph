@@ -2171,20 +2171,27 @@ Particle.prototype.animate = function(doneFunction,wantsRing) {
 
 
 //this object takes in a concave vertex and samples out in different directions
-function ConcaveVertexSampler(concaveVertex,fieldAccel) {
-    this.concaveVertex = concaveVertex;
+function ConcaveVertexSampler(concaveVertices, fieldAccel) {
+  if (!concaveVertices || !concaveVertices.length) {
+    throw new Error('need array');
+  }
 
-    this.accelStrength = vecLength(fieldAccel);
+  this.concaveVertices = concaveVertices;
+  // TODO
+  this.concaveVertex = concaveVertices[0];
 
-    this.inEdge = concaveVertex.inEdge;
-    this.outEdge = concaveVertex.outEdge;
+  this.accelStrength = vecLength(fieldAccel);
 
-    this.connectivity = {};
-    this.animationInfo = {};
-    this.connectedNodeNames = [];
-    this.nameToObject = {};
+  // TODO -- find the minimum in edges and out edges based on some acceleration vector?
+  this.inEdge = this.concaveVertex.inEdge;
+  this.outEdge = this.concaveVertex.outEdge;
 
-    this.transitionSpeed = 25.5; //0.5 seconds to transition for the max case
+  this.connectivity = {};
+  this.animationInfo = {};
+  this.connectedNodeNames = [];
+  this.nameToObject = {};
+
+  this.transitionSpeed = 25.5; //0.5 seconds to transition for the max case
 }
 
 ConcaveVertexSampler.prototype.sampleConnectivity = function() {
@@ -2197,24 +2204,21 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
 
 ConcaveVertexSampler.prototype.animateConnectivity = function() {
 
-    //console.log(this.connectedNodeNames);
-    //console.log(this.animationInfo);
+  //console.log(this.connectedNodeNames);
+  //console.log(this.animationInfo);
 
-    //now animate the "fastest" particles from each
-    for(var i = 0; i < this.connectedNodeNames.length; i++)
-    {
-        var cName = this.connectedNodeNames[i];
-        var animation = this.animationInfo[cName];
-        animation.particle.animate();
-    }
-}
+  //now animate the "fastest" particles from each
+  for(var i = 0; i < this.connectedNodeNames.length; i++)
+  {
+    var cName = this.connectedNodeNames[i];
+    var animation = this.animationInfo[cName];
+    animation.particle.animate();
+  }
+};
 
+// TODO sampling from an edge also comes along with a specific vertex now
 ConcaveVertexSampler.prototype.sampleConnectivityFromEdge = function(edge) {
-    //the sample speed
-
-
     //this "edge" connects us to some other vertex. first get the normalized vector towards that edge:
-
     var otherVertex = edge.getOtherVertex(this.concaveVertex);
     var outVec = vecSubtract(otherVertex,this.concaveVertex);
     outVec = vecNormalize(outVec);
@@ -2241,21 +2245,25 @@ ConcaveVertexSampler.prototype.sampleConnectivityFromEdge = function(edge) {
     //NUMSAMPLES
     var numSamples = 10;
 
-    for(var progress = 0; progress < 1; progress += 1/numSamples)
-    {
-        var theta = startDegree + progress * progress * progress * degreeDelta;
+    for(var progress = 0; progress < 1; progress += 1/numSamples) {
+      var theta = startDegree + progress * progress * progress * degreeDelta;
 
-        var fraction = (theta - startDegree) / (endDegree - startDegree);
-        var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
+      var fraction = (theta - startDegree) / (endDegree - startDegree);
+      var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
-        var particle = this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec,perpVec);
+      // NOW we are sampling multiple particles from this graivty transition!!!!!!!!!!! TODO
+      var particle = this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec,perpVec);
 
-        if(particle) {
-            particle.drawEntirePath();
-            particle.setOpacity(1 - progress + 0.1);
-        }
+      if (particle) {
+        particle.drawEntirePath();
+        particle.setOpacity(1 - progress + 0.1);
+      }
     }
 };
+
+// TODO -- we will first need to figure out when the acceleration vector that is sweeping will be equal to or more
+// than our perpendicular vector. then that's where we start our time actually... (wait this wont work)
+
 
 ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,maxG,thetaEnd,timeToTransition,outVec,perpVec) {
     //ok so here is where we do some math. I already did this in matlab but here's the deal:

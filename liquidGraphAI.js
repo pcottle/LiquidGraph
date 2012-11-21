@@ -29,7 +29,7 @@ function Node(locationObjs, accelDirection) {
   if (!this.isGoal) {
     // TODO we need to pass in all the location objs...
     console.log('the location objs are', locationObjs);
-    this.cvs = new ConcaveVertexSampler(locationObjs[0],accelDirection);
+    this.cvs = new ConcaveVertexSampler(locationObjs, accelDirection);
   }
 }
 
@@ -47,35 +47,30 @@ Node.prototype.expand = function() {
 }
 
 function PartialPlan(parentPlan,node) {
-    if(!parentPlan) {
-      this.nodes = [];
-    } else {
-      this.nodes = parentPlan.nodes.slice(0);
-    }
+  this.nodes = (parentPlan) ? parentPlan.nodes.slice(0) : [];
 
-    this.nodes.push(node);
+  this.nodes.push(node);
 
-    var totalTime = 0;
-    for(var i = 0; i < this.nodes.length - 1; i++)
-    {
-        //for every node -> node connection in our partial plan,
-        //calculate the time and add it
-        var sourceNode = this.nodes[i];
-        var destNode = this.nodes[i+1];
+  var totalTime = 0;
+  for (var i = 0; i < this.nodes.length - 1; i++) {
+    //for every node -> node connection in our partial plan,
+    //calculate the time and add it
+    var sourceNode = this.nodes[i];
+    var destNode = this.nodes[i+1];
 
-        var name = destNode.locationName;
+    var name = destNode.locationName;
 
-        var time = sourceNode.cvs.animationInfo[name].totalTime;
-        console.log('found ',time,'between s',sourceNode,'and dest',destNode);
+    var time = sourceNode.cvs.animationInfo[name].totalTime;
+    console.log('found ',time,'between s',sourceNode,'and dest',destNode);
 
-        totalTime += time;
-    }
-    
-    this.totalTime = totalTime;
+    totalTime += time;
+  }
+
+  this.totalTime = totalTime;
 };
 
 PartialPlan.prototype.lastNode = function() {
-    return this.nodes[this.nodes.length - 1];
+  return this.nodes[this.nodes.length - 1];
 };
 
 function GraphSearcher(concaveVertices) {
