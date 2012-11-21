@@ -1472,24 +1472,21 @@ Particle.prototype.settle = function() {
         totalTime += this.kPaths[i].endTime
     }
 
-    if(this.traceState.name == 'offScreen')
-    {
-        this.settleResults = {
-            'totalTime':totalTime,
-            'endLocationName':'offScreen',
-            'endLocationObj':'offScreen'
-        };
+    if (this.traceState.name == 'offScreen') {
+      this.settleResults = {
+        'totalTime': totalTime,
+        'endLocationName': 'offScreen',
+        'endLocationObj': 'offScreen'
+      };
+    } else {
+      this.settleResults = {
+        'totalTime': totalTime,
+        'endLocationName': this.traceState.whichVertex.id,
+        'endLocationObj': this.traceState.whichVertex
+      };
     }
-    else
-    {
-        this.settleResults = {
-        'totalTime':totalTime,
-        'endLocationName':this.traceState.whichVertex.id,
-        'endLocationObj':this.traceState.whichVertex
-        };
-    }
-    return this.settleResults;
 
+    return this.settleResults;
 };
 
 //Advances the particle to the next collision or reflection point.
@@ -2208,8 +2205,7 @@ ConcaveVertexSampler.prototype.animateConnectivity = function() {
   //console.log(this.animationInfo);
 
   //now animate the "fastest" particles from each
-  for(var i = 0; i < this.connectedNodeNames.length; i++)
-  {
+  for (var i = 0; i < this.connectedNodeNames.length; i++) {
     var cName = this.connectedNodeNames[i];
     var animation = this.animationInfo[cName];
     animation.particle.animate();
@@ -2378,9 +2374,10 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
     partController.add(particleHere);
 
     try {
-    var settleResults = particleHere.settle();
+      var settleResults = particleHere.settle();
     } catch(e) {
-        return;
+      // lolz
+      return;
     }
 
     this.postResults(settleResults,startG,realEndAccel,timeToTransition,particleHere,transitionParticle);
@@ -2388,35 +2385,37 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,ma
 };
 
 ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realEndAccel,timeToTransition,particle,transParticle) {
-    //here we store all the connectivity information. This is essentially a cost-sensitive closed list
+  // TODO -- we need to add all of these results together
+  //here we store all the connectivity information. This is essentially a cost-sensitive closed list
 
-    var totalTime = settleResults.totalTime;
-    var endLocationName = settleResults.endLocationName;
-    var endLocationObject = settleResults.endLocationObj;
+  var totalTime = settleResults.totalTime;
+  // pretend there is only one particle
+  var endLocationName = Node.prototype.stringifyLocations([settleResults.endLocationObj])
+  var endLocationObject = settleResults.endLocationObj;
 
-    var animationInformation = {
-        'endLocationName':endLocationName,
-        'endLocationObj':endLocationObject,
-        'startG':startG,
-        'realEndAccel':realEndAccel,
-        'timeToTransition':timeToTransition,
-        'totalTime':totalTime,
-        'particle':particle,
-        'transParticle':transParticle,
-    };
+  var animationInformation = {
+    'endLocationName':endLocationName,
+    'endLocationObj':endLocationObject,
+    'startG':startG,
+    'realEndAccel':realEndAccel,
+    'timeToTransition':timeToTransition,
+    'totalTime':totalTime,
+    'particle':particle,
+    'transParticle':transParticle,
+  };
 
-    if(!this.connectivity[endLocationName])
-    {
-        this.connectivity[endLocationName] = totalTime;
-        this.connectedNodeNames.push(endLocationName);
-        this.animationInfo[endLocationName] = animationInformation;
-        this.nameToObject[endLocationName] = endLocationObject;
-    }
-    else if(this.connectivity[endLocationName] > totalTime)
-    {
-        this.connectivity[endLocationName] = totalTime;
-        this.animationInfo[endLocationName] = animationInformation;
-    }
+  if (!this.connectivity[endLocationName]) {
+
+    this.connectivity[endLocationName] = totalTime;
+    this.connectedNodeNames.push(endLocationName);
+    this.animationInfo[endLocationName] = animationInformation;
+    this.nameToObject[endLocationName] = endLocationObject;
+
+  } else if(this.connectivity[endLocationName] > totalTime) {
+
+    this.connectivity[endLocationName] = totalTime;
+    this.animationInfo[endLocationName] = animationInformation;
+  }
 };
 
 

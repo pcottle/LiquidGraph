@@ -12,14 +12,7 @@ function Node(locationObjs, accelDirection) {
   this.isGoal = true;
   this.cvs = null;
 
-  var tupleEntries = [];
-  _.each(locationObjs, function(locationObj, i) {
-    // we are only the goal if ALL of our entries are offscreen
-    this.isGoal =  this.isGoal && (locationObj === 'offScreen');
-    tupleEntries.push((locationObj.id) ? String(locationObj.id) : 'offScreen');
-  }, this);
-
-  this.locationName = tupleEntries.join(',');
+  this.locationName = this.stringifyLocations(locationObjs);
 
   if (!this.isGoal) {
     // TODO we need to pass in all the location objs...
@@ -27,6 +20,17 @@ function Node(locationObjs, accelDirection) {
     this.cvs = new ConcaveVertexSampler(locationObjs, accelDirection);
   }
 }
+
+Node.prototype.stringifyLocations = function(locationObjs) {
+ var tupleEntries = [];
+  _.each(locationObjs, function(locationObj, i) {
+    // we are only the goal if ALL of our entries are offscreen
+    this.isGoal =  this.isGoal && (locationObj === 'offScreen');
+    tupleEntries.push((locationObj.id) ? String(locationObj.id) : 'offScreen');
+  }, this);
+
+  return '(' + tupleEntries.join(',') + ')';
+};
 
 Node.prototype.expand = function() {
     this.cvs.sampleConnectivity();
