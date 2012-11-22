@@ -281,19 +281,21 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
       var sourceNode = this.solution.nodes[i];
       var destNode = this.solution.nodes[i+1];
       var name = destNode.locationName;
-      var animation = sourceNode.cvs.animationInfo[name];
 
-      var startingG = animation.startG;
-      var realEndG = animation.realEndAccel;
+      // go get the action for this jump and vectors
+      var actionResults = sourceNode.cvs.getConnectivity()[name].actionResults;
+      var startingG = actionResults.action.startG;
+      var realEndG = actionResults.calcRealEndG();
+
+      var animation = sourceNode.cvs.animationInfo[name];
       var transParticle = animation.transParticle;
 
-      var transPos = sourceNode.cvs.concaveVertex;
       var timeToTransition = animation.timeToTransition;
 
       var time = 15;
       if (i == 0) { time = time * 1.5; }
 
-      var gravTransition = this.makeGravityClosure(transPos,lastG,startingG,time,i);
+      var gravTransition = this.makeGravityClosure(lastG,startingG,time,i);
 
       //ok so to animate a solution, first transition between these gravity directions
       this.animateStepFunctions.push(gravTransition);
@@ -311,7 +313,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     }
 
     //push one to return to our original position
-    gravTransition = this.makeGravityClosure(null,lastG,initialAccel,time,"end");
+    gravTransition = this.makeGravityClosure(lastG,initialAccel,time,"end");
     this.animateStepFunctions.push(gravTransition);
 };
 
@@ -361,13 +363,13 @@ GraphSearcher.prototype.animateStep = function() {
 
 GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(startingG,realEndG,transParticle,timeToTransition) {
   var gravParticleTransition = _.bind(function() {
-      this.gravityAnimation(null,startingG,realEndG,timeToTransition);
+      this.gravityAnimation(startingG,realEndG,timeToTransition);
       transParticle.animate();
   }, this);
   return gravParticleTransition;
 };
 
-GraphSearcher.prototype.makeGravityClosure = function(transPos,startG,endG,time,index) {
+GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index) {
   var gravTransition = _.bind(function() {
     //do a cross hair on the first kinda
     if (index == 0) {
@@ -379,13 +381,13 @@ GraphSearcher.prototype.makeGravityClosure = function(transPos,startG,endG,time,
       },1000,'easeIn');
     }
 
-    this.gravityAnimation(transPos,startG,endG,time);
+    this.gravityAnimation(startG,endG,time);
   }, this);
   return gravTransition;
 };
 
-GraphSearcher.prototype.gravityAnimation = function(transPos,gStart,gEnd,time) {
-  if (transPos) {
+GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time) {
+  if (undefined /*transPos*/) {
     this.pBody.attr({
         cx:transPos.x,
         cy:transPos.y

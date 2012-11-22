@@ -76,14 +76,13 @@ function GravityArrow() {
     });
 };
 
-GravityArrow.update
-
 function GravityTweener(gStart,gEnd,time,doneFunction) {
 
     //the "rotationLayer" is the HTML node we need to rotate to show the gravity direction.
 
     if(!gStart || !gEnd || !time)
     {
+      debugger;
         throw new Error("bad args in gravity tweener");
     }
 

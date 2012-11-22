@@ -2317,7 +2317,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
   // go through the range of 1 degree to 80 degrees in steps
 
   var startDegree = 1 * Math.PI / 180.0;
-  var endDegree = 65 * Math.PI / 180.0;
+  var endDegree = 75 * Math.PI / 180.0;
 
   var degreeDelta = (endDegree - startDegree);
   var theta = 0;
@@ -2576,6 +2576,7 @@ ConcaveVertexSampler.prototype.getNameToLocations = function() {
 
 //////////////////////////////////////// Results Function ///////////////////////////////////
 function ActionResults(concaveVertices, action) {
+  this.action = action;
   this.hash = this.hashAction(action);
   this.concaveVertices = concaveVertices;
   // create a mapping between indices / ids
@@ -2588,6 +2589,17 @@ function ActionResults(concaveVertices, action) {
   this.startG = action.startG;
   this.maxG = action.maxG;
   this.theta = action.theta;
+};
+
+ActionResults.prototype.calcRealEndG = function(action) {
+  action = action || this.action;
+
+  var theta = action.theta;
+  var startG = action.startG;
+  var maxG = action.maxG;
+
+  var endAccelVec = vecAdd(vecScale(vecNormalize(startG), Math.cos(theta)), vecScale(vecNormalize(maxG), Math.sin(theta)));
+  return endAccelVec;
 };
 
 ActionResults.prototype.postResults = function(concaveVertex, index, settleResults) {
