@@ -72,6 +72,8 @@ PartialPlan.prototype.calculateTotalTime = function(nodes) {
     var destNode = nodes[i+1];
 
     var name = destNode.locationName;
+    // LOL oh shit, its actually not this, because we need to the tweener time
+    // and time for the action as well. hmm.. TODO
     var time = sourceNode.cvs.getConnectivity()[name].time;
 
     totalTime += time;
@@ -434,22 +436,23 @@ GraphSearcher.prototype.nodeNodeAnimation = function(nodeIndex) {
   }
 
   var i = nodeIndex;
-
   var nodes = this.solution.nodes;
   var sourceNode = nodes[i];
   var destNode = nodes[i+1];
   var name = destNode.locationName;
 
-  var animation = sourceNode.cvs.animationInfo[name];
+  var maxTimeForSettle = sourceNode.cvs.getConnectivity()[name].time;
+  // we need to know how long the NON-TRANSITION parts of the animation
+  // take. aka the max settling time of all particles...
 
   //ok we would like to animate this particle and then have it call ourselves
   //when it's done
-  var _this = this;
-  var done = function() {
-      _this.animateStep();
-  };
+  setTimeout(_.bind(function() {
+    this.animateStep();
+  }, this), maxTimeForSettle);
 
-  animation.particle.animate(done,true);
+  var animation = sourceNode.cvs.animationInfo[name];
+  animation.particle.animate(function() {},true);
   partController.add(animation.particle);
 };
 
