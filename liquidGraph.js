@@ -2317,7 +2317,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
     // NOW we are sampling multiple particles from this graivty transition!!!!!!!!!!! TODO
-    var particle = this.sampleGravityTransition(this.concaveVertex, startG,maxG,theta,time,outVec,perpVecUnit, progress);
+    var particle = this.sampleGravityTransition(this.concaveVertex, startG, maxG, theta, time, progress);
     if (particle) {
       particle.drawEntirePath();
       particle.setOpacity(1 - progress + 0.1);
@@ -2327,7 +2327,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
 
 // TODO -- we will first need to figure out when the acceleration vector that is sweeping will be equal to or more
 // than our perpendicular vector. then that's where we start our time actually...
-ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,startG,maxG,thetaEnd,timeToTransition,outVec,perpVec) {
+ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, startG, maxG, thetaEnd, timeToTransition) {
     // need to detect edge real quick
     var getEdgeForSweep = function(vertex, perp, along) {
       // first add the two
@@ -2348,22 +2348,23 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     };
 
     var edge = getEdgeForSweep(concaveVertex, startG, maxG)['obj'];
+    var myEdgePerp = getEdgeForSweep(concaveVertex, startG, maxG)['perp']);
+    var myEdgeAlong = getEdgeForSweep(concaveVertex, startG, maxG)['along']);
+
     //end acceleration is a bit harder:
     //
     //     \___________ -> outVec
     //      |
     //      v perp vec
     //
-    // theta is the angle between perpVec and the desired end gravity direction:
-    var endAccelVec = vecAdd(vecScale(perpVec,Math.cos(thetaEnd)),vecScale(outVec, Math.sin(thetaEnd)));
+    // theta is the angle between myEdgePerp and the desired end gravity direction:
+    var endAccelVec = vecAdd(vecScale(vecNormalize(myEdgePerp),Math.cos(thetaEnd)),vecScale(vecNormalize(myEdgeAlong), Math.sin(thetaEnd)));
+    // will be projected if necessary
     var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
 
     var done = false;
     ////////////////////////// SCENARIOS /////////////////////////////////////////
-    // 1 - my perpVec for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
-    var myEdgePerp = getEdgeForSweep(concaveVertex, startG, maxG)['perp']);
-    var myEdgeAlong = getEdgeForSweep(concaveVertex, startG, maxG)['along']);
-
+    // 1 - my myEdgePerp for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
     if (vecEqual(vecNormalize(myEdgePerp), vecNormalize(startG))) {
       console.log('yay!!! im done, because this startG is my perp :D');
       done = true;

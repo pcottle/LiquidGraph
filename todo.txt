@@ -20,7 +20,7 @@ Do the three scenarios:
 
 Part D: simulate multiple particles and keep track
 
-Part E: update goal test
+Part E: update goal test :OOO
 
 Part F: UI update
 
