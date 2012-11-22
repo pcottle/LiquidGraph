@@ -2325,8 +2325,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
   }
 };
 
-// TODO -- we will first need to figure out when the acceleration vector that is sweeping will be equal to or more
-// than our perpendicular vector. then that's where we start our time actually...
+
 ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, startG, maxG, thetaEnd, timeToTransition) {
     // need to detect edge real quick
     var getEdgeForSweep = function(vertex, perp, along) {
@@ -2337,19 +2336,21 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
       if (vecDot(middle, vertexVecs['in'].along) > vecDot(middle, vertexVecs['out'].along)) {
         return {
           obj: vertex.inEdge,
-          perp: vertexVecs['in'].perp
+          perp: vertexVecs['in'].perp,
+          along: vertexVecs['in'].along
         };
       } else {
         return {
           obj: vertex.outEdge,
-          perp: vertexVecs['out'].perp
+          perp: vertexVecs['out'].perp,
+          along: vertexVecs['out'].along
         };
       }
     };
 
     var edge = getEdgeForSweep(concaveVertex, startG, maxG)['obj'];
-    var myEdgePerp = getEdgeForSweep(concaveVertex, startG, maxG)['perp']);
-    var myEdgeAlong = getEdgeForSweep(concaveVertex, startG, maxG)['along']);
+    var myEdgePerp = getEdgeForSweep(concaveVertex, startG, maxG)['perp'];
+    var myEdgeAlong = getEdgeForSweep(concaveVertex, startG, maxG)['along'];
 
     //end acceleration is a bit harder:
     //
@@ -2366,7 +2367,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     ////////////////////////// SCENARIOS /////////////////////////////////////////
     // 1 - my myEdgePerp for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
     if (vecEqual(vecNormalize(myEdgePerp), vecNormalize(startG))) {
-      console.log('yay!!! im done, because this startG is my perp :D');
+      // console.log('yay!!! im done, because this startG is my perp :D');
       done = true;
     }
 
@@ -2428,11 +2429,12 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     }
 
     var posYielder = function(t) {
+        var outVec = vecNormalize(myEdgeAlong);
         var posVec = vecAdd(_this.concaveVertex,vecScale(outVec,pos(t)));
         return posVec;
     };
     var velYielder = function(t) {
-        var velVec = vecScale(outVec,vel(t));
+        var velVec = vecScale(myEdgeAlong,vel(t));
         return velVec;
     };
 
@@ -2443,7 +2445,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     var endVelVal = vel(timeToTransition);
 
     //need to actually move this "endposval" in the direction we are headed
-    var realEndPos = vecAdd(this.concaveVertex,vecScale(outVec,endPosVal));
+    var realEndPos = vecAdd(this.concaveVertex,vecScale(vecNormalize(myEdgeAlong),endPosVal));
 
     //we need to check if this endPos is further than the other vertex
     var otherVertex = edge.getOtherVertex(this.concaveVertex);
@@ -2463,7 +2465,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
 
     if (debug) { debugCircle(realEndPos.x,realEndPos.y); }
 
-    var realEndVel = vecScale(outVec,endVelVal);
+    var realEndVel = vecScale(myEdgeAlong,endVelVal);
 
     //also need the projected endaccel
     var slidingAccel = Particle.prototype.projectVectorOntoEdge(realEndAccel,edge);
