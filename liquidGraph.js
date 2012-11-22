@@ -2160,8 +2160,6 @@ function ConcaveVertexSampler(concaveVertices, fieldAccel) {
 
   this.connectivity = {};
   this.animationInfo = {};
-  this.connectedNodeNames = [];
-  this.nameToObject = {};
 
   this.transitionSpeed = 25.5; //0.5 seconds to transition for the max case
 }
@@ -2299,7 +2297,11 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
 
   this.sampleConnectivityVecPair(this.minPair1.perp, this.minPair1.along);
   this.sampleConnectivityVecPair(this.minPair2.perp, this.minPair2.along);
-}
+
+  // sampling is now done for this half
+  console.log('************** RESULTS GROUP ******************');
+  console.log(this.resultsGroup);
+};
 
 ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit, outVec) {
   outVec = vecNormalize(outVec);
@@ -2338,9 +2340,6 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
       }
     }, this);
   }
-
-  console.log('**************');
-  console.log(this.resultsGroup);
 };
 
 
@@ -2554,15 +2553,25 @@ ConcaveVertexSampler.prototype.postResults = function(concaveVertex, index, acti
   if (!this.connectivity[endLocationName]) {
 
     this.connectivity[endLocationName] = totalTime;
-    this.connectedNodeNames.push(endLocationName);
     this.animationInfo[endLocationName] = animationInformation;
-    this.nameToObject[endLocationName] = endLocationObject;
 
   } else if (this.connectivity[endLocationName] > totalTime) {
 
     this.connectivity[endLocationName] = totalTime;
     this.animationInfo[endLocationName] = animationInformation;
   }
+};
+
+ConcaveVertexSampler.prototype.getConnectivity = function() {
+  return this.resultsGroup.optimalLocations;
+};
+
+ConcaveVertexSampler.prototype.getNameToLocations = function() {
+  var nameToLocation = {};
+  _.each(this.getConnectivity(), function(locationInfo, locationName) {
+    nameToLocation[locationName] = locationInfo.actionResults.getEndLocationObjs();
+  }, this);
+  return nameToLocation;
 };
 
 //////////////////////////////////////// Results Function ///////////////////////////////////
@@ -2646,6 +2655,17 @@ ActionResults.prototype.groupActionVars = function(startG, maxG, theta) {
     maxG: maxG,
     theta: theta
   };
+};
+
+ActionResults.prototype.getEndLocationObjs = function() {
+  if (!this.isDone()) {
+    throw new Error('nope!');
+  }
+  var endLocationObjs = [];
+  _.each(this.results, function(settleResults, who) {
+    endLocationObjs.push(settleResults.endLocationObj);
+  }, this);
+  return endLocationObjs;
 };
 
 ActionResults.prototype.hashAction = function(action) {

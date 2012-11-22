@@ -3,13 +3,9 @@ Things To Do:
 
 Part A: Refactor support for all particles:
 ------------------------------------------
+* huge RESULTS refactor to keep track of all that stuff
 * store multiple animations per node, build up multiple animations per node?
 * animation with multiple particles (aka multiple rings, etc)
-
-Part B: Refactor sampling:
-------------------------------------------
-* Based on arbitrary particle in arbitrary vertex with a beginning gmin and time
-* Then calculate that time beforehand and limit it, allowing to pipe those into multiple
 
 Part Epic #2:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

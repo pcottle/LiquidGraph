@@ -43,11 +43,12 @@ Node.prototype.expand = function() {
   //this.cvs.animateConnectivity();
 
   var connectedObjects = [];
-  for(var i = 0; i < this.cvs.connectedNodeNames.length; i++) {
-    connectedObjects.push(this.cvs.nameToObject[this.cvs.connectedNodeNames[i]]);
-  }
-  //console.log('THESE CONNECTED ojects', connectedObjects);
-  //console.log('names', this.cvs.connectedNodeNames);
+  _.each(this.cvs.getNameToLocations(), function(locationObjs, locationName) {
+    connectedObjects.push(locationObjs);
+  }, this);
+
+  console.log('THESE CONNECTED ojects', connectedObjects);
+  console.log('names', this.cvs.connectedNodeNames);
 
   return connectedObjects;
 }
