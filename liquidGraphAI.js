@@ -22,7 +22,7 @@ function Node(locationObjs, accelDirection) {
 
   if (!this.isGoal) {
     // TODO we need to pass in all the location objs...
-    console.log('the location objs are', locationObjs, 'for cvs');
+    //console.log('the location objs are', locationObjs, 'for cvs');
     this.cvs = new ConcaveVertexSampler(locationObjs, accelDirection);
   }
 }
@@ -72,9 +72,9 @@ PartialPlan.prototype.calculateTotalTime = function(nodes) {
 
     var name = destNode.locationName;
 
-    console.log('name is', name, 'source node', sourceNode.cvs.animationInfo);
+    // console.log('name is', name, 'source node', sourceNode.cvs.animationInfo);
     var time = sourceNode.cvs.animationInfo[name].totalTime;
-    console.log('found ',time,'between s',sourceNode,'and dest',destNode);
+    // console.log('found ',time,'between s',sourceNode,'and dest',destNode);
 
     totalTime += time;
   }
@@ -118,13 +118,13 @@ function GraphSearcher(concaveVertices) {
 };
 
 GraphSearcher.prototype.printPlan = function(plan) {
-    var str = '';
-    _.each(plan.nodes, function(n, i) {
-      str += n.locationName
-      str += (i < plan.nodes.length - 1) ? '->' : '';
-    });
+  var str = '';
+  _.each(plan.nodes, function(n, i) {
+    str += n.locationName
+    str += (i < plan.nodes.length - 1) ? '->' : '';
+  });
 
-    console.log("This plan is: ", str);
+  console.log("This plan is: ", str);
 };
 
 GraphSearcher.prototype.searchStep = function() {

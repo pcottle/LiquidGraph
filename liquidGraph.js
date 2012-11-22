@@ -2407,6 +2407,9 @@ ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realE
     'transParticle':transParticle,
   };
 
+  console.log(animationInformation);
+  throw new Error('asd');
+
   if (!this.connectivity[endLocationName]) {
 
     this.connectivity[endLocationName] = totalTime;
