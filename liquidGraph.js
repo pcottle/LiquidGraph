@@ -2153,6 +2153,8 @@ function ConcaveVertexSampler(concaveVertices, fieldAccel) {
   this.concaveVertices = concaveVertices;
   this.initVectors();
 
+  // after this we then have minPerp1 and minPerp2 :D
+
   // TODO
   this.concaveVertex = concaveVertices[0];
   this.accelStrength = vecLength(fieldAccel);
@@ -2244,12 +2246,14 @@ ConcaveVertexSampler.prototype.initVectors = function() {
   if (potentialPairs.length !== 1) {
     throw new Error('something is very wrong here when finding min pair');
   }
-
   var minPair = potentialPairs[0];
 
-  var pt = {x: 1000 * Math.random(), y: 1000 * Math.random()};
-  new rArrow(pt, vecScale(minPair[0], 100));
-  new rArrow(pt, vecScale(minPair[1], 100));
+
+  if (debug2) {
+    var pt = {x: 1000 * Math.random(), y: 1000 * Math.random()};
+    new rArrow(pt, vecScale(minPair[0], 100));
+    new rArrow(pt, vecScale(minPair[1], 100));
+  }
 
   if (vecCross(minPair[0], minPair[1]) > 0) {
     this.minPerp1 = minPair[0];
