@@ -72,10 +72,7 @@ PartialPlan.prototype.calculateTotalTime = function(nodes) {
     var destNode = nodes[i+1];
 
     var name = destNode.locationName;
-
-    // console.log('name is', name, 'source node', sourceNode.cvs.animationInfo);
-    var time = sourceNode.cvs.animationInfo[name].totalTime;
-    // console.log('found ',time,'between s',sourceNode,'and dest',destNode);
+    var time = sourceNode.cvs.getConnectivity()[name].time;
 
     totalTime += time;
   }
