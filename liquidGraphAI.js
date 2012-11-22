@@ -332,46 +332,49 @@ GraphSearcher.prototype.animateSolution = function() {
   this.animateStep();
 };
 
+GraphSearcher.prototype.finishAnimation = function() {
+  //we are done, clean up after ourselves
+  topNotifyClear();
+  this.pBody.remove();
+  this.ring.remove();
+
+  solveController.UIbutton.anchorClick();
+  solveController.UIbutton.showMainButtons();
+
+  //also tell the solve UI that we are done
+  solveController.isAnimating = false;
+
+  partController.clearAll();
+
+  //if this is the demo, keep solving for a bit
+  if (/demo/.test(location.href)) {
+    solveController.UIbutton.anchorClick();
+  }
+};
+
+
 GraphSearcher.prototype.animateStep = function() {
   if (this.animateStepNum >= this.animateStepFunctions.length) {
-    //we are done, clean up after ourselves
-    topNotifyClear();
-    this.pBody.remove();
-    this.ring.remove();
-
-    solveController.UIbutton.anchorClick();
-    solveController.UIbutton.showMainButtons();
-
-    //also tell the solve UI that we are done
-    solveController.isAnimating = false;
-
-    partController.clearAll();
-
-    //if this is the demo, keep solving for a bit
-    if (/demo/.test(location.href)) {
-      solveController.UIbutton.anchorClick();
-    }
-
+    this.finishAnimation();
     return;
   }
 
   //animating!!
   this.animateStepFunctions[this.animateStepNum]();
-
   this.animateStepNum++;
 };
 
 GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(startingG,realEndG,transParticle,timeToTransition) {
   var gravParticleTransition = _.bind(function() {
-      this.gravityAnimation(startingG,realEndG,timeToTransition);
-      transParticle.animate();
+    this.gravityAnimation(startingG,realEndG,timeToTransition);
+    transParticle.animate();
   }, this);
   return gravParticleTransition;
 };
 
 GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index) {
   var gravTransition = _.bind(function() {
-    //do a cross hair on the first kinda
+    //do a big zoom in on the first
     if (index == 0) {
       this.pBody.attr({
           r:200
@@ -400,12 +403,11 @@ GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time) {
     this.pBody.show();
   }
 
-  var _this = this;
-  var doneFunction = function() {
-    _this.animateStep();
-    _this.pBody.hide();
-    _this.ring.hide();
-  };
+  var doneFunction = _.bind(function() {
+    this.animateStep();
+    this.pBody.hide();
+    //this.ring.hide();
+  }, this);
 
   var gt = new GravityTweener(gStart,gEnd,time,doneFunction);
   gt.start();
