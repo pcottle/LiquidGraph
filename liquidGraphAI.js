@@ -219,7 +219,7 @@ GraphSearcher.prototype.searchStepAsync = function() {
 
     var poppedPlan = this.poppedPlans[this.poppedPlans.length - 1];
 
-    if(results == "FoundSolution") {
+    if (results == "FoundSolution") {
       topNotify("Found a solution!");
       //console.log("Found a solution!");
       var _this = this;
@@ -227,7 +227,7 @@ GraphSearcher.prototype.searchStepAsync = function() {
       setTimeout(function() {
           _this.animateSolution();
       }, 3000);
-    } else if(results == "NoSolution") {
+    } else if (results == "NoSolution") {
       topNotify("No Solution Found");
       partController.clearAll();
     } else {
@@ -269,47 +269,46 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     this.ring = p.circle(startPos.x,startPos.y,40,40);
 
     this.ring.attr({
-        'stroke-width':5,
-        'stroke':'rgba(255,255,255,0.5)',
-        'fill':'rgba(0,0,0,0)'
+      'stroke-width':5,
+      'stroke':'rgba(255,255,255,0.5)',
+      'fill':'rgba(0,0,0,0)'
     });
 
     this.pBody = cuteSmallCircle(startPos.x,startPos.y);
 
     //now loop through nodes
-    for(var i = 0; i < this.solution.nodes.length -1; i++)
-    {
-        //get information
-        var sourceNode = this.solution.nodes[i];
-        var destNode = this.solution.nodes[i+1];
-        var name = destNode.locationName;
-        var animation = sourceNode.cvs.animationInfo[name];
+    for(var i = 0; i < this.solution.nodes.length -1; i++) {
+      //get information
+      var sourceNode = this.solution.nodes[i];
+      var destNode = this.solution.nodes[i+1];
+      var name = destNode.locationName;
+      var animation = sourceNode.cvs.animationInfo[name];
 
-        var startingG = animation.startG;
-        var realEndG = animation.realEndAccel;
-        var transParticle = animation.transParticle;
+      var startingG = animation.startG;
+      var realEndG = animation.realEndAccel;
+      var transParticle = animation.transParticle;
 
-        var transPos = sourceNode.cvs.concaveVertex;
-        var timeToTransition = animation.timeToTransition;
+      var transPos = sourceNode.cvs.concaveVertex;
+      var timeToTransition = animation.timeToTransition;
 
-        var time = 15;
-        if(i == 0) { time = time * 3; }
+      var time = 15;
+      if (i == 0) { time = time * 1.5; }
 
-        var gravTransition = this.makeGravityClosure(transPos,lastG,startingG,time,i);
+      var gravTransition = this.makeGravityClosure(transPos,lastG,startingG,time,i);
 
-        //ok so to animate a solution, first transition between these gravity directions
-        this.animateStepFunctions.push(gravTransition);
+      //ok so to animate a solution, first transition between these gravity directions
+      this.animateStepFunctions.push(gravTransition);
 
-        //then animate between the startingG, the realEndG, WHILE animating the particle
-        var gravParticleTransition = this.makeGravityParticleTransitionClosure(startingG,realEndG,
-                                                        transParticle,timeToTransition);
-        this.animateStepFunctions.push(gravParticleTransition);
+      //then animate between the startingG, the realEndG, WHILE animating the particle
+      var gravParticleTransition = this.makeGravityParticleTransitionClosure(startingG,realEndG,
+                                                      transParticle,timeToTransition);
+      this.animateStepFunctions.push(gravParticleTransition);
 
-        lastG = realEndG;
+      lastG = realEndG;
 
-        //then animate the actual node node animation
-        var particleAnimation = this.makeNodeNodeClosure(i);
-        this.animateStepFunctions.push(particleAnimation);
+      //then animate the actual node node animation
+      var particleAnimation = this.makeNodeNodeClosure(i);
+      this.animateStepFunctions.push(particleAnimation);
     }
 
     //push one to return to our original position
@@ -318,143 +317,131 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
 };
 
 GraphSearcher.prototype.animateSolution = function() {
-    if(!this.solution)
-    {
-        throw new Error("no solution to animate!"); 
-    }
-    partController.clearAll();
+  if (!this.solution) {
+      throw new Error("no solution to animate!"); 
+  }
+  partController.clearAll();
 
-    solveController.isAnimating = true;
+  solveController.isAnimating = true;
 
-    solveController.UIbutton.hideAllButtons();
+  solveController.UIbutton.hideAllButtons();
 
-    this.animateStepNum = 0;
+  this.animateStepNum = 0;
 
-    this.animateStep();
+  this.animateStep();
 };
 
 GraphSearcher.prototype.animateStep = function() {
-    if(this.animateStepNum >= this.animateStepFunctions.length)
-    {
-        //we are done, clean up after ourselves
-        topNotifyClear();
-        this.pBody.remove();
-        this.ring.remove();
+  if (this.animateStepNum >= this.animateStepFunctions.length) {
+    //we are done, clean up after ourselves
+    topNotifyClear();
+    this.pBody.remove();
+    this.ring.remove();
 
-        solveController.UIbutton.anchorClick();
-        solveController.UIbutton.showMainButtons();
+    solveController.UIbutton.anchorClick();
+    solveController.UIbutton.showMainButtons();
 
-        //also tell the solve UI that we are done
-        solveController.isAnimating = false;
+    //also tell the solve UI that we are done
+    solveController.isAnimating = false;
 
-        partController.clearAll();
+    partController.clearAll();
 
-        //if this is the demo, keep solving for a bit
-        if(/demo/.test(location.href))
-        {
-            solveController.UIbutton.anchorClick();
-        }
-
-        return;
+    //if this is the demo, keep solving for a bit
+    if (/demo/.test(location.href)) {
+      solveController.UIbutton.anchorClick();
     }
 
-    //animating!!
-    this.animateStepFunctions[this.animateStepNum]();
+    return;
+  }
 
-    this.animateStepNum++;
+  //animating!!
+  this.animateStepFunctions[this.animateStepNum]();
+
+  this.animateStepNum++;
 };
 
 GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(startingG,realEndG,transParticle,timeToTransition) {
-    var _this = this;
-    var gravParticleTransition = function() {
-        _this.gravityAnimation(null,startingG,realEndG,timeToTransition);
-        transParticle.animate();
-    };
-    return gravParticleTransition;
+  var gravParticleTransition = _.bind(function() {
+      this.gravityAnimation(null,startingG,realEndG,timeToTransition);
+      transParticle.animate();
+  }, this);
+  return gravParticleTransition;
 };
 
 GraphSearcher.prototype.makeGravityClosure = function(transPos,startG,endG,time,index) {
+  var gravTransition = _.bind(function() {
+    //do a cross hair on the first kinda
+    if (index == 0) {
+      this.pBody.attr({
+          r:200
+      });
+      this.pBody.animate({
+          r:4
+      },1000,'easeIn');
+    }
 
-    var _this = this;
-    
-    var gravTransition = function() {
-        //do a cross hair on the first
-        if(index == 0)
-        {
-            _this.pBody.attr({
-                r:200
-            });
-            _this.pBody.animate({
-                r:4
-            },4000,'easeIn');
-        }
-
-        _this.gravityAnimation(transPos,startG,endG,time);
-    };
-    return gravTransition;
+    this.gravityAnimation(transPos,startG,endG,time);
+  }, this);
+  return gravTransition;
 };
 
 GraphSearcher.prototype.gravityAnimation = function(transPos,gStart,gEnd,time) {
-    if(transPos)
-    {
-        this.pBody.attr({
-            cx:transPos.x,
-            cy:transPos.y
-        });
-        this.ring.attr({
-            cx:transPos.x,
-            cy:transPos.y
-        });
-        this.ring.show();
-        this.pBody.show();
-    }
+  if (transPos) {
+    this.pBody.attr({
+        cx:transPos.x,
+        cy:transPos.y
+    });
+    this.ring.attr({
+        cx:transPos.x,
+        cy:transPos.y
+    });
+    this.ring.show();
+    this.pBody.show();
+  }
 
-    var _this = this;
-    var doneFunction = function() {
-        _this.animateStep();
-        _this.pBody.hide();
-        _this.ring.hide();
-    };
+  var _this = this;
+  var doneFunction = function() {
+    _this.animateStep();
+    _this.pBody.hide();
+    _this.ring.hide();
+  };
 
-    var gt = new GravityTweener(gStart,gEnd,time,doneFunction);
-    gt.start();
+  var gt = new GravityTweener(gStart,gEnd,time,doneFunction);
+  gt.start();
 };
 
 GraphSearcher.prototype.makeNodeNodeClosure = function(nodeIndex) {
-    var _this = this;
-    var particleAnimation = function() {
-        _this.nodeNodeAnimation(nodeIndex);
-    };
-    return particleAnimation;
+  var _this = this;
+  var particleAnimation = function() {
+      _this.nodeNodeAnimation(nodeIndex);
+  };
+  return particleAnimation;
 };
 
 GraphSearcher.prototype.nodeNodeAnimation = function(nodeIndex) {
+  if (nodeIndex >= this.solution.nodes.length -1) {
+      console.warn("called particle animation for a node that didn't exist");
+      //we are done!
+      return;
+  }
 
-    if(nodeIndex >= this.solution.nodes.length -1)
-    {
-        console.warn("called particle animation for a node that didn't exist");
-        //we are done!
-        return;
-    }
+  var i = nodeIndex;
 
-    var i = nodeIndex;
+  var nodes = this.solution.nodes;
+  var sourceNode = nodes[i];
+  var destNode = nodes[i+1];
+  var name = destNode.locationName;
 
-    var nodes = this.solution.nodes;
-    var sourceNode = nodes[i];
-    var destNode = nodes[i+1];
-    var name = destNode.locationName;
+  var animation = sourceNode.cvs.animationInfo[name];
 
-    var animation = sourceNode.cvs.animationInfo[name];
+  //ok we would like to animate this particle and then have it call ourselves
+  //when it's done
+  var _this = this;
+  var done = function() {
+      _this.animateStep();
+  };
 
-    //ok we would like to animate this particle and then have it call ourselves
-    //when it's done
-
-    var _this = this;
-    var done = function() {
-        _this.animateStep();
-    };
-
-    animation.particle.animate(done,true);
-    partController.add(animation.particle);
+  animation.particle.animate(done,true);
+  partController.add(animation.particle);
 };
 

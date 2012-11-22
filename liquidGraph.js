@@ -2186,9 +2186,27 @@ var getVertexVecs = function(concaveVertex) {
   };
 };
 
+ConcaveVertexSampler.prototype.isOffscreen = function(cv) {
+  return cv == 'offScreen';
+};
+
+ConcaveVertexSampler.prototype.getVertexID = function(cv) {
+  return (cv.id) ? String(cv.id) : 'offScreen';
+};
+
 ConcaveVertexSampler.prototype.initVectors = function() {
+  var seenBefore = {};
   this.vertexVectors = [];
+
   _.each(this.concaveVertices, function(concaveVertex) {
+    if (this.isOffscreen(concaveVertex)) {
+      return;
+    }
+    if (seenBefore[this.getVertexID(concaveVertex)]) {
+      return;
+    }
+    seenBefore[this.getVertexID(concaveVertex)] = true;
+
     var vecs = getVertexVecs(concaveVertex);
     this.vertexVectors.push(vecs);
 
@@ -2230,20 +2248,27 @@ ConcaveVertexSampler.prototype.initVectors = function() {
 
   var perpVecs = [];
   _.each(this.vertexVectors, function(vecPair) {
-    perpVecs.push(vecPair['in'].perp);
-    perpVecs.push(vecPair['out'].perp);
+    _.each(['in', 'out'], function(key) {
+      perpVecs.push({
+        perp: vecPair[key].perp,
+        along: vecPair[key].along
+      });
+    }, this);
   });
 
   var potentialPairs = [];
   // we just need to go through every possible pair
-  _.each(perpVecs, function(perpVec1, i) {
-    _.each(perpVecs, function(perpVec2, j) {
+  _.each(perpVecs, function(pair1, i) {
+    _.each(perpVecs, function(pair2, j) {
       // can swap orderings so only consider each choice, not permutation
       if (j <= i) { return; }
+      var perpVec1 = pair1.perp;
+      var perpVec2 = pair2.perp;
+
       var middle = avgVecDirections(perpVec1, perpVec2);
       if (!willCauseAnyMotion(this.vertexVectors, middle)) {
         console.log('wooho!!! found a pair that works');
-        potentialPairs.push([perpVec1, perpVec2]);
+        potentialPairs.push([pair1, pair2]);
       }
     }, this);
   }, this);
@@ -2253,19 +2278,18 @@ ConcaveVertexSampler.prototype.initVectors = function() {
   }
   var minPair = potentialPairs[0];
 
-
   if (debug2) {
     var pt = {x: 1000 * Math.random(), y: 1000 * Math.random()};
     new rArrow(pt, vecScale(minPair[0], 100));
     new rArrow(pt, vecScale(minPair[1], 100));
   }
 
-  if (vecCross(minPair[0], minPair[1]) > 0) {
-    this.minPerp1 = minPair[0];
-    this.minPerp2 = minPair[1];
+  if (vecCross(minPair[0].perp, minPair[1].perp) > 0) {
+    this.minPair1 = minPair[0];
+    this.minPair2 = minPair[1];
   } else {
-    this.minPerp1 = minPair[1];
-    this.minPerp2 = minPair[0];
+    this.minPair1 = minPair[1];
+    this.minPair2 = minPair[0];
   }
   // :D
 };
@@ -2273,13 +2297,9 @@ ConcaveVertexSampler.prototype.initVectors = function() {
 ConcaveVertexSampler.prototype.sampleConnectivity = function() {
   //we will do this by edge. The interesting thing is that the counterclockwise vs clockwise connectivity doesn't really matter
   //unlike in Yusuke's code because we can rotate in any / either direction.
-  this.perp1 = this.vertexVectors[0]['in'].perp;
-  this.along1 = this.vertexVectors[0]['in'].along;
-  this.perp2 = this.vertexVectors[0]['out'].perp;
-  this.along2 = this.vertexVectors[0]['out'].along;
 
-  this.sampleConnectivityVecPair(this.perp1, this.along1);
-  this.sampleConnectivityVecPair(this.perp2, this.along2);
+  this.sampleConnectivityVecPair(this.minPair1.perp, this.minPair1.along);
+  this.sampleConnectivityVecPair(this.minPair2.perp, this.minPair2.along);
 }
 
 ConcaveVertexSampler.prototype.animateConnectivity = function() {
@@ -2332,174 +2352,174 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
 
 
 ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, startG, maxG, thetaEnd, timeToTransition) {
-    // need to detect edge real quick
-    var getEdgeForSweep = function(vertex, perp, along) {
-      // first add the two
-      var middle = vecAdd(perp, along);
+  // need to detect edge real quick
+  var getEdgeForSweep = function(vertex, perp, along) {
+    // first add the two
+    var middle = vecAdd(perp, along);
 
-      var vertexVecs = getVertexVecs(vertex);
-      if (vecDot(middle, vertexVecs['in'].along) > vecDot(middle, vertexVecs['out'].along)) {
-        return {
-          obj: vertex.inEdge,
-          perp: vertexVecs['in'].perp,
-          along: vertexVecs['in'].along
-        };
-      } else {
-        return {
-          obj: vertex.outEdge,
-          perp: vertexVecs['out'].perp,
-          along: vertexVecs['out'].along
-        };
-      }
-    };
-
-    var edge = getEdgeForSweep(concaveVertex, startG, maxG)['obj'];
-    var myEdgePerp = getEdgeForSweep(concaveVertex, startG, maxG)['perp'];
-    var myEdgeAlong = getEdgeForSweep(concaveVertex, startG, maxG)['along'];
-
-    //end acceleration is a bit harder:
-    //
-    //     \___________ -> outVec
-    //      |
-    //      v perp vec
-    //
-    // theta is the angle between myEdgePerp and the desired end gravity direction:
-    var endAccelVec = vecAdd(vecScale(vecNormalize(myEdgePerp),Math.cos(thetaEnd)),vecScale(vecNormalize(myEdgeAlong), Math.sin(thetaEnd)));
-    // will be projected if necessary
-    var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
-
-    var done = false;
-    ////////////////////////// SCENARIOS /////////////////////////////////////////
-    // 1 - my myEdgePerp for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
-    if (vecEqual(vecNormalize(myEdgePerp), vecNormalize(startG))) {
-      // console.log('yay!!! im done, because this startG is my perp :D');
-      done = true;
+    var vertexVecs = getVertexVecs(vertex);
+    if (vecDot(middle, vertexVecs['in'].along) > vecDot(middle, vertexVecs['out'].along)) {
+      return {
+        obj: vertex.inEdge,
+        perp: vertexVecs['in'].perp,
+        along: vertexVecs['in'].along
+      };
+    } else {
+      return {
+        obj: vertex.outEdge,
+        perp: vertexVecs['out'].perp,
+        along: vertexVecs['out'].along
+      };
     }
+  };
 
-    if (!done && insideTwoVecs(myEdgePerp, myEdgeAlong, realEndAccel)) {
-      console.log('DELAYING because that turn wont move me');
-      throw new Error('delay particle path TODO');
-      done = true;
-    }
+  var edge = getEdgeForSweep(concaveVertex, startG, maxG)['obj'];
+  var myEdgePerp = getEdgeForSweep(concaveVertex, startG, maxG)['perp'];
+  var myEdgeAlong = getEdgeForSweep(concaveVertex, startG, maxG)['along'];
 
-    if (!done) {
-      // we need to figure out how much TIME it takes to sweep the vector over to our myEdgePerp
-      var angle1 = angleBetweenVecs(myEdgePerp, startG);
-      var angle2 = angleBetweenVecs(maxG, startG);
-      console.log('angles', angle1, angle2);
-      var fractionWasted = angle1 / (angle1 + angle2);
-      console.log('wasted', fractionWasted);
-      throw new Error('do somethign with time here');
-      done = true; // ?
-    }
+  //end acceleration is a bit harder:
+  //
+  //     \___________ -> outVec
+  //      |
+  //      v perp vec
+  //
+  // theta is the angle between myEdgePerp and the desired end gravity direction:
+  var endAccelVec = vecAdd(vecScale(vecNormalize(myEdgePerp),Math.cos(thetaEnd)),vecScale(vecNormalize(myEdgeAlong), Math.sin(thetaEnd)));
+  // will be projected if necessary
+  var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
 
-    //ok so here is where we do some math. I already did this in matlab but here's the deal:
-    //we need to create a function that linearly interpolates between the beginning theta (0) and the end theta(our parameter)
-    //in time. then we need to create a kinetic path out of that function, see where it ends up, and then go finally
-    //create a particle at that point with that velocity and shoot it off into space and see where it ends up.
+  var done = false;
+  ////////////////////////// SCENARIOS /////////////////////////////////////////
+  // 1 - my myEdgePerp for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
+  if (vecEqual(vecNormalize(myEdgePerp), vecNormalize(startG))) {
+    // console.log('yay!!! im done, because this startG is my perp :D');
+    done = true;
+  }
 
-    //we need to calculate the acceleration of this vector projected onto the edge. this has the format
-    //
-    // accel = sin(thetaEnd * t / tEnd) * |maxG|
-    //
-    // or, simplified as:
-    //
-    // accel = sin(Bt) * A
-    //
-    // we then integrate this once to obtain the velocity as a function of time. We solve for the constant so
-    // velocity is 0 at the beginning
-    //
-    // vel = -cos(Bt) * A / B + A/B
-    //
-    // then we integrate once more to obtain the position as a function of time (with 0 initially). We get:
-    //
-    // pos = -1 * (A * (sin(Bt) - B*t))/ (B^2)
-    //
-    // where A = |maxG|, B = thetaEnd / tEnd
+  if (!done && insideTwoVecs(myEdgePerp, myEdgeAlong, realEndAccel)) {
+    console.log('DELAYING because that turn wont move me');
+    throw new Error('delay particle path TODO');
+    done = true;
+  }
 
-    // we will then calculate parameters at the end of the transition period. Namely, we will calculate the velocity and
-    // position at the end of the transition. From there we can then just trace the particle with the given end gravity direction
-    var A = vecLength(maxG);
-    var B = thetaEnd / timeToTransition;
-    var _this = this;
+  if (!done) {
+    // we need to figure out how much TIME it takes to sweep the vector over to our myEdgePerp
+    var angle1 = angleBetweenVecs(myEdgePerp, startG);
+    var angle2 = angleBetweenVecs(maxG, startG);
+    console.log('angles', angle1, angle2);
+    var fractionWasted = angle1 / (angle1 + angle2);
+    console.log('wasted', fractionWasted);
+    throw new Error('do somethign with time here');
+    done = true; // ?
+  }
 
-    var pos = function(t) {
-        return -1 * (A * (Math.sin(B * t) - B * t)) / (B*B);
-    };
-    var vel = function(t) {
-        return -1 * Math.cos(B*t) * A / B + A/B;
-    }
-    var accel = function(t) {
-        return sin(B * t) * A;
-    }
+  //ok so here is where we do some math. I already did this in matlab but here's the deal:
+  //we need to create a function that linearly interpolates between the beginning theta (0) and the end theta(our parameter)
+  //in time. then we need to create a kinetic path out of that function, see where it ends up, and then go finally
+  //create a particle at that point with that velocity and shoot it off into space and see where it ends up.
 
-    var posYielder = function(t) {
-        var outVec = vecNormalize(myEdgeAlong);
-        var posVec = vecAdd(_this.concaveVertex,vecScale(outVec,pos(t)));
-        return posVec;
-    };
-    var velYielder = function(t) {
-        var velVec = vecScale(myEdgeAlong,vel(t));
-        return velVec;
-    };
+  //we need to calculate the acceleration of this vector projected onto the edge. this has the format
+  //
+  // accel = sin(thetaEnd * t / tEnd) * |maxG|
+  //
+  // or, simplified as:
+  //
+  // accel = sin(Bt) * A
+  //
+  // we then integrate this once to obtain the velocity as a function of time. We solve for the constant so
+  // velocity is 0 at the beginning
+  //
+  // vel = -cos(Bt) * A / B + A/B
+  //
+  // then we integrate once more to obtain the position as a function of time (with 0 initially). We get:
+  //
+  // pos = -1 * (A * (sin(Bt) - B*t))/ (B^2)
+  //
+  // where A = |maxG|, B = thetaEnd / tEnd
 
-    //make a modified kinetic path with these transition properties so we can animate the particle rolling
-    var transitionParticle = new KineticTransitionPath(posYielder,velYielder,accel,timeToTransition);
+  // we will then calculate parameters at the end of the transition period. Namely, we will calculate the velocity and
+  // position at the end of the transition. From there we can then just trace the particle with the given end gravity direction
+  var A = vecLength(maxG);
+  var B = thetaEnd / timeToTransition;
+  var _this = this;
 
-    var endPosVal = pos(timeToTransition);
-    var endVelVal = vel(timeToTransition);
+  var pos = function(t) {
+      return -1 * (A * (Math.sin(B * t) - B * t)) / (B*B);
+  };
+  var vel = function(t) {
+      return -1 * Math.cos(B*t) * A / B + A/B;
+  }
+  var accel = function(t) {
+      return sin(B * t) * A;
+  }
 
-    //need to actually move this "endposval" in the direction we are headed
-    var realEndPos = vecAdd(this.concaveVertex,vecScale(vecNormalize(myEdgeAlong),endPosVal));
+  var posYielder = function(t) {
+      var outVec = vecNormalize(myEdgeAlong);
+      var posVec = vecAdd(_this.concaveVertex,vecScale(outVec,pos(t)));
+      return posVec;
+  };
+  var velYielder = function(t) {
+      var velVec = vecScale(myEdgeAlong,vel(t));
+      return velVec;
+  };
 
-    //we need to check if this endPos is further than the other vertex
-    var otherVertex = edge.getOtherVertex(this.concaveVertex);
-    var edgeLength = vecLength(vecSubtract(otherVertex,this.concaveVertex));
-    var concaveToPosLength = vecLength(vecSubtract(realEndPos,this.concaveVertex));
+  //make a modified kinetic path with these transition properties so we can animate the particle rolling
+  var transitionParticle = new KineticTransitionPath(posYielder,velYielder,accel,timeToTransition);
 
-    if (edgeLength <= concaveToPosLength) {
-      //we need to reject this particle because it rolls off the edge before we are done
-      //transitioning gravity directions. it's somewhat impossible to model spinning gravity
-      //direction parabolas with parametric equations and be able to solve their line
-      //intersections with simple/normal equations. These particles could also start
-      //hitting other things and edge sliding with transitioning accelerations which
-      //would be just a giant explosion of difficulty (unless you were doing something
-      //dumb like Euler integration on these particles). 
+  var endPosVal = pos(timeToTransition);
+  var endVelVal = vel(timeToTransition);
 
-      // console.warn('this sample rejected');
-      return;
-    }
+  //need to actually move this "endposval" in the direction we are headed
+  var realEndPos = vecAdd(this.concaveVertex,vecScale(vecNormalize(myEdgeAlong),endPosVal));
 
-    if (debug) { debugCircle(realEndPos.x,realEndPos.y); }
+  //we need to check if this endPos is further than the other vertex
+  var otherVertex = edge.getOtherVertex(this.concaveVertex);
+  var edgeLength = vecLength(vecSubtract(otherVertex,this.concaveVertex));
+  var concaveToPosLength = vecLength(vecSubtract(realEndPos,this.concaveVertex));
 
-    var realEndVel = vecScale(myEdgeAlong,endVelVal);
+  if (edgeLength <= concaveToPosLength) {
+    //we need to reject this particle because it rolls off the edge before we are done
+    //transitioning gravity directions. it's somewhat impossible to model spinning gravity
+    //direction parabolas with parametric equations and be able to solve their line
+    //intersections with simple/normal equations. These particles could also start
+    //hitting other things and edge sliding with transitioning accelerations which
+    //would be just a giant explosion of difficulty (unless you were doing something
+    //dumb like Euler integration on these particles). 
 
-    //also need the projected endaccel
-    var slidingAccel = Particle.prototype.projectVectorOntoEdge(realEndAccel,edge);
+    // console.warn('this sample rejected');
+    return;
+  }
 
-    //now make a particle at this position, with this velocity, edge sliding on this edge, with the end field acceleration
-    //but with the projected velocity in this case
-    var kState = new KineticState(realEndPos,realEndVel,slidingAccel);
-    var tState = {
-        'name':'onEdge',
-        'whichEdge':edge
-    };
+  if (debug) { debugCircle(realEndPos.x,realEndPos.y); }
 
-    var particleHere = new Particle(kState,realEndAccel,tState);
-    partController.add(particleHere);
+  var realEndVel = vecScale(myEdgeAlong,endVelVal);
 
-    try {
-      var settleResults = particleHere.settle();
-    } catch(e) {
-      // lolz
-      return;
-    }
+  //also need the projected endaccel
+  var slidingAccel = Particle.prototype.projectVectorOntoEdge(realEndAccel,edge);
 
-    this.postResults(settleResults,startG,realEndAccel,timeToTransition,particleHere,transitionParticle);
-    return particleHere;
+  //now make a particle at this position, with this velocity, edge sliding on this edge, with the end field acceleration
+  //but with the projected velocity in this case
+  var kState = new KineticState(realEndPos,realEndVel,slidingAccel);
+  var tState = {
+      'name':'onEdge',
+      'whichEdge':edge
+  };
+
+  var particleHere = new Particle(kState,realEndAccel,tState);
+  partController.add(particleHere);
+
+  try {
+    var settleResults = particleHere.settle();
+  } catch(e) {
+    // lolz
+    return;
+  }
+
+  this.postResults(concaveVertex, settleResults,startG,realEndAccel,timeToTransition,particleHere,transitionParticle);
+  return particleHere;
 };
 
-ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realEndAccel,timeToTransition,particle,transParticle) {
+ConcaveVertexSampler.prototype.postResults = function(conaveVertex, settleResults,startG,realEndAccel,timeToTransition,particle,transParticle) {
   // TODO -- we need to add all of these results together
   //here we store all the connectivity information. This is essentially a cost-sensitive closed list
 
@@ -2536,6 +2556,21 @@ ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realE
   }
 };
 
+
+//////////////////////////////////////// Results Function ///////////////////////////////////
+var ResultsGroup = function(concaveVertices) {
+  this.concaveVertices = concaveVertices;
+  this.length = this.concaveVertices.length;
+
+};
+
+ResultsGroup.prototype.animate = function() {
+
+};
+
+ResultsGroup.prototype.print = function() {
+
+};
 
 
 /**********END CLASSSES*************/
