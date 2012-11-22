@@ -2155,14 +2155,7 @@ function ConcaveVertexSampler(concaveVertices, fieldAccel) {
 
   // TODO
   this.concaveVertex = concaveVertices[0];
-
   this.accelStrength = vecLength(fieldAccel);
-
-  throw new Error('asd');
-
-  // TODO -- find the minimum in edges and out edges based on some acceleration vector?
-  this.inEdge = this.concaveVertex.inEdge;
-  this.outEdge = this.concaveVertex.outEdge;
 
   this.connectivity = {};
   this.animationInfo = {};
@@ -2172,51 +2165,50 @@ function ConcaveVertexSampler(concaveVertices, fieldAccel) {
   this.transitionSpeed = 25.5; //0.5 seconds to transition for the max case
 }
 
+var getOutwardEdgeVec = function(vertex, edge) {
+  var otherVertex = edge.getOtherVertex(vertex);
+  return vecNormalize(vecSubtract(otherVertex, vertex));
+};
+
+var getEdgeVecs = function(vertex, edge) {
+  return {
+    along: getOutwardEdgeVec(vertex, edge),
+    perp: vecNegate(edge.outwardNormal)
+  };
+};
+
+var getVertexVecs = function(concaveVertex) {
+  return {
+    'in': getEdgeVecs(concaveVertex, concaveVertex.inEdge),
+    'out': getEdgeVecs(concaveVertex, concaveVertex.outEdge)
+  };
+};
+
 ConcaveVertexSampler.prototype.initVectors = function() {
-  var getOutwardEdgeVec = function(vertex, edge) {
-    var otherVertex = edge.getOtherVertex(vertex);
-    return vecNormalize(vecSubtract(otherVertex, vertex));
-  };
-
-  var getEdgeVecs = function(vertex, edge) {
-    return {
-      along: getOutwardEdgeVec(vertex, edge),
-      perp: vecNegate(edge.outwardNormal)
-    };
-  };
-
-  var getVertexVecs = function(concaveVertex) {
-    return {
-      'in': getEdgeVecs(concaveVertex, concaveVertex.inEdge),
-      'out': getEdgeVecs(concaveVertex, concaveVertex.outEdge)
-    };
-  };
-
+  this.vertexVectors = [];
   _.each(this.concaveVertices, function(concaveVertex) {
     var vecs = getVertexVecs(concaveVertex);
-    console.log(vecs);
-    console.log(concaveVertex);
+    this.vertexVectors.push(vecs);
 
-    _.each(['in', 'out'], function(key1) {
-      _.each(['along', 'perp'], function(key2) {
-        new rArrow(concaveVertex, vecScale(vecs[key1][key2], 100));
+    if (debug2) {
+      _.each(['in', 'out'], function(key1) {
+        _.each(['along', 'perp'], function(key2) {
+          new rArrow(concaveVertex, vecScale(vecs[key1][key2], 100));
+        });
       });
-    });
+    }
   }, this);
 };
 
 ConcaveVertexSampler.prototype.sampleConnectivity = function() {
-    //we will do this by edge. The interesting thing is that the counterclockwise vs clockwise connectivity doesn't really matter
-    //unlike in Yusuke's code because we can rotate in any / either direction.
+  //we will do this by edge. The interesting thing is that the counterclockwise vs clockwise connectivity doesn't really matter
+  //unlike in Yusuke's code because we can rotate in any / either direction.
 
-    this.sampleConnectivityMinG(this.inEdge);
-    this.sampleConnectivityMinG(this.outEdge);
+  this.sampleConnectivityVecPair(this.vertexVectors[0]['in'].perp, this.vertexVectors[0]['in'].along);
+  this.sampleConnectivityVecPair(this.vertexVectors[0]['out'].perp, this.vertexVectors[0]['out'].along);
 }
 
 ConcaveVertexSampler.prototype.animateConnectivity = function() {
-
-  //console.log(this.connectedNodeNames);
-  //console.log(this.animationInfo);
 
   //now animate the "fastest" particles from each
   for (var i = 0; i < this.connectedNodeNames.length; i++) {
@@ -2227,61 +2219,61 @@ ConcaveVertexSampler.prototype.animateConnectivity = function() {
 };
 
 // TODO sampling from an edge also comes along with a specific vertex now
-ConcaveVertexSampler.prototype.sampleConnectivityMinG = function(edge) {
-    //this "edge" connects us to some other vertex. first get the normalized vector towards that edge:
-    var otherVertex = edge.getOtherVertex(this.concaveVertex);
-    var outVec = vecSubtract(otherVertex,this.concaveVertex);
-    outVec = vecNormalize(outVec);
+ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit, outVec) {
+  outVec = vecNormalize(outVec);
 
-    //now we need the starting gravity direction, aka the negated outward normal of this edge
-    var perpVec = vecNegate(edge.outwardNormal);
+  //the start gravity direction and the max gravity direction are two vectors we need
+  //for the following calculations
+  var startG = vecScale(perpVecUnit, this.accelStrength);
+  var maxG = vecScale(outVec, this.accelStrength);
 
-    //the start gravity direction and the max gravity direction are two vectors we need
-    //for the following calculations
-    var startG = vecScale(perpVec,this.accelStrength);
-    var maxG = vecScale(outVec,this.accelStrength);
+  // ok now we have a maximum gravity direction, and the starting gravity direction.
+  //
+  // lets go ahead and sample some particles inbetween these two extremes. we will
+  // go through the range of 1 degree to 80 degrees in steps
 
-    //ok now we have an edge, a maximum gravity direction, and the starting gravity direction.
-    //
-    //lets go ahead and sample some particles inbetween these two extremes. we will
-    //go through the range of 1 degree to 80 degrees in steps
+  var startDegree = 1 * Math.PI / 180.0;
+  var endDegree = 65 * Math.PI / 180.0;
 
-    var startDegree = 1 * Math.PI / 180.0;
-    var endDegree = 65 * Math.PI / 180.0;
+  var degreeDelta = (endDegree - startDegree);
+  var theta = 0;
 
-    var degreeDelta = (endDegree - startDegree);
-    var theta = 0;
+  //NUMSAMPLES
+  var numSamples = 10;
 
-    //NUMSAMPLES
-    var numSamples = 10;
+  for (var progress = 0; progress < 1; progress += 1/numSamples) {
+    var theta = startDegree + progress * progress * progress * degreeDelta;
 
-    for (var progress = 0; progress < 1; progress += 1/numSamples) {
-      var theta = startDegree + progress * progress * progress * degreeDelta;
+    var fraction = (theta - startDegree) / (endDegree - startDegree);
+    var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
-      var fraction = (theta - startDegree) / (endDegree - startDegree);
-      var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
-
-      // NOW we are sampling multiple particles from this graivty transition!!!!!!!!!!! TODO
-      var particle = this.sampleGravityTransition(edge,startG,maxG,theta,time,outVec,perpVec, progress);
+    // NOW we are sampling multiple particles from this graivty transition!!!!!!!!!!! TODO
+    var particle = this.sampleGravityTransition(this.concaveVertex, startG,maxG,theta,time,outVec,perpVecUnit, progress);
+    if (particle) {
+      particle.drawEntirePath();
+      particle.setOpacity(1 - progress + 0.1);
     }
-};
-
-// ok listen up FUCKERS, here is the deal. now when we sample a given gravity sweep, we have to simulate that gravity sweep for
-// every particle we have in our state. then compile all those results (finding out where every particle ended up) and store them
-
-ConcaveVertexSampler.prototype.sampleGravityTransitionForAll = function(
-  edge, startG, maxG, thetaEnd, timeToTransition, outVec, perpVec, progress) {
-
-  var particle = this.sampleGravityTransition(edge, startG, maxG, thetaEnd, timeToTransition, outVec, perpVec);
-  if (particle) {
-    particle.drawEntirePath();
-    particle.setOpacity(1 - progress + 0.1);
   }
 };
 
 // TODO -- we will first need to figure out when the acceleration vector that is sweeping will be equal to or more
 // than our perpendicular vector. then that's where we start our time actually...
-ConcaveVertexSampler.prototype.sampleGravityTransition = function(edge,startG,maxG,thetaEnd,timeToTransition,outVec,perpVec) {
+ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,startG,maxG,thetaEnd,timeToTransition,outVec,perpVec) {
+    // need to detect edge real quick
+    var getEdgeForSweep = function(vertex, perp, along) {
+      // first add the two
+      var middle = vecAdd(perp, along);
+
+      var vertexVecs = getVertexVecs(vertex);
+      if (vecDot(middle, vertexVecs['in'].along) > vecDot(middle, vertexVecs['out'].along)) {
+        return vertex.inEdge;
+      } else {
+        return vertex.outEdge;
+      }
+    };
+
+    var edge = getEdgeForSweep(concaveVertex, startG, maxG);
+
     //ok so here is where we do some math. I already did this in matlab but here's the deal:
     //we need to create a function that linearly interpolates between the beginning theta (0) and the end theta(our parameter)
     //in time. then we need to create a kinetic path out of that function, see where it ends up, and then go finally
@@ -2483,7 +2475,7 @@ function vecCross(v1,v2) {
 };
 
 function vecLength(vec) {
-    if (vec == undefined || vec.x == undefined) { throw new Error("bad arg"); }
+    if (vec == undefined || vec.x == undefined) { debugger; throw new Error("bad arg"); }
 
     return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
 };
