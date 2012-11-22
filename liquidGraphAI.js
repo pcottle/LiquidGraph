@@ -265,7 +265,8 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     var initialAccel = globalAccel;
     var lastG = globalAccel;
 
-    var startPos = this.solution.nodes[0].cvs.concaveVertex;
+    // TODO - hacky
+    var startPos = this.solution.nodes[0].cvs.concaveVertices[0];
     this.ring = p.circle(startPos.x,startPos.y,40,40);
 
     this.ring.attr({

@@ -2153,6 +2153,8 @@ function ConcaveVertexSampler(concaveVertices, fieldAccel) {
   this.concaveVertices = concaveVertices;
   this.initVectors();
 
+  this.resultsGroup = new ResultsGroup(concaveVertices);
+
   // after this we then have minPerp1 and minPerp2 :D
   this.accelStrength = vecLength(fieldAccel);
 
@@ -2328,18 +2330,21 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
     // NOW we are sampling multiple particles from this graivty transition!!!!!!!!!!! TODO
-    _.each(this.concaveVertices, function(concaveVertex) {
-      var particle = this.sampleGravityTransition(concaveVertex, startG, maxG, theta, time, progress);
+    _.each(this.concaveVertices, function(concaveVertex, index) {
+      var particle = this.sampleGravityTransition(concaveVertex, index, startG, maxG, theta, time, progress);
       if (particle) {
         particle.drawEntirePath();
         particle.setOpacity(1 - progress + 0.1);
       }
     }, this);
   }
+
+  console.log('**************');
+  console.log(this.resultsGroup);
 };
 
 
-ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, startG, maxG, thetaEnd, timeToTransition) {
+ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, index, startG, maxG, thetaEnd, timeToTransition) {
   // need to detect edge real quick
   var getEdgeForSweep = function(vertex, perp, along) {
     // first add the two
@@ -2372,15 +2377,18 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   //      v perp vec
   //
   // theta is the angle between myEdgePerp and the desired end gravity direction:
-  var endAccelVec = vecAdd(vecScale(vecNormalize(myEdgePerp),Math.cos(thetaEnd)),vecScale(vecNormalize(myEdgeAlong), Math.sin(thetaEnd)));
+
   // will be projected if necessary
+  var endAccelVec = vecAdd(vecScale(vecNormalize(myEdgePerp),Math.cos(thetaEnd)),vecScale(vecNormalize(myEdgeAlong), Math.sin(thetaEnd)));
   var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
 
   var done = false;
+  var realThetaEnd = null;
   ////////////////////////// SCENARIOS /////////////////////////////////////////
   // 1 - my myEdgePerp for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
   if (vecEqual(vecNormalize(myEdgePerp), vecNormalize(startG))) {
     // console.log('yay!!! im done, because this startG is my perp :D');
+    realThetaEnd = thetaEnd;
     done = true;
   }
 
@@ -2400,6 +2408,12 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     throw new Error('do somethign with time here');
     done = true; // ?
   }
+
+  if (!done || realThetaEnd === null) {
+    throw new Error('dont need what i need');
+  }
+  endAccelVec = vecAdd(vecScale(vecNormalize(myEdgePerp),Math.cos(realThetaEnd)),vecScale(vecNormalize(myEdgeAlong), Math.sin(realThetaEnd)));
+  realEndAccel = vecScale(endAccelVec,vecLength(maxG));
 
   //ok so here is where we do some math. I already did this in matlab but here's the deal:
   //we need to create a function that linearly interpolates between the beginning theta (0) and the end theta(our parameter)
@@ -2428,7 +2442,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   // we will then calculate parameters at the end of the transition period. Namely, we will calculate the velocity and
   // position at the end of the transition. From there we can then just trace the particle with the given end gravity direction
   var A = vecLength(maxG);
-  var B = thetaEnd / timeToTransition;
+  var B = realThetaEnd / timeToTransition;
 
   var pos = function(t) {
       return -1 * (A * (Math.sin(B * t) - B * t)) / (B*B);
@@ -2502,13 +2516,21 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     return;
   }
 
-  this.postResults(concaveVertex, settleResults,startG,realEndAccel,timeToTransition,particleHere,transitionParticle);
+  var action = ActionResults.prototype.groupActionVars(startG, maxG, thetaEnd);
+  this.postResults(concaveVertex, index, action, settleResults, realEndAccel, timeToTransition, particleHere, transitionParticle);
   return particleHere;
 };
 
-ConcaveVertexSampler.prototype.postResults = function(conaveVertex, settleResults,startG,realEndAccel,timeToTransition,particle,transParticle) {
+ConcaveVertexSampler.prototype.postResults = function(concaveVertex, index, action, settleResults, realEndAccel, timeToTransition, particle, transParticle) {
   // TODO -- we need to add all of these results together
   //here we store all the connectivity information. This is essentially a cost-sensitive closed list
+
+  this.resultsGroup.postResults(action, concaveVertex, index, settleResults, realEndAccel, timeToTransition, particle, transParticle);
+
+  // unpack TODO
+  var startG = action.startG;
+  var maxG = action.maxG;
+  var thetaEnd = action.thetaEnd;
 
   var totalTime = settleResults.totalTime;
   // pretend there is only one particle
@@ -2543,12 +2565,142 @@ ConcaveVertexSampler.prototype.postResults = function(conaveVertex, settleResult
   }
 };
 
-
 //////////////////////////////////////// Results Function ///////////////////////////////////
-var ResultsGroup = function(concaveVertices) {
+function ActionResults(concaveVertices, action) {
+  this.hash = this.hashAction(action);
   this.concaveVertices = concaveVertices;
-  this.length = this.concaveVertices.length;
+  // create a mapping between indices / ids
 
+  this.results = {};
+  _.each(concaveVertices, function(cv, i) {
+    this.results[this.getVertexID(cv, i)] = null;
+  }, this);
+
+  this.startG = action.startG;
+  this.maxG = action.maxG;
+  this.theta = action.theta;
+};
+
+ActionResults.prototype.postResults = function(concaveVertex, index, settleResults) {
+  this.results[this.getVertexID(concaveVertex, index)] = settleResults;
+};
+
+ActionResults.prototype.debugPrint = function() {
+  console.log('my action results for action', this.hash);
+  console.log('total time of', this.maxTimeForSettle());
+  _.each(this.results, function(result, cvID) {
+    console.log('cv id', cvID, ' had this result', result);
+  }, this);
+};
+
+ActionResults.prototype.getMaxTimeForSettle = function() {
+  if (!this.isDone()) {
+    throw new Error('im not done yet, cant get the total time for you');
+  }
+  var maxTime = 0;
+  _.each(this.results, function(settleResults) {
+    maxTime = Math.max(maxTime, settleResults.totalTime);
+  }, this);
+  return maxTime;
+};
+
+ActionResults.prototype.getEndLocation = function() {
+  if (!this.isDone()) {
+    throw new Error('im not dnoe yet!!');
+  }
+
+  var locationObjs = [];
+  _.each(this.results, function(settleResults) {
+    locationObjs.push(settleResults.endLocationObj);
+  }, this);
+
+  return Node.prototype.stringifyLocations(locationObjs);
+};
+
+ActionResults.prototype.getEndLocationAndTime = function() {
+  return {
+    time: this.getMaxTimeForSettle(),
+    endLocation: this.getEndLocation()
+  };
+};
+
+ActionResults.prototype.isDone = function() {
+  var numBack = 0;
+  _.each(this.results, function(result) {
+    if (result !== null) {
+      numBack++;
+    }
+  }, this);
+
+  return numBack == this.concaveVertices.length;
+};
+
+ActionResults.prototype.getVertexID = function(vertex, i) {
+  var id = (vertex.id) ? String(vertex.id) : 'offScreen';
+  return String(i) + ':' + id;
+};
+
+ActionResults.prototype.groupActionVars = function(startG, maxG, theta) {
+  return {
+    startG: startG,
+    maxG: maxG,
+    theta: theta
+  };
+};
+
+ActionResults.prototype.hashAction = function(action) {
+  return JSON.stringify(action);
+};
+
+function ResultsGroup(concaveVertices) {
+  this.concaveVertices = concaveVertices;
+
+  this.actionToSet = {};
+  this.optimalLocations = {};
+};
+
+// you are passing in (Action), (ConcaveVertex), (settle results) basically
+ResultsGroup.prototype.postResults = function(action, concaveVertex, index, settleResults) {
+  var actionHash = ActionResults.prototype.hashAction(action);
+  if (!this.actionToSet[actionHash]) {
+    this.initActionResults(actionHash, action);
+  }
+
+  this.actionToSet[actionHash].postResults(concaveVertex, index, settleResults);
+
+  if (this.actionToSet[actionHash].isDone()) {
+    this.calcOptimal();
+  }
+};
+
+ResultsGroup.prototype.setOptimalLocation = function(endLocation, actionResults, time) {
+  this.optimalLocations[endLocation] = {
+    time: time,
+    actionResults: actionResults
+  };
+};
+
+ResultsGroup.prototype.calcOptimal = function() {
+  _.each(this.actionToSet, function(actionResults) {
+    var tuple = actionResults.getEndLocationAndTime();
+    var endLocation = tuple.endLocation;
+    var time = tuple.time;
+
+    // if this endLocation doesnt exist yet, its always optimal
+    if (!this.optimalLocations[endLocation]) {
+      this.setOptimalLocation(endLocation, actionResults, time);
+      return;
+    }
+    
+    // if our time is better...
+    if (this.optimalLocations[endLocation].time > time) {
+      this.setOptimalLocation(endLocation, actionResults, time);
+    }
+  }, this);
+};
+
+ResultsGroup.prototype.initActionResults = function(actionHash, action) {
+  this.actionToSet[actionHash] = new ActionResults(this.concaveVertices, action);
 };
 
 ResultsGroup.prototype.animate = function() {
