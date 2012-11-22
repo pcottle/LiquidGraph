@@ -263,17 +263,22 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     var initialAccel = globalAccel;
     var lastG = globalAccel;
 
-    // TODO - hacky
-    var startPos = this.solution.nodes[0].cvs.concaveVertices[0];
-    this.ring = p.circle(startPos.x,startPos.y,40,40);
+    // ugh, ideally we would have a ring that is just consistent through all animations,
+    // but since there are a bunch of different kinetic paths all joining up together,
+    // its a lot of work to refactor that...
+    this.rings = [];
+    _.each(this.solution.nodes[0].cvs.concaveVertices, function(cv) {
+      var ring = p.circle(cv.x, cv.y, 40, 40);
+      ring.attr({
+        'stroke-width':5,
+        'stroke':'rgba(255,255,255,0.5)',
+        'fill':'rgba(0,0,0,0)'
+      });
+      this.rings.push(ring);
+    }, this);
 
-    this.ring.attr({
-      'stroke-width':5,
-      'stroke':'rgba(255,255,255,0.5)',
-      'fill':'rgba(0,0,0,0)'
-    });
-
-    this.pBody = cuteSmallCircle(startPos.x,startPos.y);
+    var hackyPos = this.solution.nodes[0].cvs.concaveVertices[0];
+    this.pBody = cuteSmallCircle(hackyPos.x,hackyPos.y);
 
     //now loop through nodes
     for(var i = 0; i < this.solution.nodes.length -1; i++) {
@@ -336,7 +341,7 @@ GraphSearcher.prototype.finishAnimation = function() {
   //we are done, clean up after ourselves
   topNotifyClear();
   this.pBody.remove();
-  this.ring.remove();
+  _.each(this.rings, function(ring) { ring.remove(); });
 
   solveController.UIbutton.anchorClick();
   solveController.UIbutton.showMainButtons();
@@ -406,7 +411,7 @@ GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time) {
   var doneFunction = _.bind(function() {
     this.animateStep();
     this.pBody.hide();
-    //this.ring.hide();
+    _.each(this.rings, function(ring) { ring.remove(); });
   }, this);
 
   var gt = new GravityTweener(gStart,gEnd,time,doneFunction);

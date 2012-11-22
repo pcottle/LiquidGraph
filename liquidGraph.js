@@ -1267,34 +1267,34 @@ function KineticPath(parabola,endTime) {
 };
 
 KineticPath.prototype.animate = function(doneFunction,wantsRing) {
-    this.doneFunction = doneFunction;
-    this.animateSpeed = globalAnimateSpeed;
+  this.doneFunction = doneFunction;
+  this.animateSpeed = globalAnimateSpeed;
 
-    //clear our animation if we are starting over
-    this.clearAnimation();
+  //clear our animation if we are starting over
+  this.clearAnimation();
 
-    //now set our graphical stuff to the beginning at t=0
-    var startPoint = this.pointYielder(0);
-    var startVel = this.slopeYielder(0);
+  //now set our graphical stuff to the beginning at t=0
+  var startPoint = this.pointYielder(0);
+  var startVel = this.slopeYielder(0);
 
-    this.pos = startPoint;
-    this.vel = startVel;
+  this.pos = startPoint;
+  this.vel = startVel;
 
-    this.particleBody = cuteSmallCircle(startPoint.x,startPoint.y);
+  this.particleBody = cuteSmallCircle(startPoint.x,startPoint.y);
 
-    if (wantsRing) {
-        this.ring = p.circle(startPoint.x,startPoint.y,40,40);
-        this.ring.attr({
-            'stroke':'rgba(255,255,255,0.5)',
-            'fill':'rgba(0,0,0,0)',
-            'stroke-width':5
-        });
-    }
+  if (wantsRing) {
+    this.ring = p.circle(startPoint.x,startPoint.y,40,40);
+    this.ring.attr({
+        'stroke':'rgba(255,255,255,0.5)',
+        'fill':'rgba(0,0,0,0)',
+        'stroke-width':5
+    });
+  }
 
-    this.vArrow = new rArrow(startPoint,startVel);
+  this.vArrow = new rArrow(startPoint,startVel);
 
-    //start animation with timeout
-    bAnimator.add(this.animateFunction);
+  //start animation with timeout
+  bAnimator.add(this.animateFunction);
 };
 
 KineticPath.prototype.getAnimateFunction = function() {
