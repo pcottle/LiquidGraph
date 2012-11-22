@@ -2154,9 +2154,6 @@ function ConcaveVertexSampler(concaveVertices, fieldAccel) {
   this.initVectors();
 
   // after this we then have minPerp1 and minPerp2 :D
-
-  // TODO
-  this.concaveVertex = concaveVertices[0];
   this.accelStrength = vecLength(fieldAccel);
 
   this.connectivity = {};
@@ -2302,17 +2299,6 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
   this.sampleConnectivityVecPair(this.minPair2.perp, this.minPair2.along);
 }
 
-ConcaveVertexSampler.prototype.animateConnectivity = function() {
-
-  //now animate the "fastest" particles from each
-  for (var i = 0; i < this.connectedNodeNames.length; i++) {
-    var cName = this.connectedNodeNames[i];
-    var animation = this.animationInfo[cName];
-    animation.particle.animate();
-  }
-};
-
-// TODO sampling from an edge also comes along with a specific vertex now
 ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit, outVec) {
   outVec = vecNormalize(outVec);
 
@@ -2342,11 +2328,13 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
     // NOW we are sampling multiple particles from this graivty transition!!!!!!!!!!! TODO
-    var particle = this.sampleGravityTransition(this.concaveVertex, startG, maxG, theta, time, progress);
-    if (particle) {
-      particle.drawEntirePath();
-      particle.setOpacity(1 - progress + 0.1);
-    }
+    _.each(this.concaveVertices, function(concaveVertex) {
+      var particle = this.sampleGravityTransition(concaveVertex, startG, maxG, theta, time, progress);
+      if (particle) {
+        particle.drawEntirePath();
+        particle.setOpacity(1 - progress + 0.1);
+      }
+    }, this);
   }
 };
 
@@ -2441,7 +2429,6 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   // position at the end of the transition. From there we can then just trace the particle with the given end gravity direction
   var A = vecLength(maxG);
   var B = thetaEnd / timeToTransition;
-  var _this = this;
 
   var pos = function(t) {
       return -1 * (A * (Math.sin(B * t) - B * t)) / (B*B);
@@ -2455,7 +2442,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
 
   var posYielder = function(t) {
       var outVec = vecNormalize(myEdgeAlong);
-      var posVec = vecAdd(_this.concaveVertex,vecScale(outVec,pos(t)));
+      var posVec = vecAdd(concaveVertex,vecScale(outVec,pos(t)));
       return posVec;
   };
   var velYielder = function(t) {
@@ -2470,12 +2457,12 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   var endVelVal = vel(timeToTransition);
 
   //need to actually move this "endposval" in the direction we are headed
-  var realEndPos = vecAdd(this.concaveVertex,vecScale(vecNormalize(myEdgeAlong),endPosVal));
+  var realEndPos = vecAdd(concaveVertex,vecScale(vecNormalize(myEdgeAlong),endPosVal));
 
   //we need to check if this endPos is further than the other vertex
-  var otherVertex = edge.getOtherVertex(this.concaveVertex);
-  var edgeLength = vecLength(vecSubtract(otherVertex,this.concaveVertex));
-  var concaveToPosLength = vecLength(vecSubtract(realEndPos,this.concaveVertex));
+  var otherVertex = edge.getOtherVertex(concaveVertex);
+  var edgeLength = vecLength(vecSubtract(otherVertex,concaveVertex));
+  var concaveToPosLength = vecLength(vecSubtract(realEndPos,concaveVertex));
 
   if (edgeLength <= concaveToPosLength) {
     //we need to reject this particle because it rolls off the edge before we are done
