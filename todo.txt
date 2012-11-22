@@ -11,10 +11,6 @@ Part B: Refactor sampling:
 * Based on arbitrary particle in arbitrary vertex with a beginning gmin and time
 * Then calculate that time beforehand and limit it, allowing to pipe those into multiple
 
-Part C: Reduce outward edge vectors to smallest pocket
--------------------------------------------
-* this primes ability to sample multiple
-
 Part D: simulate multiple particles and keep track
 
 Part E: update goal test
