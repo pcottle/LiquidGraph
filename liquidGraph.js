@@ -2335,13 +2335,56 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
 
       var vertexVecs = getVertexVecs(vertex);
       if (vecDot(middle, vertexVecs['in'].along) > vecDot(middle, vertexVecs['out'].along)) {
-        return vertex.inEdge;
+        return {
+          obj: vertex.inEdge,
+          perp: vertexVecs['in'].perp
+        };
       } else {
-        return vertex.outEdge;
+        return {
+          obj: vertex.outEdge,
+          perp: vertexVecs['out'].perp
+        };
       }
     };
 
-    var edge = getEdgeForSweep(concaveVertex, startG, maxG);
+    var edge = getEdgeForSweep(concaveVertex, startG, maxG)['obj'];
+    //end acceleration is a bit harder:
+    //
+    //     \___________ -> outVec
+    //      |
+    //      v perp vec
+    //
+    // theta is the angle between perpVec and the desired end gravity direction:
+    var endAccelVec = vecAdd(vecScale(perpVec,Math.cos(thetaEnd)),vecScale(outVec, Math.sin(thetaEnd)));
+    var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
+
+    var done = false;
+    ////////////////////////// SCENARIOS /////////////////////////////////////////
+    // 1 - my perpVec for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
+    var myEdgePerp = getEdgeForSweep(concaveVertex, startG, maxG)['perp']);
+    var myEdgeAlong = getEdgeForSweep(concaveVertex, startG, maxG)['along']);
+
+    if (vecEqual(vecNormalize(myEdgePerp), vecNormalize(startG))) {
+      console.log('yay!!! im done, because this startG is my perp :D');
+      done = true;
+    }
+
+    if (!done && insideTwoVecs(myEdgePerp, myEdgeAlong, realEndAccel)) {
+      console.log('DELAYING because that turn wont move me');
+      throw new Error('delay particle path TODO');
+      done = true;
+    }
+
+    if (!done) {
+      // we need to figure out how much TIME it takes to sweep the vector over to our myEdgePerp
+      var angle1 = angleBetweenVecs(myEdgePerp, startG);
+      var angle2 = angleBetweenVecs(maxG, startG);
+      console.log('angles', angle1, angle2);
+      var fractionWasted = angle1 / (angle1 + angle2);
+      console.log('wasted', fractionWasted);
+      throw new Error('do somethign with time here');
+      done = true; // ?
+    }
 
     //ok so here is where we do some math. I already did this in matlab but here's the deal:
     //we need to create a function that linearly interpolates between the beginning theta (0) and the end theta(our parameter)
@@ -2369,7 +2412,6 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
 
     // we will then calculate parameters at the end of the transition period. Namely, we will calculate the velocity and
     // position at the end of the transition. From there we can then just trace the particle with the given end gravity direction
-
     var A = vecLength(maxG);
     var B = thetaEnd / timeToTransition;
     var _this = this;
@@ -2399,16 +2441,6 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     var endPosVal = pos(timeToTransition);
     var endVelVal = vel(timeToTransition);
 
-    //end acceleration is a bit harder:
-    //
-    //     \___________ -> outVec
-    //      |
-    //      v perp vec
-    //
-    // theta is the angle between perpVec and the desired end gravity direction:
-
-    var endAccelVec = vecAdd(vecScale(perpVec,Math.cos(thetaEnd)),vecScale(outVec, Math.sin(thetaEnd)));
-
     //need to actually move this "endposval" in the direction we are headed
     var realEndPos = vecAdd(this.concaveVertex,vecScale(outVec,endPosVal));
 
@@ -2431,7 +2463,6 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     if (debug) { debugCircle(realEndPos.x,realEndPos.y); }
 
     var realEndVel = vecScale(outVec,endVelVal);
-    var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
 
     //also need the projected endaccel
     var slidingAccel = Particle.prototype.projectVectorOntoEdge(realEndAccel,edge);
@@ -2548,6 +2579,15 @@ function vecLength(vec) {
 
     return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
 };
+
+function vecCompare(vec1, vec2) {
+  if (!vec1 || !vec2) { throw new Error('not working'); }
+  return Math.pow(vec1.x - vec2.x, 2) + Math.pow(vec1.y - vec2.y, 2);
+};
+
+function vecEqual(vec1, vec2) {
+  return vecCompare(vec1, vec2) < 0.001;
+}
 
 function vecAdd(vec1,vec2) {
     return {
@@ -2671,15 +2711,18 @@ function velocityAngle(vel)
     the second vector to do the calculation.
                                                     */
 
-function angleBetweenEdges(edge1,edge2)
-{
-    //this function HEAVILY depends on edge point ordering being consistent around the boundary
-    //of a polygon, but it is, so I think we are good
-    var slope1 = edge1.edgeSlope;
-    var slope2 = vecNegate(edge2.edgeSlope);
+function angleBetweenEdges(edge1,edge2) {
+  //this function HEAVILY depends on edge point ordering being consistent around the boundary
+  //of a polygon, but it is, so I think we are good
+  var slope1 = edge1.edgeSlope;
+  var slope2 = vecNegate(edge2.edgeSlope);
 
-    var dotScaled = vecDot(slope1,slope2) / (vecLength(slope1) * vecLength(slope2));
-    return Math.acos(dotScaled);
+  return angleBetweenVecs(slope1, slope2);
+}
+
+function angleBetweenVecs(slope1, slope2) {
+  var dotScaled = vecDot(slope1,slope2) / (vecLength(slope1) * vecLength(slope2));
+  return Math.acos(dotScaled);
 };
 
 function velocityHue(vel)
