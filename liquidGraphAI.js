@@ -9,14 +9,20 @@ function Node(locationObjs, accelDirection) {
   if (!accelDirection) { throw new Error("need field accel at this node!"); }
 
   this.locationObjs = locationObjs;
-  this.isGoal = true;
+  this.isGoal = false;
   this.cvs = null;
 
   this.locationName = this.stringifyLocations(locationObjs);
 
+  // TODO HACKED UP GOAL CALCULATION, this needs to be total
+  if (/offScreen/.test(this.locationName)) {
+    this.isGoal = true;
+  }
+
+
   if (!this.isGoal) {
     // TODO we need to pass in all the location objs...
-    console.log('the location objs are', locationObjs);
+    console.log('the location objs are', locationObjs, 'for cvs');
     this.cvs = new ConcaveVertexSampler(locationObjs, accelDirection);
   }
 }
@@ -25,8 +31,7 @@ Node.prototype.stringifyLocations = function(locationObjs) {
  var tupleEntries = [];
   _.each(locationObjs, function(locationObj, i) {
     // we are only the goal if ALL of our entries are offscreen
-    this.isGoal =  this.isGoal && (locationObj === 'offScreen');
-    tupleEntries.push((locationObj.id) ? String(locationObj.id) : 'offScreen');
+    tupleEntries.push(((locationObj.id) ? String(locationObj.id) : 'offScreen'));
   }, this);
 
   return '(' + tupleEntries.join(',') + ')';
@@ -41,6 +46,8 @@ Node.prototype.expand = function() {
   for(var i = 0; i < this.cvs.connectedNodeNames.length; i++) {
     connectedObjects.push(this.cvs.nameToObject[this.cvs.connectedNodeNames[i]]);
   }
+  //console.log('THESE CONNECTED ojects', connectedObjects);
+  //console.log('names', this.cvs.connectedNodeNames);
 
   return connectedObjects;
 }
@@ -51,22 +58,28 @@ function PartialPlan(parentPlan,node) {
 
   this.nodes.push(node);
 
+  this.totalTime = this.calculateTotalTime(this.nodes);
+}
+
+PartialPlan.prototype.calculateTotalTime = function(nodes) {
   var totalTime = 0;
-  for (var i = 0; i < this.nodes.length - 1; i++) {
+
+  for (var i = 0; i < nodes.length - 1; i++) {
     //for every node -> node connection in our partial plan,
     //calculate the time and add it
-    var sourceNode = this.nodes[i];
-    var destNode = this.nodes[i+1];
+    var sourceNode = nodes[i];
+    var destNode = nodes[i+1];
 
     var name = destNode.locationName;
 
+    console.log('name is', name, 'source node', sourceNode.cvs.animationInfo);
     var time = sourceNode.cvs.animationInfo[name].totalTime;
     console.log('found ',time,'between s',sourceNode,'and dest',destNode);
 
     totalTime += time;
   }
 
-  this.totalTime = totalTime;
+  return totalTime;
 };
 
 PartialPlan.prototype.lastNode = function() {
@@ -167,7 +180,8 @@ GraphSearcher.prototype.searchStep = function() {
     var newLocationObjects = nodeToExpand.expand();
     for (var i = 0; i < newLocationObjects.length; i++) {
         // TODO: all location objects??
-        var newNode = new Node([newLocationObjects[i]],this.startAccel);
+        var newNode = new Node(newLocationObjects[i], this.startAccel);
+
         var newPlan = new PartialPlan(planToExpand,newNode);
         this.planPriorityQueue.push(newPlan);
     }

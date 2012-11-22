@@ -2390,8 +2390,11 @@ ConcaveVertexSampler.prototype.postResults = function(settleResults,startG,realE
 
   var totalTime = settleResults.totalTime;
   // pretend there is only one particle
-  var endLocationName = Node.prototype.stringifyLocations([settleResults.endLocationObj])
-  var endLocationObject = settleResults.endLocationObj;
+  // ONLY FOR Particle 1 at index 0 TODO
+  var particleLocations = [settleResults.endLocationObj].concat(this.concaveVertices.slice(1))
+
+  var endLocationName = Node.prototype.stringifyLocations(particleLocations);
+  var endLocationObject = particleLocations;
 
   var animationInformation = {
     'endLocationName':endLocationName,
