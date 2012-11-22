@@ -2202,14 +2202,63 @@ ConcaveVertexSampler.prototype.initVectors = function() {
   var insideTwoVecs = function(first, second, test) {
     // the vectors better have been given in the right order!
     if (vecCross(first, second) <= 0) {
+      // TODO for concave vertices that are really tight, this just needs to be reversed :DDD i think...
       debugger;
       throw new Error('woah! not allowed in that order');
     }
     return vecCross(first, test) > 0 && vecCross(test, second) > 0;
   };
 
-  // ok now we have a bunch of pairs of min vectors for each vertex. we need to go through and reduce these
-  // down to just the smallest pair (so none of them produce motion)
+  var willCauseMotion = function(vecPair, toTest) {
+    return !insideTwoVecs(vecPair['out'].perp, vecPair['in'].perp, toTest);
+  };
+
+  var willCauseAnyMotion = function(vertexVectors, toTest) {
+    var any = false;
+    _.each(vertexVectors, function(vecPair) {
+      any = any || willCauseMotion(vecPair, toTest);
+    });
+    return any;
+  };
+
+  var perpVecs = [];
+  _.each(this.vertexVectors, function(vecPair) {
+    perpVecs.push(vecPair['in'].perp);
+    perpVecs.push(vecPair['out'].perp);
+  });
+
+  var potentialPairs = [];
+  // we just need to go through every possible pair
+  _.each(perpVecs, function(perpVec1, i) {
+    _.each(perpVecs, function(perpVec2, j) {
+      // can swap orderings so only consider each choice, not permutation
+      if (j <= i) { return; }
+      var middle = avgVecDirections(perpVec1, perpVec2);
+      if (!willCauseAnyMotion(this.vertexVectors, middle)) {
+        console.log('wooho!!! found a pair that works');
+        potentialPairs.push([perpVec1, perpVec2]);
+      }
+    }, this);
+  }, this);
+
+  if (potentialPairs.length !== 1) {
+    throw new Error('something is very wrong here when finding min pair');
+  }
+
+  var minPair = potentialPairs[0];
+
+  var pt = {x: 1000 * Math.random(), y: 1000 * Math.random()};
+  new rArrow(pt, vecScale(minPair[0], 100));
+  new rArrow(pt, vecScale(minPair[1], 100));
+
+  if (vecCross(minPair[0], minPair[1]) > 0) {
+    this.minPerp1 = minPair[0];
+    this.minPerp2 = minPair[1];
+  } else {
+    this.minPerp1 = minPair[1];
+    this.minPerp2 = minPair[0];
+  }
+  // :D
 };
 
 ConcaveVertexSampler.prototype.sampleConnectivity = function() {
@@ -2509,6 +2558,13 @@ function vecNormalize(vec) {
         x:vec.x / denom,
         y:vec.y / denom
     };
+};
+
+function avgVecDirections(vec1, vec2) {
+  vec1 = vecNormalize(vec1);
+  vec2 = vecNormalize(vec2);
+  var sum = vecAdd(vec1, vec2);
+  return vecNormalize(sum);
 };
 
 function vecSubtract(vec1,vec2) {
