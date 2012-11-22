@@ -11,6 +11,13 @@ Part B: Refactor sampling:
 * Based on arbitrary particle in arbitrary vertex with a beginning gmin and time
 * Then calculate that time beforehand and limit it, allowing to pipe those into multiple
 
+Part Epic #2:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Do the three scenarios:
+1) if g_start is your minimum, you are good to go! dont do anything
+2) if g_start and g_end are within your no motion zone, dont do anything
+3) if its partway, figure out how much time to delay and other nasty shit
+
 Part D: simulate multiple particles and keep track
 
 Part E: update goal test
