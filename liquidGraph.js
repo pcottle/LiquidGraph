@@ -2202,11 +2202,16 @@ ConcaveVertexSampler.prototype.initVectors = function() {
   }, this);
 
   var insideTwoVecs = function(first, second, test) {
+    // this method ONLY WORKS if first and second are less than 180 degrees apart,
+    // which is true for our uses...
+
     // the vectors better have been given in the right order!
     if (vecCross(first, second) <= 0) {
-      // TODO for concave vertices that are really tight, this just needs to be reversed :DDD i think...
-      debugger;
-      throw new Error('woah! not allowed in that order');
+      var temp = first;
+      first = second;
+      second = temp;
+      // debugger;
+      // throw new Error('woah! not allowed in that order');
     }
     return vecCross(first, test) > 0 && vecCross(test, second) > 0;
   };
@@ -2460,6 +2465,8 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
       //hitting other things and edge sliding with transitioning accelerations which
       //would be just a giant explosion of difficulty (unless you were doing something
       //dumb like Euler integration on these particles). 
+
+      // console.warn('this sample rejected');
       return;
     }
 

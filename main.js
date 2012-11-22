@@ -1,4 +1,5 @@
 $j = jQuery.noConflict();
+var debug2 = true;
 
 //globals
 var notifyTimeout = null;
