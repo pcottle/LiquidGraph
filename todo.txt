@@ -21,3 +21,8 @@ Part E: update goal test
 
 Part F: UI update
 
+Misc:
+~~~~~~~~~~~~~~~~~~
+* allow particles to just "delay" for a certain amount of ms before getting animated
+* idea of the delay BEFORE kinetic path transition
+
