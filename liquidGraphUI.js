@@ -401,19 +401,18 @@ UIButton.prototype.anchorClick = function() {
 
 
 function rArrow(pos,vel) {
-    if(!pos || !vel) { throw new Error("null arguments!"); }
-    //ok so we want to essentially make a path that looks like an arrow
+  if (!pos || !vel) { throw new Error("null arguments!"); }
+  //ok so we want to essentially make a path that looks like an arrow
 
-    //this consists of making a path. first we start at our position, and then
-    //we move some fraction of our velocity in the velocity direction to get our second point.
+  //this consists of making a path. first we start at our position, and then
+  //we move some fraction of our velocity in the velocity direction to get our second point.
 
-    //then we draw the arrow heads. this is done by doing some vector rotations and the like
-    this.pos = pos;
-    this.vel = vel;
+  //then we draw the arrow heads. this is done by doing some vector rotations and the like
+  this.pos = pos;
+  this.vel = vel;
 
-    this.path = null;
-
-    this.buildPath();
+  this.path = null;
+  this.buildPath();
 };
 
 rArrow.prototype.buildPath = function() {

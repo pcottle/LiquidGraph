@@ -2198,14 +2198,30 @@ ConcaveVertexSampler.prototype.initVectors = function() {
       });
     }
   }, this);
+
+  var insideTwoVecs = function(first, second, test) {
+    // the vectors better have been given in the right order!
+    if (vecCross(first, second) <= 0) {
+      debugger;
+      throw new Error('woah! not allowed in that order');
+    }
+    return vecCross(first, test) > 0 && vecCross(test, second) > 0;
+  };
+
+  // ok now we have a bunch of pairs of min vectors for each vertex. we need to go through and reduce these
+  // down to just the smallest pair (so none of them produce motion)
 };
 
 ConcaveVertexSampler.prototype.sampleConnectivity = function() {
   //we will do this by edge. The interesting thing is that the counterclockwise vs clockwise connectivity doesn't really matter
   //unlike in Yusuke's code because we can rotate in any / either direction.
+  this.perp1 = this.vertexVectors[0]['in'].perp;
+  this.along1 = this.vertexVectors[0]['in'].along;
+  this.perp2 = this.vertexVectors[0]['out'].perp;
+  this.along2 = this.vertexVectors[0]['out'].along;
 
-  this.sampleConnectivityVecPair(this.vertexVectors[0]['in'].perp, this.vertexVectors[0]['in'].along);
-  this.sampleConnectivityVecPair(this.vertexVectors[0]['out'].perp, this.vertexVectors[0]['out'].along);
+  this.sampleConnectivityVecPair(this.perp1, this.along1);
+  this.sampleConnectivityVecPair(this.perp2, this.along2);
 }
 
 ConcaveVertexSampler.prototype.animateConnectivity = function() {
