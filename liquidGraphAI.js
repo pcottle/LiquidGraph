@@ -240,6 +240,7 @@ GraphSearcher.prototype.searchStepAsync = function() {
 };
 
 GraphSearcher.prototype.buildSolutionAnimation = function() {
+    var time = 15;
     //ok so this is the deal. we need to build a ton of functions that will animate
     //between two arbitrary things. these are the types of functions we will have:
 
@@ -294,29 +295,21 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
       var startingG = actionResults.action.startG;
       var realEndG = actionResults.calcRealEndG();
 
-      var animation = sourceNode.cvs.animationInfo[name];
-      var transParticle = animation.transParticle;
-
-      var timeToTransition = animation.timeToTransition;
-
-      var time = 15;
-      if (i == 0) { time = time * 1.5; }
-
-      var gravTransition = this.makeGravityClosure(lastG,startingG,time,i);
-
       //ok so to animate a solution, first transition between these gravity directions
+      var gravTransition = this.makeGravityClosure(lastG,startingG,time,i);
       this.animateStepFunctions.push(gravTransition);
 
       //then animate between the startingG, the realEndG, WHILE animating the particle
-      var gravParticleTransition = this.makeGravityParticleTransitionClosure(startingG,realEndG,
-                                                      transParticle,timeToTransition);
+      var transAnimations = actionResults.getTransAnimations();
+      var gravParticleTransition = this.makeGravityParticleTransitionClosure(startingG,realEndG,transAnimations);
       this.animateStepFunctions.push(gravParticleTransition);
-
-      lastG = realEndG;
 
       //then animate the actual node node animation
       var particleAnimation = this.makeNodeNodeClosure(i);
       this.animateStepFunctions.push(particleAnimation);
+
+      // switch off for the next loop
+      lastG = realEndG;
     }
 
     //push one to return to our original position
@@ -371,15 +364,26 @@ GraphSearcher.prototype.animateStep = function() {
   this.animateStepNum++;
 };
 
-GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(startingG,realEndG,transParticle,timeToTransition) {
+GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(startingG,realEndG,transAnimations) {
+  var timeToTransition = 0;
+  _.each(transAnimations, function(animation) {
+    timeToTransition = Math.max(timeToTransition, animation.timeToTransition);
+  }, this);
+
   var gravParticleTransition = _.bind(function() {
     this.gravityAnimation(startingG,realEndG,timeToTransition);
-    transParticle.animate();
+
+    _.each(transAnimations, function(transAnimation) {
+      transAnimation.transParticle.animate();
+    }, this);
   }, this);
   return gravParticleTransition;
 };
 
 GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index) {
+  // first one is slower?
+  if (index == 0) { time = time * 1.5; }
+
   var gravTransition = _.bind(function() {
     //do a big zoom in on the first
     if (index == 0) {
@@ -430,9 +434,9 @@ GraphSearcher.prototype.makeNodeNodeClosure = function(nodeIndex) {
 
 GraphSearcher.prototype.nodeNodeAnimation = function(nodeIndex) {
   if (nodeIndex >= this.solution.nodes.length -1) {
-      console.warn("called particle animation for a node that didn't exist");
-      //we are done!
-      return;
+    console.warn("called particle animation for a node that didn't exist");
+    //we are done!
+    return;
   }
 
   var i = nodeIndex;
@@ -442,17 +446,22 @@ GraphSearcher.prototype.nodeNodeAnimation = function(nodeIndex) {
   var name = destNode.locationName;
 
   var maxTimeForSettle = sourceNode.cvs.getConnectivity()[name].time;
-  // we need to know how long the NON-TRANSITION parts of the animation
-  // take. aka the max settling time of all particles...
+  var actionResults = sourceNode.cvs.getConnectivity()[name].actionResults;
+  var settleAnimations = actionResults.getSettleAnimations();
 
-  //ok we would like to animate this particle and then have it call ourselves
-  //when it's done
-  setTimeout(_.bind(function() {
+  var foundMax = false;
+  whenLastDone = _.bind(function() {
     this.animateStep();
-  }, this), maxTimeForSettle);
+  }, this);
 
-  var animation = sourceNode.cvs.animationInfo[name];
-  animation.particle.animate(function() {},true);
-  partController.add(animation.particle);
+  _.each(settleAnimations, function(animation) {
+    if (!foundMax && animation.time == maxTimeForSettle) {
+      foundMax = true;
+      animation.particle.animate(whenLastDone, true);
+    } else {
+      animation.particle.animate(function() {}, true);
+    }
+    partController.add(animation.particle);
+  }, this);
 };
 

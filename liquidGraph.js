@@ -2159,7 +2159,6 @@ function ConcaveVertexSampler(concaveVertices, fieldAccel) {
   this.accelStrength = vecLength(fieldAccel);
 
   this.connectivity = {};
-  this.animationInfo = {};
 
   this.transitionSpeed = 25.5; //0.5 seconds to transition for the max case
 }
@@ -2521,37 +2520,19 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
 };
 
 ConcaveVertexSampler.prototype.postResults = function(concaveVertex, index, action, settleResults, realEndAccel, timeToTransition, particle, transParticle) {
-  // TODO -- we need to add all of these results together
   //here we store all the connectivity information. This is essentially a cost-sensitive closed list
-
-  this.resultsGroup.postResults(action, concaveVertex, index, settleResults, realEndAccel, timeToTransition, particle, transParticle);
-
-  // unpack TODO
-  var startG = action.startG;
-  var maxG = action.maxG;
-  var thetaEnd = action.thetaEnd;
-
-  var totalTime = settleResults.totalTime;
-  // pretend there is only one particle
-  // ONLY FOR Particle 1 at index 0 TODO
-  var particleLocations = [settleResults.endLocationObj].concat(this.concaveVertices.slice(1))
-
-  var endLocationName = Node.prototype.stringifyLocations(particleLocations);
-  var endLocationObject = particleLocations;
-
-  var animationInformation = {
-    'timeToTransition':timeToTransition,
-    'particle':particle,
-    'transParticle':transParticle,
+  var animationPackage = {
+    transition: {
+      timeToTransition: timeToTransition,
+      transParticle: transParticle
+    },
+    settle: {
+      particle: particle,
+      time: settleResults.totalTime
+    }
   };
 
-  if (!this.connectivity[endLocationName]) {
-    this.connectivity[endLocationName] = totalTime;
-    this.animationInfo[endLocationName] = animationInformation;
-  } else if (this.connectivity[endLocationName] > totalTime) {
-    this.connectivity[endLocationName] = totalTime;
-    this.animationInfo[endLocationName] = animationInformation;
-  }
+  this.resultsGroup.postResults(action, concaveVertex, index, settleResults, animationPackage);
 };
 
 ConcaveVertexSampler.prototype.getConnectivity = function() {
@@ -2594,8 +2575,36 @@ ActionResults.prototype.calcRealEndG = function(action) {
   return endAccelVec;
 };
 
-ActionResults.prototype.postResults = function(concaveVertex, index, settleResults) {
-  this.results[this.getVertexID(concaveVertex, index)] = settleResults;
+ActionResults.prototype.postResults = function(concaveVertex, index, settleResults, animationPackage) {
+  this.results[this.getVertexID(concaveVertex, index)] = _.extend(
+    {},
+    settleResults,
+    { animation: animationPackage }
+  );
+};
+
+ActionResults.prototype.getTransAnimations = function() {
+  if (!this.isDone()) {
+    throw new Error('need all first');
+  }
+
+  return this.getAnimationKey('transition');
+};
+
+ActionResults.prototype.getSettleAnimations = function() {
+  if (!this.isDone()) { throw new Error('rawr'); }
+
+  return this.getAnimationKey('settle');
+};
+
+ActionResults.prototype.getAnimationKey = function(key) {
+  var requested = [];
+  _.each(this.results, function(result) {
+    if (result.animation[key]) {
+      requested.push(result.animation[key]);
+    }
+  }, this);
+  return requested;
 };
 
 ActionResults.prototype.debugPrint = function() {
@@ -2684,13 +2693,13 @@ function ResultsGroup(concaveVertices) {
 };
 
 // you are passing in (Action), (ConcaveVertex), (settle results) basically
-ResultsGroup.prototype.postResults = function(action, concaveVertex, index, settleResults) {
+ResultsGroup.prototype.postResults = function(action, concaveVertex, index, settleResults, animationPackage) {
   var actionHash = ActionResults.prototype.hashAction(action);
   if (!this.actionToSet[actionHash]) {
     this.initActionResults(actionHash, action);
   }
 
-  this.actionToSet[actionHash].postResults(concaveVertex, index, settleResults);
+  this.actionToSet[actionHash].postResults(concaveVertex, index, settleResults, animationPackage);
 
   if (this.actionToSet[actionHash].isDone()) {
     this.calcOptimal();
