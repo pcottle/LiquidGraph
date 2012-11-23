@@ -2330,8 +2330,17 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     var fraction = (theta - startDegree) / (endDegree - startDegree);
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
-    // NOW we are sampling multiple particles from this graivty transition!!!!!!!!!!! TODO
+    if (debug2) {
+      console.log('this action', startG, maxG, theta);
+      var realEndG = ActionResults.prototype.calcRealEndG({startG: startG, maxG: maxG, theta: theta});
+      var pos = {x: 100 + progress * 500, y: 100};
+
+      new rArrow(pos, vecScale(startG, 1));
+      new rArrow(pos, vecScale(realEndG, 100));
+    }
+
     _.each(this.concaveVertices, function(concaveVertex, index) {
+      console.log('about to sample for', concaveVertex);
       var particle = this.sampleGravityTransition(concaveVertex, index, startG, maxG, theta, time, progress);
       if (particle) {
         particle.drawEntirePath();
@@ -2343,6 +2352,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
 
 
 ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, index, startG, maxG, thetaEnd, timeToTransition) {
+  var action = ActionResults.prototype.groupActionVars(startG, maxG, thetaEnd);
   // need to detect edge real quick
   var getEdgeForSweep = function(vertex, perp, along) {
     // first add the two
@@ -2385,15 +2395,20 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   ////////////////////////// SCENARIOS /////////////////////////////////////////
   // 1 - my myEdgePerp for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
   if (vecEqual(vecNormalize(myEdgePerp), vecNormalize(startG))) {
-    // console.log('yay!!! im done, because this startG is my perp :D');
+    console.log('yay!!! im done, because this startG is my perp :D');
     realThetaEnd = thetaEnd;
     done = true;
   }
 
   if (!done && insideTwoVecs(myEdgePerp, myEdgeAlong, realEndAccel)) {
-    console.log('DELAYING because that turn wont move me');
-    throw new Error('delay particle path TODO');
-    done = true;
+    console.log('that action wont move me!');
+    var settleResults = {
+      totalTime: 0,
+      endLocationName: String(concaveVertex.id),
+      endLocationObj: concaveVertex
+    };
+    this.resultsGroup.postResults(action, concaveVertex, index, settleResults, {});
+    return;
   }
 
   if (!done) {
@@ -2484,8 +2499,8 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     //hitting other things and edge sliding with transitioning accelerations which
     //would be just a giant explosion of difficulty (unless you were doing something
     //dumb like Euler integration on these particles). 
-
-    // console.warn('this sample rejected');
+    console.warn('this sample rejected');
+    this.resultsGroup.rejectAction(action);
     return;
   }
 
@@ -2514,12 +2529,11 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     return;
   }
 
-  var action = ActionResults.prototype.groupActionVars(startG, maxG, thetaEnd);
-  this.postResults(concaveVertex, index, action, settleResults, realEndAccel, timeToTransition, particleHere, transitionParticle);
+  this.postResults(concaveVertex, index, action, settleResults, timeToTransition, particleHere, transitionParticle);
   return particleHere;
 };
 
-ConcaveVertexSampler.prototype.postResults = function(concaveVertex, index, action, settleResults, realEndAccel, timeToTransition, particle, transParticle) {
+ConcaveVertexSampler.prototype.postResults = function(concaveVertex, index, action, settleResults, timeToTransition, particle, transParticle) {
   //here we store all the connectivity information. This is essentially a cost-sensitive closed list
   var animationPackage = {
     transition: {
@@ -2617,6 +2631,8 @@ ActionResults.prototype.debugPrint = function() {
 
 ActionResults.prototype.getMaxTimeForSettle = function() {
   if (!this.isDone()) {
+    console.log(this.results);
+    debugger
     throw new Error('im not done yet, cant get the total time for you');
   }
   var maxTime = 0;
@@ -2696,15 +2712,24 @@ function ResultsGroup(concaveVertices) {
   this.optimalLocations = {};
 };
 
+ResultsGroup.prototype.rejectAction = function(action) {
+  this.actionToSet[ActionResults.prototype.hashAction(action)] = null;
+};
+
 // you are passing in (Action), (ConcaveVertex), (settle results) basically
 ResultsGroup.prototype.postResults = function(action, concaveVertex, index, settleResults, animationPackage) {
   var actionHash = ActionResults.prototype.hashAction(action);
-  if (!this.actionToSet[actionHash]) {
+
+  if (this.actionToSet[actionHash] === null) {
+    // rejection, so dont care about this
+    return;
+  }
+
+  if (this.actionToSet[actionHash] === undefined) {
     this.initActionResults(actionHash, action);
   }
 
   this.actionToSet[actionHash].postResults(concaveVertex, index, settleResults, animationPackage);
-
   if (this.actionToSet[actionHash].isDone()) {
     this.calcOptimal();
   }
@@ -2719,6 +2744,11 @@ ResultsGroup.prototype.setOptimalLocation = function(endLocation, actionResults,
 
 ResultsGroup.prototype.calcOptimal = function() {
   _.each(this.actionToSet, function(actionResults) {
+    if (actionResults === null) {
+      // rejection
+      return;
+    }
+
     var tuple = actionResults.getEndLocationAndTime();
     var endLocation = tuple.endLocation;
     var time = tuple.time;
