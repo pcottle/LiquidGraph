@@ -1,6 +1,10 @@
 Things To Do:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Animation Epic #1:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1) rings when a particle is just stationary :O
+
 Part Epic #2:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Do the three scenarios:

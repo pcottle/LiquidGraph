@@ -2221,7 +2221,7 @@ ConcaveVertexSampler.prototype.initVectors = function() {
     var vecs = getVertexVecs(concaveVertex);
     this.vertexVectors.push(vecs);
 
-    if (debug2) {
+    if (false && debug2) {
       _.each(['in', 'out'], function(key1) {
         _.each(['along', 'perp'], function(key2) {
           new rArrow(concaveVertex, vecScale(vecs[key1][key2], 100));
@@ -2323,6 +2323,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
 
   //NUMSAMPLES
   var numSamples = 10;
+  NUM_SAMPLE++;
 
   for (var progress = 0; progress < 1; progress += 1/numSamples) {
     var theta = startDegree + progress * progress * progress * degreeDelta;
@@ -2330,13 +2331,15 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     var fraction = (theta - startDegree) / (endDegree - startDegree);
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
-    if (debug2) {
+    if (false && debug2) {
       console.log('this action', startG, maxG, theta);
       var realEndG = ActionResults.prototype.calcRealEndG({startG: startG, maxG: maxG, theta: theta});
-      var pos = {x: 100 + progress * 500, y: 100};
+      var pos = {x: 120 + progress * 500, y: 0 + NUM_SAMPLE * 60};
 
-      new rArrow(pos, vecScale(startG, 1));
-      new rArrow(pos, vecScale(realEndG, 100));
+      var one = new rArrow(pos, vecScale(startG, 1));
+      one.path.toBack();
+      var two = new rArrow(pos, vecScale(realEndG, 100));
+      two.path.toBack();
     }
 
     _.each(this.concaveVertices, function(concaveVertex, index) {
