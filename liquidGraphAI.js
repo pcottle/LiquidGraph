@@ -284,7 +284,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     this.pBody = cuteSmallCircle(hackyPos.x,hackyPos.y);
 
     //now loop through nodes
-    for(var i = 0; i < this.solution.nodes.length -1; i++) {
+    for (var i = 0; i < this.solution.nodes.length -1; i++) {
       //get information
       var sourceNode = this.solution.nodes[i];
       var destNode = this.solution.nodes[i+1];
@@ -401,17 +401,18 @@ GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index) {
 };
 
 GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time) {
-  if (undefined /*transPos*/) {
+  if (ringVertices) {
+    /*
     this.pBody.attr({
         cx:transPos.x,
         cy:transPos.y
-    });
+    });*/
+    //this.pBody.show();
     this.ring.attr({
         cx:transPos.x,
         cy:transPos.y
     });
     this.ring.show();
-    this.pBody.show();
   }
 
   var doneFunction = _.bind(function() {
