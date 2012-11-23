@@ -61,8 +61,8 @@ function executeDemo() {
 }
 
 function startLoadingWithText(theText) {
-    startLoading();
-    topNotify(theText);
+  startLoading();
+  topNotify(theText);
 }
 
 function stopLoadingWithText() {

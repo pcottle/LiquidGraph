@@ -47,8 +47,7 @@ Node.prototype.expand = function() {
     connectedObjects.push(locationObjs);
   }, this);
 
-  console.log('THESE CONNECTED ojects', connectedObjects);
-  console.log('names', this.cvs.connectedNodeNames);
+  // console.log('THESE CONNECTED ojects', connectedObjects);
 
   return connectedObjects;
 }

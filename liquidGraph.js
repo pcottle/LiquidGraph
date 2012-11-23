@@ -2010,7 +2010,7 @@ Particle.prototype.edgeSlide = function() {
     //      Then we think we are hitting this edge from behind, so the code barfs because we try to project
     //      a velocity onto an edge with the same outward facing normal.
     //      
-    //      I just actually verified this in the debugger, and I got a solution of
+    //      I just actually verified this in the de bugger, and I got a solution of
     //      0.00000114454 for the next stage of the particle, meaning that it collided with the edge from
     //      behind :O. Let's try this:
     //          If we instead take our next starting position as the VERTEX, we actually get 0
@@ -2221,7 +2221,7 @@ ConcaveVertexSampler.prototype.initVectors = function() {
     var vecs = getVertexVecs(concaveVertex);
     this.vertexVectors.push(vecs);
 
-    if (false && debug2) {
+    if (debug2) {
       _.each(['in', 'out'], function(key1) {
         _.each(['along', 'perp'], function(key2) {
           new rArrow(concaveVertex, vecScale(vecs[key1][key2], 100));
@@ -2231,13 +2231,21 @@ ConcaveVertexSampler.prototype.initVectors = function() {
   }, this);
 
   var willCauseMotion = function(vecPair, toTest) {
+    // first of all, if its just one of our perps...
+    if (vecEqual(toTest, vecPair['out'].perp) || vecEqual(toTest, vecPair['in'].perp)) {
+      return false;
+    }
     return !insideTwoVecs(vecPair['out'].perp, vecPair['in'].perp, toTest);
   };
 
-  var willCauseAnyMotion = function(vertexVectors, toTest) {
+  var willCauseAnyMotion = function(vertexVectors, perpVec1, perpVec2) {
+    var middle = avgVecDirections(perpVec1, perpVec2);
+
     var any = false;
     _.each(vertexVectors, function(vecPair) {
-      any = any || willCauseMotion(vecPair, toTest);
+      any = any || willCauseMotion(vecPair, middle);
+      any = any || willCauseMotion(vecPair, perpVec1);
+      any = any || willCauseMotion(vecPair, perpVec2);
     });
     return any;
   };
@@ -2261,20 +2269,55 @@ ConcaveVertexSampler.prototype.initVectors = function() {
       var perpVec1 = pair1.perp;
       var perpVec2 = pair2.perp;
 
-      var middle = avgVecDirections(perpVec1, perpVec2);
-      if (!willCauseAnyMotion(this.vertexVectors, middle)) {
-        console.log('wooho!!! found a pair that works');
+      if (!willCauseAnyMotion(this.vertexVectors, perpVec1, perpVec2)) {
+        //console.log('wooho!!! found a pair that works');
         potentialPairs.push([pair1, pair2]);
       }
     }, this);
   }, this);
 
-  if (potentialPairs.length !== 1) {
+  if (potentialPairs.length < 1) {
+    debugger
+    _.each(perpVecs, function(pair, i) {
+      new rArrow({x: 100 + i * 60, y: 100}, vecScale(pair.perp, 100));
+    }, this);
+
+    _.each(this.concaveVertices, function(cv) {
+      c = p.circle(cv.x, cv.y, 30, 30);
+      c.attr("fill","hsba(0.5,0.8,0.7,1)"); 
+    }, this);
+
     throw new Error('something is very wrong here when finding min pair');
   }
+
+  if (potentialPairs.length > 1) {
+    console.warn('sorting by biggest');
+    if (false && debug2) {
+      _.each(potentialPairs, function(pairTuple, i) {
+        _.each(pairTuple, function(pair) {
+          new rArrow({x: 200 + i * 60, y: 200}, vecScale(pair.perp, 100));
+        }, this);
+      }, this);
+    }
+
+    // sort by largest angle
+    potentialPairs.sort(function(vecPairA, vecPairB) {
+      var angleA = angleBetweenVecs(vecPairA[0].perp, vecPairA[1].perp);
+      var angleB = angleBetweenVecs(vecPairB[0].perp, vecPairB[1].perp);
+      return angleB - angleA;
+    });
+
+    if (false && debug2) {
+      var temp = potentialPairs[0];
+      _.each(temp, function(pair) {
+        new rArrow({x: 300, y: 300}, vecScale(pair.perp, 100));
+      }, this);
+    }
+  }
+
   var minPair = potentialPairs[0];
 
-  if (debug2) {
+  if (false && debug2) {
     var pt = {x: 1000 * Math.random(), y: 1000 * Math.random()};
     new rArrow(pt, vecScale(minPair[0], 100));
     new rArrow(pt, vecScale(minPair[1], 100));
@@ -2325,14 +2368,13 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
   var numSamples = 10;
   NUM_SAMPLE++;
 
-  for (var progress = 0; progress < 1; progress += 1/numSamples) {
+  for (var progress = 0.05; progress < 1; progress += 1/numSamples) {
     var theta = startDegree + progress * progress * progress * degreeDelta;
 
     var fraction = (theta - startDegree) / (endDegree - startDegree);
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
     if (false && debug2) {
-      console.log('this action', startG, maxG, theta);
       var realEndG = ActionResults.prototype.calcRealEndG({startG: startG, maxG: maxG, theta: theta});
       var pos = {x: 120 + progress * 500, y: 0 + NUM_SAMPLE * 60};
 
@@ -2343,9 +2385,9 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     }
 
     _.each(this.concaveVertices, function(concaveVertex, index) {
-      console.log('about to sample for', concaveVertex);
+      console.log('about to sample for', (concaveVertex.id) ? String(concaveVertex.id) : 'offScreen');
       var particle = this.sampleGravityTransition(concaveVertex, index, startG, maxG, theta, time, progress);
-      if (particle) {
+      if (particle && index % 4 == 0) {
         particle.drawEntirePath();
         particle.setOpacity(1 - progress + 0.1);
       }
@@ -2357,7 +2399,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
 ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, index, startG, maxG, thetaEnd, timeToTransition) {
   var action = ActionResults.prototype.groupActionVars(startG, maxG, thetaEnd);
   // first the really ridiculous base case: offscreen
-  console.log('im already offscreen!!');
+  // console.log('im already offscreen!!');
   if (concaveVertex == 'offScreen') {
     var settleResults = {
       totalTime: 0,
@@ -2393,6 +2435,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   var edge = getEdgeForSweep(concaveVertex, startG, maxG)['obj'];
   var myEdgePerp = getEdgeForSweep(concaveVertex, startG, maxG)['perp'];
   var myEdgeAlong = getEdgeForSweep(concaveVertex, startG, maxG)['along'];
+  var myOtherEdgePerp = vecNegate(concaveVertex.getOtherEdge(edge).getOutwardNormal());
 
   //end acceleration is a bit harder:
   //
@@ -2411,13 +2454,36 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   ////////////////////////// SCENARIOS /////////////////////////////////////////
   // 1 - my myEdgePerp for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
   if (vecEqual(vecNormalize(myEdgePerp), vecNormalize(startG))) {
-    console.log('yay!!! im done, because this startG is my perp :D');
+    // console.log('yay!!! im done, because this startG is my perp :D');
     realThetaEnd = thetaEnd;
     done = true;
   }
 
-  if (!done && insideTwoVecs(myEdgePerp, myEdgeAlong, realEndAccel)) {
+  if (!done && insideTwoVecs(myEdgePerp, myOtherEdgePerp, realEndAccel)) {
     console.log('that action wont move me!');
+    var startingPos = vecAdd(concaveVertex, concaveVertex.inEdge.outwardNormal);
+    startingPos = vecAdd(startingPos, concaveVertex.outEdge.outwardNormal);
+
+    var starting = new KineticState(startingPos, {x: 0, y: 0}, realEndAccel);
+    var particle = new Particle(starting, realEndAccel);
+    var trueResults = particle.settle();
+
+    if (trueResults.endLocationName != String(concaveVertex.id)) {
+      c = p.circle(concaveVertex.x, concaveVertex.y, 30, 30);
+      c2 = p.circle(trueResults.endLocationObj.x, trueResults.endLocationObj.y, 30, 30);
+
+      debugger
+      new rArrow(concaveVertex, vecScale(myEdgePerp, 200));
+      new rArrow(concaveVertex, vecScale(myOtherEdgePerp, 200));
+      new rArrow(concaveVertex, vecScale(startG, 2));
+      new rArrow(concaveVertex, vecScale(realEndAccel, 2));
+
+      console.warn('FOUND YOU');
+      this.resultsGroup.postResults(action, concaveVertex, index, trueResults);
+      return;
+      // throw new Error('gah');
+    }
+
     var settleResults = {
       totalTime: 0,
       endLocationName: String(concaveVertex.id),
@@ -2428,13 +2494,31 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   }
 
   if (!done) {
+    // just sanity check that the real end accel is inside our perp and long
+    if (!insideTwoVecs(myEdgePerp, myEdgeAlong, realEndAccel)) {
+      throw new Error('wuttttt');
+    }
     // we need to figure out how much TIME it takes to sweep the vector over to our myEdgePerp
-    var angle1 = angleBetweenVecs(myEdgePerp, startG);
-    var angle2 = angleBetweenVecs(maxG, startG);
-    console.log('angles', angle1, angle2);
-    var fractionWasted = angle1 / (angle1 + angle2);
-    console.log('wasted', fractionWasted);
-    throw new Error('do somethign with time here');
+    var wastedAngle = angleBetweenVecs(myEdgePerp, startG);
+    var totalAngle = angleBetweenVecs(startG, realEndAccel);
+    console.log('angles', wastedAngle, totalAngle);
+    var apparentTheta = totalAngle - wastedAngle;
+
+    var apparentRealEndG = ActionResults.prototype.calcRealEndG({
+      theta: apparentTheta,
+      startG: myEdgePerp,
+      maxG: maxG
+    });
+
+    debugger
+
+    new rArrow(concaveVertex, vecScale(myEdgePerp, 100));
+    new rArrow(concaveVertex, vecScale(startG, 4));
+    new rArrow(concaveVertex, vecScale(realEndAccel, 4));
+    new rArrow(concaveVertex, vecScale(apparentRealEndG, 8));
+
+    // TODO - delay thing
+    realThetaEnd = apparentTheta;
     done = true; // ?
   }
 
@@ -2654,7 +2738,6 @@ ActionResults.prototype.debugPrint = function() {
 ActionResults.prototype.getMaxTimeForSettle = function() {
   if (!this.isDone()) {
     console.log(this.results);
-    debugger
     throw new Error('im not done yet, cant get the total time for you');
   }
   var maxTime = 0;
@@ -2848,7 +2931,7 @@ function vecCross(v1,v2) {
 };
 
 function vecLength(vec) {
-    if (vec == undefined || vec.x == undefined) { debugger; throw new Error("bad arg"); }
+    if (vec == undefined || vec.x == undefined) { throw new Error("bad arg"); }
 
     return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
 };
@@ -2859,7 +2942,7 @@ function vecCompare(vec1, vec2) {
 };
 
 function vecEqual(vec1, vec2) {
-  return vecCompare(vec1, vec2) < 0.001;
+  return vecCompare(vec1, vec2) < 0.00001;
 }
 
 function vecAdd(vec1,vec2) {
