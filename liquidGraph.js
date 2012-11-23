@@ -2353,6 +2353,19 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
 
 ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, index, startG, maxG, thetaEnd, timeToTransition) {
   var action = ActionResults.prototype.groupActionVars(startG, maxG, thetaEnd);
+  // first the really ridiculous base case: offscreen
+  console.log('im already offscreen!!');
+  if (concaveVertex == 'offScreen') {
+    var settleResults = {
+      totalTime: 0,
+      endLocationName: concaveVertex,
+      endLocationObj: concaveVertex
+    };
+    this.resultsGroup.postResults(action, concaveVertex, index, settleResults);
+    return;
+  }
+  ///////////////////////////////////////////////////////////////////////////
+
   // need to detect edge real quick
   var getEdgeForSweep = function(vertex, perp, along) {
     // first add the two
@@ -2407,7 +2420,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
       endLocationName: String(concaveVertex.id),
       endLocationObj: concaveVertex
     };
-    this.resultsGroup.postResults(action, concaveVertex, index, settleResults, {});
+    this.resultsGroup.postResults(action, concaveVertex, index, settleResults);
     return;
   }
 
@@ -2573,6 +2586,10 @@ function ActionResults(concaveVertices, action) {
     this.results[this.getVertexID(cv, i)] = null;
   }, this);
 
+  if (!action) {
+    debugger
+  }
+
   this.startG = action.startG;
   this.maxG = action.maxG;
   this.theta = action.theta;
@@ -2590,6 +2607,8 @@ ActionResults.prototype.calcRealEndG = function(action) {
 };
 
 ActionResults.prototype.postResults = function(concaveVertex, index, settleResults, animationPackage) {
+  animationPackage = animationPackage || {};
+
   this.results[this.getVertexID(concaveVertex, index)] = _.extend(
     {},
     settleResults,

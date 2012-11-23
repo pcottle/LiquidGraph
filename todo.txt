@@ -1,16 +1,9 @@
 Things To Do:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Part A: Refactor support for all particles:
-------------------------------------------
-* huge RESULTS refactor to keep track of all that stuff
-* store multiple animations per node, build up multiple animations per node?
-* animation with multiple particles (aka multiple rings, etc)
-
 Part Epic #2:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Do the three scenarios:
-1) if g_start is your minimum, you are good to go! dont do anything
 2) if g_start and g_end are within your no motion zone, dont do anything
 3) if its partway, figure out how much time to delay and other nasty shit
 

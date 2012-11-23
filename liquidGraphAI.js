@@ -14,8 +14,8 @@ function Node(locationObjs, accelDirection) {
 
   this.locationName = this.stringifyLocations(locationObjs);
 
-  // TODO HACKED UP GOAL CALCULATION, this needs to be total
-  if (/offScreen/.test(this.locationName)) {
+  var matches = this.locationName.match(/offScreen/g);
+  if (matches && matches.length == this.locationObjs.length) {
     this.isGoal = true;
   }
 
