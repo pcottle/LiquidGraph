@@ -270,8 +270,11 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     // but since there are a bunch of different kinetic paths all joining up together,
     // its a lot of work to refactor that...
     this.rings = [];
+    this.pBodies = [];
+
     _.each(this.solution.nodes[0].cvs.concaveVertices, function(cv) {
       var ring = p.circle(cv.x, cv.y, 40, 40);
+      this.pBodies.push(cuteSmallCircle(cv.x, cv.y));
       ring.attr({
         'stroke-width':5,
         'stroke':'rgba(255,255,255,0.5)',
@@ -279,9 +282,6 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
       });
       this.rings.push(ring);
     }, this);
-
-    var hackyPos = this.solution.nodes[0].cvs.concaveVertices[0];
-    this.pBody = cuteSmallCircle(hackyPos.x,hackyPos.y);
 
     //now loop through nodes
     for (var i = 0; i < this.solution.nodes.length -1; i++) {
@@ -296,7 +296,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
       var realEndG = actionResults.calcRealEndG();
 
       //ok so to animate a solution, first transition between these gravity directions
-      var gravTransition = this.makeGravityClosure(lastG,startingG,time,i);
+      var gravTransition = this.makeGravityClosure(lastG,startingG,time,i, actionResults.getStartLocationObjs());
       this.animateStepFunctions.push(gravTransition);
 
       //then animate between the startingG, the realEndG, WHILE animating the particle
@@ -335,7 +335,7 @@ GraphSearcher.prototype.animateSolution = function() {
 GraphSearcher.prototype.finishAnimation = function() {
   //we are done, clean up after ourselves
   topNotifyClear();
-  this.pBody.remove();
+  _.each(this.pBodies, function(pbody) { pbody.remove(); });
   _.each(this.rings, function(ring) { ring.remove(); });
 
   solveController.UIbutton.anchorClick();
@@ -380,45 +380,56 @@ GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(starting
   return gravParticleTransition;
 };
 
-GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index) {
+GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index, ringVertices) {
   // first one is slower?
   if (index == 0) { time = time * 1.5; }
 
   var gravTransition = _.bind(function() {
     //do a big zoom in on the first
     if (index == 0) {
-      this.pBody.attr({
-          r:200
-      });
-      this.pBody.animate({
-          r:4
-      },1000,'easeIn');
+      _.each(this.pBodies, function(pBody) {
+        pBody.attr({
+            r:200
+        });
+        pBody.animate({
+            r:4
+        },1000,'easeIn');
+      }, this);
     }
 
-    this.gravityAnimation(startG,endG,time);
+    this.gravityAnimation(startG,endG,time, ringVertices);
   }, this);
   return gravTransition;
 };
 
-GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time) {
+GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time, ringVertices) {
   if (ringVertices) {
-    /*
-    this.pBody.attr({
-        cx:transPos.x,
-        cy:transPos.y
-    });*/
-    //this.pBody.show();
-    this.ring.attr({
-        cx:transPos.x,
-        cy:transPos.y
-    });
-    this.ring.show();
+    _.each(ringVertices, function(ringVertex, i) {
+      if (ringVertex.x === undefined) {
+        // it's offscreen
+        return;
+      }
+      
+      var ring = this.rings[i];
+      var pBody = this.pBodies[i];
+
+      ring.attr({
+        cx: ringVertex.x,
+        cy: ringVertex.y
+      });
+      ring.show();
+      pBody.attr({
+        cx: ringVertex.x,
+        cy: ringVertex.y
+      });
+      pBody.show();
+    }, this);
   }
 
   var doneFunction = _.bind(function() {
     this.animateStep();
-    this.pBody.hide();
-    _.each(this.rings, function(ring) { ring.remove(); });
+    _.each(this.pBodies, function(pBody) { pBody.hide(); });
+    _.each(this.rings, function(ring) { ring.hide(); });
   }, this);
 
   var gt = new GravityTweener(gStart,gEnd,time,doneFunction);

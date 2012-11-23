@@ -2670,6 +2670,10 @@ ActionResults.prototype.groupActionVars = function(startG, maxG, theta) {
   };
 };
 
+ActionResults.prototype.getStartLocationObjs = function() {
+  return this.concaveVertices;
+};
+
 ActionResults.prototype.getEndLocationObjs = function() {
   if (!this.isDone()) {
     throw new Error('nope!');
