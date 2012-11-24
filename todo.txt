@@ -1,9 +1,4 @@
-Things To Do:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Epic #1:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1) support for delay animations...
-
-Part F: UI update
 

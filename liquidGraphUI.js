@@ -695,7 +695,7 @@ SolveUIControl.prototype.keyDown = function(which) {
     return;
   }
   if (this.verticesToSolve.length == 0) {
-    topNotifyTemp("No particles were dropped, nothing to solve!", 3000);
+    topNotifyTemp("No particles settled in concave vertices, nothing to solve!", 3000);
     return;
   }
 
@@ -733,40 +733,18 @@ SolveUIControl.prototype.activate = function() {
   //reset all particles
   partController.clearAll();
 
-  this.setCursor('help',true);
+  this.setCursor('pointer');
 };
 
 SolveUIControl.prototype.deactivate = function() {
-    this.active = false;
-    this.UIbutton.active = false;
+  this.active = false;
+  this.UIbutton.active = false;
 
-    this.setCursor('default',false);
+  this.setCursor('default');
 };
 
-
-SolveUIControl.prototype.setCursor = function(pointType,turningOn) {
-
-    //go make all the polygon rPaths have the right cursor
-    for(var i = 0; i < polyController.polys.length; i++)
-    {
-        var poly = polyController.polys[i];
-        var path = poly.rPath;
-        var vertices = poly.vertices;
-
-        for(var j = 0; j < vertices.length; j++)
-        {
-            var v = vertices[j];
-            if(turningOn && !v.isConcave)
-            {
-                $j(v.rPoint.node).css('cursor','not-allowed');
-            }
-            else
-            {
-                $j(vertices[j].rPoint.node).css('cursor',pointType);
-            }
-        }
-    }
-
+SolveUIControl.prototype.setCursor = function(type) {
+  $j('#canvasHolder').css('cursor',type);
 };
 
 
