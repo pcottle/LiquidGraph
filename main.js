@@ -64,7 +64,7 @@ function executeDemo() {
     });
 
     // TODO -- switch back
-    //topNotifyTemp("Looking for solution here",3000);
+    topNotifyTemp("Looking for solution here",2000);
 
     setTimeout(function() {
       searcher = new GraphSearcher(vertices);
@@ -169,11 +169,10 @@ $j(document).ready(function(){
 
     if(/demo/.test(location.href))
     {
-        executeDemo();
-        // TODO
-        //showDemoDiv();
-        //solveController.UIbutton.hideAllButtons();
-        //$j('#demoButton').slideDown();
+        // executeDemo();
+        showDemoDiv();
+        solveController.UIbutton.hideAllButtons();
+        $j('#demoButton').slideDown();
     }
 
 });
