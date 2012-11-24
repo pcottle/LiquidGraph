@@ -1676,6 +1676,7 @@ Particle.prototype.projectVelocityOntoEdge = function(velocity,edge) {
         console.log(this);
         //part = this;
 
+        debugger
         throw new Error('Projecting vector onto edge with same facing outward normal!');
     }
 
@@ -2222,6 +2223,7 @@ ConcaveVertexSampler.prototype.initVectors = function() {
     this.vertexVectors.push(vecs);
 
     if (debug2) {
+      // show the along and perp vectors for each edge
       _.each(['in', 'out'], function(key1) {
         _.each(['along', 'perp'], function(key2) {
           new rArrow(concaveVertex, vecScale(vecs[key1][key2], 100));
@@ -2293,6 +2295,7 @@ ConcaveVertexSampler.prototype.initVectors = function() {
   if (potentialPairs.length > 1) {
     console.warn('sorting by biggest');
     if (false && debug2) {
+      // show the potential pairs of our min pocket
       _.each(potentialPairs, function(pairTuple, i) {
         _.each(pairTuple, function(pair) {
           new rArrow({x: 200 + i * 60, y: 200}, vecScale(pair.perp, 100));
@@ -2307,20 +2310,16 @@ ConcaveVertexSampler.prototype.initVectors = function() {
       return angleB - angleA;
     });
 
-    if (false && debug2) {
-      var temp = potentialPairs[0];
-      _.each(temp, function(pair) {
-        new rArrow({x: 300, y: 300}, vecScale(pair.perp, 100));
-      }, this);
-    }
+    
   }
 
   var minPair = potentialPairs[0];
 
   if (false && debug2) {
-    var pt = {x: 1000 * Math.random(), y: 1000 * Math.random()};
-    new rArrow(pt, vecScale(minPair[0], 100));
-    new rArrow(pt, vecScale(minPair[1], 100));
+    // show the selected minpocket
+    _.each(minPair, function(pair) {
+      new rArrow({x: 300, y: 300}, vecScale(pair.perp, 100));
+    }, this);
   }
 
   if (vecCross(minPair[0].perp, minPair[1].perp) > 0) {
@@ -2343,6 +2342,7 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
   // sampling is now done for this half
   console.log('************** RESULTS GROUP ******************');
   console.log(this.resultsGroup);
+  this.resultsGroup.debugConnectivity();
 };
 
 ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit, outVec) {
@@ -2374,18 +2374,19 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     var fraction = (theta - startDegree) / (endDegree - startDegree);
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
-    if (false && debug2) {
-      var realEndG = ActionResults.prototype.calcRealEndG({startG: startG, maxG: maxG, theta: theta});
-      var pos = {x: 120 + progress * 500, y: 0 + NUM_SAMPLE * 60};
-
-      var one = new rArrow(pos, vecScale(startG, 1));
-      one.path.toBack();
-      var two = new rArrow(pos, vecScale(realEndG, 100));
-      two.path.toBack();
-    }
-
     _.each(this.concaveVertices, function(concaveVertex, index) {
-      console.log('about to sample for', (concaveVertex.id) ? String(concaveVertex.id) : 'offScreen');
+      if (index == 0) {
+        console.log('about to sample for', (concaveVertex.id) ? String(concaveVertex.id) : 'offScreen');
+      }
+
+      if (false && debug2) {
+        // show the actual starting G direction and the real EndG here
+        var dir = ActionResults.prototype.calcRealEndG({maxG: maxG, startG: startG, theta: theta});
+        var debugPos = {x: 500, y:500 + 300 * progress};
+        new rArrow(debugPos, vecScale(dir, 100));
+        new rArrow(debugPos, vecScale(startG, 1));
+      }
+
       var particle = this.sampleGravityTransition(concaveVertex, index, startG, maxG, theta, time, progress);
       if (particle && index % 4 == 0) {
         particle.drawEntirePath();
@@ -2396,10 +2397,11 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
 };
 
 
-ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, index, startG, maxG, thetaEnd, timeToTransition) {
+ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex, index, startG, maxG, thetaEnd, timeToTransition, progress) {
   var action = ActionResults.prototype.groupActionVars(startG, maxG, thetaEnd);
+  var debugPos = {x: 400, y:500 + 300 * progress};
+
   // first the really ridiculous base case: offscreen
-  // console.log('im already offscreen!!');
   if (concaveVertex == 'offScreen') {
     var settleResults = {
       totalTime: 0,
@@ -2446,8 +2448,8 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   // theta is the angle between myEdgePerp and the desired end gravity direction:
 
   // will be projected if necessary
-  var endAccelVec = vecAdd(vecScale(vecNormalize(myEdgePerp),Math.cos(thetaEnd)),vecScale(vecNormalize(myEdgeAlong), Math.sin(thetaEnd)));
-  var realEndAccel = vecScale(endAccelVec,vecLength(maxG));
+  var endAccelVec = ActionResults.prototype.calcRealEndG(action);
+  var realEndAccel = vecScale(endAccelVec, vecLength(maxG));
 
   var done = false;
   var realThetaEnd = null;
@@ -2461,6 +2463,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
 
   if (!done && insideTwoVecs(myEdgePerp, myOtherEdgePerp, realEndAccel)) {
     console.log('that action wont move me!');
+    /*
     var startingPos = vecAdd(concaveVertex, concaveVertex.inEdge.outwardNormal);
     startingPos = vecAdd(startingPos, concaveVertex.outEdge.outwardNormal);
 
@@ -2468,6 +2471,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     var particle = new Particle(starting, realEndAccel);
     var trueResults = particle.settle();
 
+    // TODO - delete
     if (trueResults.endLocationName != String(concaveVertex.id)) {
       c = p.circle(concaveVertex.x, concaveVertex.y, 30, 30);
       c2 = p.circle(trueResults.endLocationObj.x, trueResults.endLocationObj.y, 30, 30);
@@ -2482,7 +2486,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
       this.resultsGroup.postResults(action, concaveVertex, index, trueResults);
       return;
       // throw new Error('gah');
-    }
+    }*/
 
     var settleResults = {
       totalTime: 0,
@@ -2498,6 +2502,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     if (!insideTwoVecs(myEdgePerp, myEdgeAlong, realEndAccel)) {
       throw new Error('wuttttt');
     }
+
     // we need to figure out how much TIME it takes to sweep the vector over to our myEdgePerp
     var wastedAngle = angleBetweenVecs(myEdgePerp, startG);
     var totalAngle = angleBetweenVecs(startG, realEndAccel);
@@ -2510,8 +2515,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
       maxG: maxG
     });
 
-    debugger
-
+    // debugger
     new rArrow(concaveVertex, vecScale(myEdgePerp, 100));
     new rArrow(concaveVertex, vecScale(startG, 4));
     new rArrow(concaveVertex, vecScale(realEndAccel, 4));
@@ -2673,10 +2677,6 @@ function ActionResults(concaveVertices, action) {
     this.results[this.getVertexID(cv, i)] = null;
   }, this);
 
-  if (!action) {
-    debugger
-  }
-
   this.startG = action.startG;
   this.maxG = action.maxG;
   this.theta = action.theta;
@@ -2819,6 +2819,16 @@ function ResultsGroup(concaveVertices) {
 
 ResultsGroup.prototype.rejectAction = function(action) {
   this.actionToSet[ActionResults.prototype.hashAction(action)] = null;
+};
+
+ResultsGroup.prototype.debugConnectivity = function() {
+  var num = 0;
+  _.each(this.optimalLocations, function(info, endLocationName) {
+    num++;
+    console.log('can get here', endLocationName, 'via', info.actionResults.action);
+    var debugPos = {x: 200, y: 100 + num * 60};
+    var a = new rArrow(debugPos, vecScale(info.actionResults.calcRealEndG(), 100));
+  });
 };
 
 // you are passing in (Action), (ConcaveVertex), (settle results) basically
@@ -2994,8 +3004,8 @@ function angleToVec(angle) {
 
 function vecScale(vec,scale) {
     return {
-        x:vec.x * scale,
-        y:vec.y * scale
+        x: vec.x * scale,
+        y: vec.y * scale
     };
 };
 

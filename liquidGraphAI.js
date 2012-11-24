@@ -27,14 +27,44 @@ function Node(locationObjs, accelDirection) {
   }
 }
 
+Node.prototype.stringifyLocation = function(locationObj) {
+  return (locationObj.id) ? String(locationObj.id) : 'offScreen';
+};
+
 Node.prototype.stringifyLocations = function(locationObjs) {
- var tupleEntries = [];
-  _.each(locationObjs, function(locationObj, i) {
+  var tupleEntries = [];
+  _.each(locationObjs, function(locationObj) {
     // we are only the goal if ALL of our entries are offscreen
-    tupleEntries.push(((locationObj.id) ? String(locationObj.id) : 'offScreen'));
+    tupleEntries.push(this.stringifyLocation(locationObj));
   }, this);
 
   return '(' + tupleEntries.join(',') + ')';
+};
+
+Node.prototype.getNumInSame = function() {
+  var locationToNum = {};
+  _.each(this.locationObjs, function(locationObj) {
+    var hash = this.stringifyLocation(locationObj);
+    locationToNum[hash] = locationToNum[hash] || 0;
+    locationToNum[hash] += 1;
+  }, this);
+
+  var numInSame = 0;
+  _.each(locationToNum, function(val) {
+    if (val > 1) {
+      numInSame += val;
+    }
+  });
+  return numInSame;
+};
+
+Node.prototype.getNumOffScreen = function() {
+  var results = this.locationName.match(/offScreen/g);
+  if (!results) {
+    return 0;
+  } else {
+    return results.length;
+  }
 };
 
 Node.prototype.expand = function() {
@@ -81,6 +111,14 @@ PartialPlan.prototype.calculateTotalTime = function(nodes) {
   return totalTime;
 };
 
+PartialPlan.prototype.getNumInSame = function() {
+  return this.lastNode().getNumInSame();
+};
+
+PartialPlan.prototype.getNumOffScreen = function() {
+  return this.lastNode().getNumOffScreen();
+};
+
 PartialPlan.prototype.lastNode = function() {
   return this.nodes[this.nodes.length - 1];
 };
@@ -106,7 +144,20 @@ function GraphSearcher(concaveVertices) {
   
   this.planPriorityQueue = [];
   this.sortFunction = function(a,b) {
-      return a.totalTime - b.totalTime;
+    // ok so this is more complicated -- we need to sort first by our heuristics essentially
+    var aOff = a.getNumOffScreen();
+    var bOff = b.getNumOffScreen();
+    if (aOff !== bOff) {
+      return bOff - aOff;
+    }
+
+    var aSame = a.getNumInSame();
+    var bSame = b.getNumInSame();
+    if (aSame !== bSame) {
+      return bSame - aSame;
+    }
+
+    return a.totalTime - b.totalTime;
   };
 
   var n = new Node(concaveVertices,startAccel);
@@ -293,6 +344,17 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
       var actionResults = sourceNode.cvs.getConnectivity()[name].actionResults;
       var startingG = actionResults.action.startG;
       var realEndG = actionResults.calcRealEndG();
+
+      if (debug2) {
+        var debugPos = {x: 400, y: 100 + i * 60};
+        var a = new rArrow(debugPos, vecScale(realEndG, 200));
+        a.path.click((function(action) {
+          var toDebug = JSON.parse(JSON.stringify(action));
+          return function() {
+            console.log(toDebug);
+          };
+        })(actionResults.action));
+      }
 
       //ok so to animate a solution, first transition between these gravity directions
       var gravTransition = this.makeGravityClosure(lastG,startingG,time,i, actionResults.getStartLocationObjs());
