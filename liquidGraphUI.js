@@ -292,7 +292,6 @@ uiControl.prototype.canvasMove = function(e) {
 };
 
 uiControl.prototype.canvasClick = function(e) {
-
     if(!this.parentObj.active)
     {
         return;
@@ -661,53 +660,90 @@ polygonUIControl.prototype.mouseMove = function(x,y) {
 };
 
 function SolveUIControl() {
+  this.active = false;
+  this.firstTime = true;
+  this.isAnimating = false;
 
-    this.active = false;
-    this.firstTime = true;
-    this.isAnimating = false;
+  this.verticesToSolve = [];
 
-    this.prototype = new uiControl(this);
-    this.UIbutton = new UIButton(this,'solveButton','Solve!','Stop Solving');
+  this.prototype = new uiControl(this);
+  this.UIbutton = new UIButton(this,'solveButton','Solve!','Stop Solving');
 };
 
 //for some reason the stubs from the prototype dont get inherited
 SolveUIControl.prototype.mouseMove = function() { return; }
 SolveUIControl.prototype.mouseUp = function() { return; }
-SolveUIControl.prototype.leftClick = function() { return; }
-SolveUIControl.prototype.keyDown = function() { return; }
+
+SolveUIControl.prototype.leftClick = function(x,y) { 
+  // ok so make a particle here and wait for it to settle...
+  var pos = {x: x, y: y};
+  var vel = {x: 0, y: 0};
+  var accel = globalAccel;
+
+  var kState = new KineticState(pos, vel, accel);
+  var particle = partController.makeParticle(kState, accel);
+
+  if (particle.settleResults.endLocationName !== 'offScreen') {
+    this.verticesToSolve.push(particle.settleResults.endLocationObj);
+  }
+
+  return;
+}
+
+SolveUIControl.prototype.keyDown = function(which) {
+  if (which !== 32) {
+    return;
+  }
+  if (this.verticesToSolve.length == 0) {
+    topNotifyTemp("No particles were dropped, nothing to solve!", 3000);
+    return;
+  }
+
+  this.startSearch();
+  return;
+}
+
 SolveUIControl.prototype.rightClick = function() { return; }
 
 SolveUIControl.prototype.vertexClick = function(vertex) {
-    if(!vertex.isConcave)
-    {
-        return;
-    }
-    if(this.isAnimating)
-    {
-        topNotifyTemp("One solution at a time!");
-        return;
-    }
+  if(!vertex.isConcave) {
+      return;
+  }
+  if(this.isAnimating) {
+    topNotifyTemp("One solution at a time!");
+    return;
+  }
 
-    partController.clearAll();
+  this.verticesToSolve.push(vertex);
+  this.isAnimating = true;
+};
 
-    searcher = new GraphSearcher([vertex]);
+SolveUIControl.prototype.searchFinished = function() {
+  this.verticesToSolve = [];
+};
+
+SolveUIControl.prototype.startSearch = function() {
+  partController.clearAll();
+  topNotifyTemp('Searching for solution...', 3000);
+  setTimeout(_.bind(function() {
+    searcher = new GraphSearcher(this.verticesToSolve);
     searcher.search();
+  }, this), 200);
 };
 
 SolveUIControl.prototype.activate = function() {
-    if(this.firstTime)
-    {
-        topNotifyTemp("Click on a concave vertex!",3000);
-        this.firstTime = false;
-    }
+  if(this.firstTime) {
+    topNotifyTemp("Click to drop particles, spacebar to solve!",3000);
+    this.firstTime = false;
+  }
 
-    this.active = true;
-    this.UIbutton.active = true;
+  this.active = true;
+  this.UIbutton.active = true;
 
-    //reset all particles
-    partController.clearAll();
+  //reset all particles
+  partController.clearAll();
 
-    this.setCursor('help',true);
+  this.setCursor('help',true);
 };
 
 SolveUIControl.prototype.deactivate = function() {
@@ -924,9 +960,9 @@ TraceUIControl.prototype.leftClick = function(x,y) {
 TraceUIControl.prototype.mouseMove = function(x,y,e) { 
     if(e && !e.which)
     {
-        this.clearScreen();
-        this.resetVars();
-        return;
+      this.clearScreen();
+      this.resetVars();
+      return;
     }
 
     //only do the moving if our mouse is down

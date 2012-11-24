@@ -38,6 +38,8 @@ Node.prototype.stringifyLocations = function(locationObjs) {
     tupleEntries.push(this.stringifyLocation(locationObj));
   }, this);
 
+  tupleEntries.sort();
+
   return '(' + tupleEntries.join(',') + ')';
 };
 
@@ -141,7 +143,7 @@ function GraphSearcher(concaveVertices) {
   this.poppedPlans = [];
   this.goalPlans = [];
   this.visitedStates = {};
-  
+
   this.planPriorityQueue = [];
   this.sortFunction = function(a,b) {
     // ok so this is more complicated -- we need to sort first by our heuristics essentially
@@ -385,7 +387,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
 
 GraphSearcher.prototype.animateSolution = function() {
   if (!this.solution) {
-      throw new Error("no solution to animate!"); 
+      throw new Error("no solution to animate!");
   }
   partController.clearAll();
 
@@ -406,6 +408,7 @@ GraphSearcher.prototype.finishAnimation = function() {
   GLOBAL_RINGS = [];
   GLOBAL_PBODIES =[];
 
+  solveController.searchFinished();
   solveController.UIbutton.anchorClick();
   solveController.UIbutton.showMainButtons();
 
@@ -477,7 +480,7 @@ GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time, particlePo
         // it's offscreen
         return;
       }
-      
+
       var ring = this.rings[i];
       var pBody = this.pBodies[i];
 
