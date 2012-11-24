@@ -12,6 +12,19 @@ var debug = false;
 var WORST = false; // go for the longest plans
 var NUM_SAMPLE = 0;
 
+var GLOBAL_RINGS = null;
+var GLOBAL_PBODIES = null;
+
+function globalCrossHide(index) {
+  GLOBAL_RINGS[index].hide();
+  GLOBAL_PBODIES[index].hide();
+}
+
+function globalCrossShow(index) {
+  GLOBAL_RINGS[index].show();
+  GLOBAL_PBODIES[index].show();
+}
+
 function showDemoDiv() {
     $j('#demoWrapper').css('top','100px');
 }
@@ -47,7 +60,7 @@ function executeDemo() {
       });
       circle.animate({
           r:4
-      },200,'easeInOut');
+      },1000,'easeInOut');
     });
 
     // TODO -- switch back
@@ -56,7 +69,7 @@ function executeDemo() {
     setTimeout(function() {
       searcher = new GraphSearcher(vertices);
       searcher.search();
-    },250);
+    },1000);
   },200);
 }
 

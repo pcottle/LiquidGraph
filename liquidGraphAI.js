@@ -321,16 +321,21 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
     // its a lot of work to refactor that...
     this.rings = [];
     this.pBodies = [];
+    GLOBAL_RINGS = this.rings;
+    GLOBAL_PBODIES = this.pBodies;
 
     _.each(this.solution.nodes[0].cvs.concaveVertices, function(cv) {
       var ring = p.circle(cv.x, cv.y, 40, 40);
-      this.pBodies.push(cuteSmallCircle(cv.x, cv.y));
       ring.attr({
         'stroke-width':5,
         'stroke':'rgba(255,255,255,0.5)',
         'fill':'rgba(0,0,0,0)'
       });
+
+      var pBody = cuteSmallCircle(cv.x, cv.y);
+
       this.rings.push(ring);
+      this.pBodies.push(pBody);
     }, this);
 
     //now loop through nodes
@@ -345,7 +350,7 @@ GraphSearcher.prototype.buildSolutionAnimation = function() {
       var startingG = actionResults.action.startG;
       var realEndG = actionResults.calcRealEndG();
 
-      if (debug2) {
+      if (false && debug2) {
         var debugPos = {x: 400, y: 100 + i * 60};
         var a = new rArrow(debugPos, vecScale(realEndG, 200));
         a.path.click((function(action) {
@@ -398,6 +403,8 @@ GraphSearcher.prototype.finishAnimation = function() {
   topNotifyClear();
   _.each(this.pBodies, function(pbody) { pbody.remove(); });
   _.each(this.rings, function(ring) { ring.remove(); });
+  GLOBAL_RINGS = [];
+  GLOBAL_PBODIES =[];
 
   solveController.UIbutton.anchorClick();
   solveController.UIbutton.showMainButtons();
@@ -441,7 +448,7 @@ GraphSearcher.prototype.makeGravityParticleTransitionClosure = function(starting
   return gravParticleTransition;
 };
 
-GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index, ringVertices) {
+GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index, particlePositions) {
   // first one is slower?
   if (index == 0) { time = time * 1.5; }
 
@@ -458,15 +465,15 @@ GraphSearcher.prototype.makeGravityClosure = function(startG,endG,time,index, ri
       }, this);
     }
 
-    this.gravityAnimation(startG,endG,time, ringVertices);
+    this.gravityAnimation(startG,endG,time, particlePositions);
   }, this);
   return gravTransition;
 };
 
-GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time, ringVertices) {
-  if (ringVertices) {
-    _.each(ringVertices, function(ringVertex, i) {
-      if (ringVertex.x === undefined) {
+GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time, particlePositions) {
+  if (particlePositions) {
+    _.each(particlePositions, function(particlePos, i) {
+      if (particlePos.x === undefined) {
         // it's offscreen
         return;
       }
@@ -475,13 +482,13 @@ GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time, ringVertic
       var pBody = this.pBodies[i];
 
       ring.attr({
-        cx: ringVertex.x,
-        cy: ringVertex.y
+        cx: particlePos.x,
+        cy: particlePos.y
       });
       ring.show();
       pBody.attr({
-        cx: ringVertex.x,
-        cy: ringVertex.y
+        cx: particlePos.x,
+        cy: particlePos.y
       });
       pBody.show();
     }, this);
@@ -489,8 +496,6 @@ GraphSearcher.prototype.gravityAnimation = function(gStart,gEnd,time, ringVertic
 
   var doneFunction = _.bind(function() {
     this.animateStep();
-    _.each(this.pBodies, function(pBody) { pBody.hide(); });
-    _.each(this.rings, function(ring) { ring.hide(); });
   }, this);
 
   var gt = new GravityTweener(gStart,gEnd,time,doneFunction);
@@ -527,7 +532,7 @@ GraphSearcher.prototype.nodeNodeAnimation = function(nodeIndex) {
     this.animateStep();
   }, this);
 
-  _.each(settleAnimations, function(animation) {
+  _.each(settleAnimations, function(animation, index) {
     if (!foundMax && animation.time == maxTimeForSettle) {
       foundMax = true;
       animation.particle.animate(whenLastDone, true);

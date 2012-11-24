@@ -1,24 +1,9 @@
 Things To Do:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Animation Epic #1:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1) rings when a particle is just stationary or delaying :O
-
-Part Epic #2:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Do the three scenarios:
-2) if g_start and g_end are within your no motion zone, dont do anything
-3) if its partway, figure out how much time to delay and other nasty shit
-
-Part D: simulate multiple particles and keep track
-
-Part E: update goal test :OOO
+Epic #1:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1) support for delay animations...
 
 Part F: UI update
-
-Misc:
-~~~~~~~~~~~~~~~~~~
-* allow particles to just "delay" for a certain amount of ms before getting animated
-* idea of the delay BEFORE kinetic path transition
 

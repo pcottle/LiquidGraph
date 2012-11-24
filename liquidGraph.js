@@ -571,10 +571,12 @@ particleController.prototype.add = function(part) {
 };
 
 particleController.prototype.clearAll = function() {
-    $j.each(this.particles,function(i,particle) {
-        particle.clearAll();
-    });
-    this.particles = [];
+  $j.each(this.particles,function(i,particle) {
+    if (particle.clearAll) {
+      particle.clearAll();
+    }
+  });
+  this.particles = [];
 };
 
 particleController.prototype.makeParticle = function(kState,accel,beginState) {
@@ -1130,10 +1132,11 @@ KineticState.prototype.toParabola = function() {
 
 
 
-function KineticTransitionPath(posYielder,velYielder,accelYielder,endTime) {
+function KineticTransitionPath(posYielder,velYielder,accelYielder,endTime,index) {
     this.pointYielder = posYielder;
     this.slopeYielder = velYielder;
     this.accelYielder = accelYielder;
+    this.index = index;
 
     this.animateFunction = this.getAnimateFunction();
     this.animateTime = 0;
@@ -1151,6 +1154,10 @@ KineticTransitionPath.prototype.getAnimateFunction = function() {
 KineticTransitionPath.prototype.animate = function(doneFunction) {
     this.doneFunction = doneFunction;
     this.animateSpeed = globalAnimateSpeed;
+
+    if (this.index !== undefined) {
+      globalCrossHide(this.index);
+    }
 
     //clear
     this.clearAnimation();
@@ -1376,6 +1383,11 @@ KineticPath.prototype.drawPath = function() {
     this.parabola.drawParabolaPath(this.endTime);
 };
 
+KineticPath.prototype.getEndpoint = function() {
+  var point = this.pointYielder(this.endTime);
+  return point;
+};
+
 KineticPath.prototype.showEndpoint = function() {
     var point = this.pointYielder(this.endTime);
 
@@ -1396,9 +1408,10 @@ KineticPath.prototype.clearAll = function() {
 };
 
 
-function Particle(startKineticState,fieldAccel,beginState) {
+function Particle(startKineticState,fieldAccel,beginState,index) {
   this.startKineticState = startKineticState;
   this.currentKineticState = startKineticState;
+  this.index = index;
 
   if (!fieldAccel) {
     throw new Error("specify a field acceleration! We might not start in free fall");
@@ -2096,6 +2109,10 @@ Particle.prototype.drawEntirePath = function() {
     });
 };
 
+Particle.prototype.getLastPath = function() {
+  return this.kPaths[this.kPaths.length - 1];
+};
+
 Particle.prototype.animateStep = function(i) {
    if (i >= this.kPaths.length)
    {
@@ -2104,7 +2121,18 @@ Particle.prototype.animateStep = function(i) {
         {
             this.doneAnimatingFunction();
         }
+        if (this.wantsRing) {
+          var endedUp = this.getLastPath().getEndpoint();
+          GLOBAL_RINGS[this.index].attr({
+            cx: endedUp.x,
+            cy: endedUp.y
+          });
+          globalCrossShow(this.index);
+        }
         return; 
+   }
+   if (i == 0 && this.wantsRing) {
+     globalCrossHide(this.index);
    }
 
    //make a done closure object
@@ -2127,13 +2155,11 @@ Particle.prototype.animate = function(doneFunction,wantsRing) {
     //ok so the tricky here is that we need to animate each path in succession. so when a path finishes,
     //it must call it's parent particle to animate the next one. this is all done with closures and
     //timeouts.... aka reasons to absolutely love JS
-    if (wantsRing)
-    {
-        this.wantsRing = true;
-    }
-    else
-    {
-        this.wantsRing = false;
+    if (wantsRing) {
+      this.wantsRing = true;
+      globalCrossHide(this.index);
+    } else {
+      this.wantsRing = false;
     }
 
     if (doneFunction)
@@ -2222,7 +2248,7 @@ ConcaveVertexSampler.prototype.initVectors = function() {
     var vecs = getVertexVecs(concaveVertex);
     this.vertexVectors.push(vecs);
 
-    if (debug2) {
+    if (false && debug2) {
       // show the along and perp vectors for each edge
       _.each(['in', 'out'], function(key1) {
         _.each(['along', 'perp'], function(key2) {
@@ -2342,7 +2368,9 @@ ConcaveVertexSampler.prototype.sampleConnectivity = function() {
   // sampling is now done for this half
   console.log('************** RESULTS GROUP ******************');
   console.log(this.resultsGroup);
-  this.resultsGroup.debugConnectivity();
+  if (false && debug2) {
+    this.resultsGroup.debugConnectivity();
+  }
 };
 
 ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit, outVec) {
@@ -2366,7 +2394,6 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
 
   //NUMSAMPLES
   var numSamples = 10;
-  NUM_SAMPLE++;
 
   for (var progress = 0.05; progress < 1; progress += 1/numSamples) {
     var theta = startDegree + progress * progress * progress * degreeDelta;
@@ -2388,7 +2415,10 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
       }
 
       var particle = this.sampleGravityTransition(concaveVertex, index, startG, maxG, theta, time, progress);
-      if (particle && index % 4 == 0) {
+      if (particle) {
+        NUM_SAMPLE++;
+      }
+      if (particle && NUM_SAMPLE % 6 == 0) {
         particle.drawEntirePath();
         particle.setOpacity(1 - progress + 0.1);
       }
@@ -2468,7 +2498,6 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     startingPos = vecAdd(startingPos, concaveVertex.outEdge.outwardNormal);
 
     var starting = new KineticState(startingPos, {x: 0, y: 0}, realEndAccel);
-    var particle = new Particle(starting, realEndAccel);
     var trueResults = particle.settle();
 
     // TODO - delete
@@ -2493,7 +2522,9 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
       endLocationName: String(concaveVertex.id),
       endLocationObj: concaveVertex
     };
-    this.resultsGroup.postResults(action, concaveVertex, index, settleResults);
+    var animationPackage = this.genStubbedAnimationPackage(index);
+
+    this.resultsGroup.postResults(action, concaveVertex, index, settleResults, animationPackage);
     return;
   }
 
@@ -2516,12 +2547,15 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     });
 
     // debugger
-    new rArrow(concaveVertex, vecScale(myEdgePerp, 100));
-    new rArrow(concaveVertex, vecScale(startG, 4));
-    new rArrow(concaveVertex, vecScale(realEndAccel, 4));
-    new rArrow(concaveVertex, vecScale(apparentRealEndG, 8));
+    if (false && debug2) {
+      new rArrow(concaveVertex, vecScale(myEdgePerp, 100));
+      new rArrow(concaveVertex, vecScale(startG, 4));
+      new rArrow(concaveVertex, vecScale(realEndAccel, 4));
+      new rArrow(concaveVertex, vecScale(apparentRealEndG, 8));
+    }
 
     // TODO - delay thing
+    console.warn('need to do the delay thing....');
     realThetaEnd = apparentTheta;
     done = true; // ?
   }
@@ -2582,7 +2616,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   };
 
   //make a modified kinetic path with these transition properties so we can animate the particle rolling
-  var transitionParticle = new KineticTransitionPath(posYielder,velYielder,accel,timeToTransition);
+  var transitionParticle = new KineticTransitionPath(posYielder,velYielder,accel,timeToTransition, index);
 
   var endPosVal = pos(timeToTransition);
   var endVelVal = vel(timeToTransition);
@@ -2623,7 +2657,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
       'whichEdge':edge
   };
 
-  var particleHere = new Particle(kState,realEndAccel,tState);
+  var particleHere = new Particle(kState,realEndAccel,tState, index);
   partController.add(particleHere);
 
   try {
@@ -2651,6 +2685,27 @@ ConcaveVertexSampler.prototype.postResults = function(concaveVertex, index, acti
   };
 
   this.resultsGroup.postResults(action, concaveVertex, index, settleResults, animationPackage);
+};
+
+ConcaveVertexSampler.prototype.genStubbedAnimationPackage = function(index) {
+  var animate = function() {
+    globalCrossShow(index);
+  };
+  var animationPackage = {
+    transition: {
+      transParticle: {
+        animate: animate
+      },
+      timeToTransition: 0,
+    },
+    settle: {
+      particle: {
+        animate: animate
+      },
+      time: 0
+    }
+  };
+  return animationPackage;
 };
 
 ConcaveVertexSampler.prototype.getConnectivity = function() {
