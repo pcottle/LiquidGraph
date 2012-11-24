@@ -85,7 +85,7 @@ function Polygon(rPoints,rPath) {
 
         var x = rPoint.attr('cx');
         var y = rPoint.attr('cy');
-    
+
         var vertex = new Vertex(x,y,rPoint,this);
         this.vertices.push(vertex);
     }
@@ -305,7 +305,7 @@ Polygon.prototype.setBodyDragHandlers = function() {
         {
             return;
         }
-    
+
         this.startDragX = x;
         this.startDragY = y;
     }
@@ -609,15 +609,6 @@ particleController.prototype.togglePathPreference = function() {
         this.wantsPaths = true;
     }
 };
-
-
-
-
-
-
-
-
-
 
 
 function parametricQuadSolver(a,b,c) {
@@ -1132,15 +1123,16 @@ KineticState.prototype.toParabola = function() {
 
 
 
-function KineticTransitionPath(posYielder,velYielder,accelYielder,endTime,index) {
-    this.pointYielder = posYielder;
-    this.slopeYielder = velYielder;
-    this.accelYielder = accelYielder;
-    this.index = index;
+function KineticTransitionPath(posYielder,velYielder,accelYielder,endTime,index,delayTime) {
+  this.pointYielder = posYielder;
+  this.slopeYielder = velYielder;
+  this.accelYielder = accelYielder;
+  this.index = index;
 
-    this.animateFunction = this.getAnimateFunction();
-    this.animateTime = 0;
-    this.endTime = endTime;
+  this.animateFunction = this.getAnimateFunction();
+  this.animateTime = 0;
+  this.endTime = endTime;
+  this.delayTime = (delayTime === undefined) ? 0 : delayTime;
 };
 
 KineticTransitionPath.prototype.getAnimateFunction = function() {
@@ -1183,6 +1175,12 @@ KineticTransitionPath.prototype.animate = function(doneFunction) {
 
 KineticTransitionPath.prototype.animateStep = function() {
     this.animateTime += this.animateSpeed;
+
+    if (this.animateTime < this.delayTime) {
+      console.log('delaying...', this.delayTime, this.endTime);
+      bAnimator.add(this.animateFunction);
+      return; // delay
+    }
 
     if (this.animateTime > this.endTime)
     {
@@ -1342,7 +1340,7 @@ KineticPath.prototype.animateStep = function() {
         this.parabola.removePath();
         this.parabola.drawParabolaPath(this.animateTime);
     }
- 
+
     this.vArrow.update(this.pos,this.vel);
 
     //set another?
@@ -1765,7 +1763,7 @@ Particle.prototype.projectVectorOntoEdge = function(vector,edge) {
 };
 
 
-Particle.prototype.getArrivalVertex = function() { 
+Particle.prototype.getArrivalVertex = function() {
 
     if (this.traceState.name != 'onEdge') { throw new Error("dont call arrival vertex when not on edge!"); }
     if (!this.traceState.whichEdge) { throw new Error("null edge during sliding!"); }
@@ -1789,7 +1787,7 @@ Particle.prototype.getArrivalVertex = function() {
     //     solve deterministically / parametrically and then just compute the required kinetic
     //     state at that edge.
     //
-    // 
+    //
 
     var edge = this.traceState.whichEdge;
     var edgeNormal = vecScale(edge.outwardNormal,40);
@@ -2023,7 +2021,7 @@ Particle.prototype.edgeSlide = function() {
     //      for the e2 / new parabola intersection at what is, essentially, the vertex between the two.
     //      Then we think we are hitting this edge from behind, so the code barfs because we try to project
     //      a velocity onto an edge with the same outward facing normal.
-    //      
+    //
     //      I just actually verified this in the de bugger, and I got a solution of
     //      0.00000114454 for the next stage of the particle, meaning that it collided with the edge from
     //      behind :O. Let's try this:
@@ -2129,7 +2127,7 @@ Particle.prototype.animateStep = function(i) {
           });
           globalCrossShow(this.index);
         }
-        return; 
+        return;
    }
    if (i == 0 && this.wantsRing) {
      globalCrossHide(this.index);
@@ -2312,7 +2310,7 @@ ConcaveVertexSampler.prototype.initVectors = function() {
 
     _.each(this.concaveVertices, function(cv) {
       c = p.circle(cv.x, cv.y, 30, 30);
-      c.attr("fill","hsba(0.5,0.8,0.7,1)"); 
+      c.attr("fill","hsba(0.5,0.8,0.7,1)");
     }, this);
 
     throw new Error('something is very wrong here when finding min pair');
@@ -2336,7 +2334,7 @@ ConcaveVertexSampler.prototype.initVectors = function() {
       return angleB - angleA;
     });
 
-    
+
   }
 
   var minPair = potentialPairs[0];
@@ -2402,9 +2400,10 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
     _.each(this.concaveVertices, function(concaveVertex, index) {
+      /*
       if (index == 0) {
         console.log('about to sample for', (concaveVertex.id) ? String(concaveVertex.id) : 'offScreen');
-      }
+      }*/
 
       if (false && debug2) {
         // show the actual starting G direction and the real EndG here
@@ -2482,6 +2481,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   var realEndAccel = vecScale(endAccelVec, vecLength(maxG));
 
   var done = false;
+  var delayTime = 0;
   var realThetaEnd = null;
   ////////////////////////// SCENARIOS /////////////////////////////////////////
   // 1 - my myEdgePerp for this edge is the same as the startG, so we are good to go and nothing needs to be done :D
@@ -2537,7 +2537,8 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     // we need to figure out how much TIME it takes to sweep the vector over to our myEdgePerp
     var wastedAngle = angleBetweenVecs(myEdgePerp, startG);
     var totalAngle = angleBetweenVecs(startG, realEndAccel);
-    console.log('angles', wastedAngle, totalAngle);
+    delayTime = (wastedAngle / totalAngle) * timeToTransition;
+    console.log('angles', wastedAngle, totalAngle, (wastedAngle / totalAngle), timeToTransition, delayTime);
     var apparentTheta = totalAngle - wastedAngle;
 
     var apparentRealEndG = ActionResults.prototype.calcRealEndG({
@@ -2554,8 +2555,6 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
       new rArrow(concaveVertex, vecScale(apparentRealEndG, 8));
     }
 
-    // TODO - delay thing
-    console.warn('need to do the delay thing....');
     realThetaEnd = apparentTheta;
     done = true; // ?
   }
@@ -2616,7 +2615,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   };
 
   //make a modified kinetic path with these transition properties so we can animate the particle rolling
-  var transitionParticle = new KineticTransitionPath(posYielder,velYielder,accel,timeToTransition, index);
+  var transitionParticle = new KineticTransitionPath(posYielder,velYielder,accel,timeToTransition, index, delayTime);
 
   var endPosVal = pos(timeToTransition);
   var endVelVal = vel(timeToTransition);
@@ -2636,8 +2635,8 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     //intersections with simple/normal equations. These particles could also start
     //hitting other things and edge sliding with transitioning accelerations which
     //would be just a giant explosion of difficulty (unless you were doing something
-    //dumb like Euler integration on these particles). 
-    console.warn('this sample rejected');
+    //dumb like Euler integration on these particles).
+    // console.warn('this sample rejected');
     this.resultsGroup.rejectAction(action);
     return;
   }
@@ -2928,7 +2927,7 @@ ResultsGroup.prototype.calcOptimal = function() {
       this.setOptimalLocation(endLocation, actionResults, time);
       return;
     }
-    
+
     // if our time is better...
     if (this.optimalLocations[endLocation].time > time) {
       this.setOptimalLocation(endLocation, actionResults, time);
@@ -3086,7 +3085,7 @@ function lineLineIntersection(p1,p2,p3,p4) {
     var numLeft = (x1*y2 - y1*x2);
     var numRight = (x3*y4 - y3*x4);
 
-    var iX = (numLeft * (x3 - x4) - (x1 - x2) * numRight)/(denom); 
+    var iX = (numLeft * (x3 - x4) - (x1 - x2) * numRight)/(denom);
     var iY = (numLeft * (y3 - y4) - (y1 - y2) * numRight)/(denom);
 
     //return this
@@ -3122,7 +3121,7 @@ function velocityAngle(vel)
 
 /*
     returns the angle BETWEEN the edges at the junction / vertex point, aka
-           * 
+           *
     \     /
      \   /
       \O/

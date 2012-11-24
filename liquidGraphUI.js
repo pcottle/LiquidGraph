@@ -664,7 +664,7 @@ function SolveUIControl() {
   this.firstTime = true;
   this.isAnimating = false;
 
-  this.verticesToSolve = [];
+  this.verticesToSolve = {};
 
   this.prototype = new uiControl(this);
   this.UIbutton = new UIButton(this,'solveButton','Solve!','Stop Solving');
@@ -675,6 +675,8 @@ SolveUIControl.prototype.mouseMove = function() { return; }
 SolveUIControl.prototype.mouseUp = function() { return; }
 
 SolveUIControl.prototype.leftClick = function(x,y) { 
+  if (this.isAnimating) { return; }
+
   // ok so make a particle here and wait for it to settle...
   var pos = {x: x, y: y};
   var vel = {x: 0, y: 0};
@@ -683,8 +685,11 @@ SolveUIControl.prototype.leftClick = function(x,y) {
   var kState = new KineticState(pos, vel, accel);
   var particle = partController.makeParticle(kState, accel);
 
-  if (particle.settleResults.endLocationName !== 'offScreen') {
-    this.verticesToSolve.push(particle.settleResults.endLocationObj);
+  var name = particle.settleResults.endLocationName;
+  var obj = particle.settleResults.endLocationObj;
+
+  if (name !== 'offScreen') {
+    this.verticesToSolve[name] = obj;
   }
 
   return;
@@ -694,7 +699,7 @@ SolveUIControl.prototype.keyDown = function(which) {
   if (which !== 32) {
     return;
   }
-  if (this.verticesToSolve.length == 0) {
+  if (_.keys(this.verticesToSolve).length == 0) {
     topNotifyTemp("No particles settled in concave vertices, nothing to solve!", 3000);
     return;
   }
@@ -708,15 +713,22 @@ SolveUIControl.prototype.rightClick = function() { };
 SolveUIControl.prototype.vertexClick = function(vertex) { };
 
 SolveUIControl.prototype.searchFinished = function() {
-  this.verticesToSolve = [];
+  this.verticesToSolve = {};
 };
 
 SolveUIControl.prototype.startSearch = function() {
   this.isAnimating = true;
   partController.clearAll();
+
   topNotifyTemp('Searching for solution...', 3000);
+
+  var vertices = [];
+  _.each(this.verticesToSolve, function(vertex) {
+    vertices.push(vertex);
+  }, this);
+
   setTimeout(_.bind(function() {
-    searcher = new GraphSearcher(this.verticesToSolve);
+    searcher = new GraphSearcher(vertices);
     searcher.search();
   }, this), 200);
 };
@@ -726,6 +738,8 @@ SolveUIControl.prototype.activate = function() {
     topNotifyTemp("Click to drop particles, spacebar to solve!",3000);
     this.firstTime = false;
   }
+
+  this.verticesToSolve = {};
 
   this.active = true;
   this.UIbutton.active = true;
@@ -739,6 +753,7 @@ SolveUIControl.prototype.activate = function() {
 SolveUIControl.prototype.deactivate = function() {
   this.active = false;
   this.UIbutton.active = false;
+  this.verticesToSolve = {};
 
   this.setCursor('default');
 };

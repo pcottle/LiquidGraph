@@ -186,7 +186,7 @@ GraphSearcher.prototype.searchStep = function() {
     //pop off the top plan
     var planToExpand = this.planPriorityQueue.shift();
 
-    console.log('the plan i popped or shifted was', planToExpand);
+    // console.log('the plan i popped or shifted was', planToExpand);
     if (planToExpand) {
       this.printPlan(planToExpand);
     }
