@@ -156,7 +156,10 @@ function GraphSearcher(concaveVertices) {
     var aSame = a.getNumInSame();
     var bSame = b.getNumInSame();
     if (aSame !== bSame) {
-      return bSame - aSame;
+      // weight numSame by 10 seconds each. and
+      // you want HIGHER numSame, but lower totalTime.
+      // plan times still have effect
+      return (bSame * 10 - aSame * 10) + (a.totalTime - b.totalTime);
     }
 
     return a.totalTime - b.totalTime;

@@ -703,26 +703,16 @@ SolveUIControl.prototype.keyDown = function(which) {
   return;
 }
 
-SolveUIControl.prototype.rightClick = function() { return; }
+SolveUIControl.prototype.rightClick = function() { };
 
-SolveUIControl.prototype.vertexClick = function(vertex) {
-  if(!vertex.isConcave) {
-      return;
-  }
-  if(this.isAnimating) {
-    topNotifyTemp("One solution at a time!");
-    return;
-  }
-
-  this.verticesToSolve.push(vertex);
-  this.isAnimating = true;
-};
+SolveUIControl.prototype.vertexClick = function(vertex) { };
 
 SolveUIControl.prototype.searchFinished = function() {
   this.verticesToSolve = [];
 };
 
 SolveUIControl.prototype.startSearch = function() {
+  this.isAnimating = true;
   partController.clearAll();
   topNotifyTemp('Searching for solution...', 3000);
   setTimeout(_.bind(function() {
