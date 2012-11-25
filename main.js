@@ -200,6 +200,7 @@ $j(document).ready(function(){
         listEscaped = listEscaped.split('&')[0];
         var list = JSON.parse(unescape(listEscaped));
         loadIdsAndSolve(list);
+        turnSolveControllerOn();
       }
     }
 });
