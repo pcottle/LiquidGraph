@@ -1865,8 +1865,7 @@ Particle.prototype.clearAll = function() {
     $j.each(this.kPaths,function(i,kPath) { kPath.clearAll(); });
 
     //also clear the animations in bAnimator
-    bAnimator.stopAnimating;
-
+    bAnimator.stopAnimating();
 };
 
 Particle.prototype.edgeSlide = function() {
