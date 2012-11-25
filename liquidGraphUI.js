@@ -713,6 +713,7 @@ SolveUIControl.prototype.rightClick = function() { };
 SolveUIControl.prototype.vertexClick = function(vertex) { };
 
 SolveUIControl.prototype.searchFinished = function() {
+  LAST_SOLVED = this.verticesToSolve;
   this.verticesToSolve = {};
 };
 
@@ -753,6 +754,10 @@ SolveUIControl.prototype.activate = function() {
 SolveUIControl.prototype.deactivate = function() {
   this.active = false;
   this.UIbutton.active = false;
+
+  if (_.keys(this.verticesToSolve).length) {
+    LAST_SOLVED = this.verticesToSolve;
+  }
   this.verticesToSolve = {};
 
   this.setCursor('default');
@@ -1462,7 +1467,16 @@ function exportGeometry()
     // also push it to our state
     var escaped = escape(exportString);
     if (history && history.pushState) {
-      history.pushState({}, "Share link", "index.html?geometry=" + escaped);
+      var link = "index.html?geometry=" + escaped;
+
+      if (LAST_SOLVED && _.keys(LAST_SOLVED).length) {
+        var ids = [];
+        _.each(LAST_SOLVED, function(asd, id) {
+          ids.push(id);
+        }, this);
+        link = link + '&idsToSolve=' + escape(JSON.stringify(ids));
+      }
+      history.pushState({}, "Share link", link);
     }
 };
 

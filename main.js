@@ -11,6 +11,7 @@ var polyController = null;
 var debug = false;
 var WORST = false; // go for the longest plans
 var NUM_SAMPLE = 0;
+var LAST_SOLVED = null;
 
 var GLOBAL_RINGS = null;
 var GLOBAL_PBODIES = null;
@@ -33,6 +34,40 @@ function hideDemoDiv() {
     $j('#demoWrapper').css('top','-600px');
 }
 
+function loadIdsAndSolve(ids) {
+  if (!ids) {
+    ids = (DEMO_VERTEX_ID) ? [DEMO_VERTEX_ID] : DEMO_VERTEX_IDS;
+  }
+
+  var vertices = [];
+  _.each(ids, function(id) {
+    var v = polyController.getVertexById(id);
+    vertices.push(v);
+
+    var circle = cuteSmallCircle(v.x,v.y);
+    circle.attr({
+        r:200
+    });
+    circle.animate({
+        r:4
+    },1000,'easeInOut');
+  });
+
+  topNotifyTemp("Looking for solution here",2000);
+
+  setTimeout(function() {
+    searcher = new GraphSearcher(vertices);
+    searcher.search();
+  },1000);
+}
+
+function turnSolveControllerOn() {
+  //hack up the solve mode
+  solveController.active = true;
+  solveController.UIbutton.active = true;
+  solveController.UIbutton.hideAllButtons();
+}
+
 function executeDemo() {
   hideDemoDiv();
   windowResize();
@@ -42,34 +77,9 @@ function executeDemo() {
     importGeometry();
     toggleImportExport();
 
-    //hack up the solve mode
-    solveController.active = true;
-    solveController.UIbutton.active = true;
-    solveController.UIbutton.hideAllButtons();
+    turnSolveControllerOn();
 
-    var ids = (DEMO_VERTEX_ID) ? [DEMO_VERTEX_ID] : DEMO_VERTEX_IDS;
-    var vertices = [];
-
-    _.each(ids, function(id) {
-      var v = polyController.getVertexById(id);
-      vertices.push(v);
-
-      var circle = cuteSmallCircle(v.x,v.y);
-      circle.attr({
-          r:200
-      });
-      circle.animate({
-          r:4
-      },1000,'easeInOut');
-    });
-
-    // TODO -- switch back
-    topNotifyTemp("Looking for solution here",2000);
-
-    setTimeout(function() {
-      searcher = new GraphSearcher(vertices);
-      searcher.search();
-    },1000);
+    loadIdsAndSolve();
   },200);
 }
 
@@ -168,20 +178,30 @@ $j(document).ready(function(){
     }
 
     if(/demo/.test(location.href)) {
-      // executeDemo();
       showDemoDiv();
       solveController.UIbutton.hideAllButtons();
       $j('#demoButton').slideDown();
       return;
     }
 
-    if (/index.html\?geometry=/.test(location.href)) {
+    if (/geometry=/.test(location.href)) {
       // get the string in a hacky way
       var href = location.href;
-      var escaped = href.split('index.html?geometry=')[1];
+      var escaped = href.split('geometry=')[1];
       escaped = escaped.split('&')[0];
       var json = unescape(escaped);
       importGeometry(json);
       toggleImportExport();
+      // do thing for particles
+
+      if (/idsToSolve=/.test(location.href)) {
+        href = location.href;
+        var listEscaped = href.split('idsToSolve=')[1];
+        listEscaped = listEscaped.split('&')[0];
+        var list = JSON.parse(unescape(listEscaped));
+        loadIdsAndSolve(list);
+      }
     }
 });
+
+
