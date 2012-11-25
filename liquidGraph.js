@@ -2384,7 +2384,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
   // go through the range of 1 degree to 80 degrees in steps
 
   var startDegree = 1 * Math.PI / 180.0;
-  var endDegree = 75 * Math.PI / 180.0;
+  var endDegree = 85 * Math.PI / 180.0;
 
   var degreeDelta = (endDegree - startDegree);
   var theta = 0;

@@ -508,7 +508,6 @@ rArrow.prototype.highlight = function() {
 
 
 function polygonUIControl() {
-
     this.uiPoints = [];
     this.uiPath = null;
     this.currentPoint = null;
@@ -1247,6 +1246,7 @@ function toggleImportExport()
 function clearAll()
 {
     polyController.reset();
+    polyController.vertexIdToGive = 0;
     partController.clearAll();
 }
 
