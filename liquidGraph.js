@@ -2491,7 +2491,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
   }
 
   if (!done && insideTwoVecs(myEdgePerp, myOtherEdgePerp, realEndAccel)) {
-    console.log('that action wont move me!');
+    // console.log('that action wont move me!');
     /*
     var startingPos = vecAdd(concaveVertex, concaveVertex.inEdge.outwardNormal);
     startingPos = vecAdd(startingPos, concaveVertex.outEdge.outwardNormal);
@@ -2537,7 +2537,7 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     var wastedAngle = angleBetweenVecs(myEdgePerp, startG);
     var totalAngle = angleBetweenVecs(startG, realEndAccel);
     delayTime = (wastedAngle / totalAngle) * timeToTransition;
-    console.log('angles', wastedAngle, totalAngle, (wastedAngle / totalAngle), timeToTransition, delayTime);
+    // console.log('angles', wastedAngle, totalAngle, (wastedAngle / totalAngle), timeToTransition, delayTime);
     var apparentTheta = totalAngle - wastedAngle;
 
     var apparentRealEndG = ActionResults.prototype.calcRealEndG({

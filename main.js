@@ -167,12 +167,21 @@ $j(document).ready(function(){
         gArrow = new GravityArrow();
     }
 
-    if(/demo/.test(location.href))
-    {
-        // executeDemo();
-        showDemoDiv();
-        solveController.UIbutton.hideAllButtons();
-        $j('#demoButton').slideDown();
+    if(/demo/.test(location.href)) {
+      // executeDemo();
+      showDemoDiv();
+      solveController.UIbutton.hideAllButtons();
+      $j('#demoButton').slideDown();
+      return;
     }
 
+    if (/index.html\?geometry=/.test(location.href)) {
+      // get the string in a hacky way
+      var href = location.href;
+      var escaped = href.split('index.html?geometry=')[1];
+      escaped = escaped.split('&')[0];
+      var json = unescape(escaped);
+      importGeometry(json);
+      toggleImportExport();
+    }
 });

@@ -1,4 +1,3 @@
-Epic #1:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-1) support for delay animations...
+TODO
+~~~~~~~~~~~~~~
 

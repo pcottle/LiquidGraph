@@ -1245,7 +1245,7 @@ function clearAll()
     partController.clearAll();
 }
 
-function importGeometry()
+function importGeometry(text)
 {
 
     var width = $j(window).width();
@@ -1265,10 +1265,9 @@ function importGeometry()
     var minX = Number.MAX_VALUE;
     var minY = Number.MAX_VALUE;
 
-    var text = $j('#jsonTextArea').val();
-    if(!text)
-    {
-        text = $j('#jsonTextArea').text();
+    text = text || $j('#jsonTextArea').val();
+    if(!text) {
+      text = $j('#jsonTextArea').text();
     }
     
     var importData = null;
@@ -1451,8 +1450,6 @@ function exportGeometry()
 
         particles.push(scaledState);
     }
-    //particles = []; // turn off particle import / export for now
-
     var exportData = {
         'polys':exportPolys,
         'particles':particles
@@ -1461,6 +1458,12 @@ function exportGeometry()
     var exportString = JSON.stringify(exportData);
     console.log(exportString);
     $j('#jsonTextArea').val(exportString);
+
+    // also push it to our state
+    var escaped = escape(exportString);
+    if (history && history.pushState) {
+      history.pushState({}, "Share link", "index.html?geometry=" + escaped);
+    }
 };
 
 var s = [];

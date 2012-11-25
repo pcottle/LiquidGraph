@@ -186,11 +186,6 @@ GraphSearcher.prototype.searchStep = function() {
     //pop off the top plan
     var planToExpand = this.planPriorityQueue.shift();
 
-    // console.log('the plan i popped or shifted was', planToExpand);
-    if (planToExpand) {
-      this.printPlan(planToExpand);
-    }
-
     if (!planToExpand) {
       if (!WORST) {
         return "NoSolution";
@@ -252,7 +247,7 @@ GraphSearcher.prototype.searchStep = function() {
       times.push(this.planPriorityQueue[i].totalTime);
     }
 
-    console.log("SORTED LIST OF TIMES IS");
+    console.log("SORTED LIST OF plans IS");
     console.log(times.join(','));
 
     //not at goal yet
