@@ -126,6 +126,7 @@ PartialPlan.prototype.lastNode = function() {
 };
 
 function GraphSearcher(concaveVertices) {
+  START = new Date();
   //the initial accel will just be negated sum of
   //the two edge outward normals, scaled to the length of the field
   //accel
@@ -290,6 +291,7 @@ GraphSearcher.prototype.searchStepAsync = function() {
 };
 
 GraphSearcher.prototype.buildSolutionAnimation = function() {
+    END = new Date();
     var time = 15;
     //ok so this is the deal. we need to build a ton of functions that will animate
     //between two arbitrary things. these are the types of functions we will have:

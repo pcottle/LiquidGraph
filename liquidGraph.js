@@ -2399,6 +2399,7 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
     var time = Math.max(0.1 * this.transitionSpeed, fraction * this.transitionSpeed);
 
     _.each(this.concaveVertices, function(concaveVertex, index) {
+      NUM_SAMPLE++;
       /*
       if (index == 0) {
         console.log('about to sample for', (concaveVertex.id) ? String(concaveVertex.id) : 'offScreen');
@@ -2413,9 +2414,6 @@ ConcaveVertexSampler.prototype.sampleConnectivityVecPair = function(perpVecUnit,
       }
 
       var particle = this.sampleGravityTransition(concaveVertex, index, startG, maxG, theta, time, progress);
-      if (particle) {
-        NUM_SAMPLE++;
-      }
       if (particle && NUM_SAMPLE % 6 == 0) {
         particle.drawEntirePath();
         particle.setOpacity(1 - progress + 0.1);
@@ -2636,6 +2634,8 @@ ConcaveVertexSampler.prototype.sampleGravityTransition = function(concaveVertex,
     //would be just a giant explosion of difficulty (unless you were doing something
     //dumb like Euler integration on these particles).
     // console.warn('this sample rejected');
+
+    NUM_SAMPLE_REJECTED++;
     this.resultsGroup.rejectAction(action);
     return;
   }

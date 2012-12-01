@@ -11,6 +11,7 @@ var polyController = null;
 var debug = false;
 var WORST = false; // go for the longest plans
 var NUM_SAMPLE = 0;
+var NUM_SAMPLE_REJECTED = 0;
 var LAST_SOLVED = null;
 
 var GLOBAL_RINGS = null;
@@ -199,6 +200,7 @@ $j(document).ready(function(){
         var listEscaped = href.split('idsToSolve=')[1];
         listEscaped = listEscaped.split('&')[0];
         var list = JSON.parse(unescape(listEscaped));
+
         loadIdsAndSolve(list);
         turnSolveControllerOn();
       }
