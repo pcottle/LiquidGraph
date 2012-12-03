@@ -56,6 +56,7 @@ function loadIdsAndSolve(ids) {
 
   topNotifyTemp("Looking for solution here",2000);
 
+  solveController.searchOn();
   setTimeout(function() {
     searcher = new GraphSearcher(vertices);
     searcher.search();

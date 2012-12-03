@@ -675,6 +675,7 @@ SolveUIControl.prototype.mouseUp = function() { return; }
 
 SolveUIControl.prototype.leftClick = function(x,y) { 
   if (this.isAnimating) { return; }
+  if (this.isSearching) { return; }
 
   // ok so make a particle here and wait for it to settle...
   var pos = {x: x, y: y};
@@ -714,10 +715,19 @@ SolveUIControl.prototype.vertexClick = function(vertex) { };
 SolveUIControl.prototype.searchFinished = function() {
   LAST_SOLVED = this.verticesToSolve;
   this.verticesToSolve = {};
+
+  this.isAnimating = false;
+  this.isSearching = false;
+};
+
+SolveUIControl.prototype.searchOn = function() {
+  this.isAnimating = true;
+  this.isSearching = true;
 };
 
 SolveUIControl.prototype.startSearch = function() {
   this.isAnimating = true;
+  this.isSearching = true;
   partController.clearAll();
 
   topNotifyTemp('Searching for solution...', 3000);
@@ -752,6 +762,8 @@ SolveUIControl.prototype.activate = function() {
 
 SolveUIControl.prototype.deactivate = function() {
   this.active = false;
+  this.isAnimating = false;
+  this.isSearching = false;
   this.UIbutton.active = false;
 
   if (_.keys(this.verticesToSolve).length) {
